@@ -1,0 +1,30 @@
+{
+  "name": "ai-website-qa-engineer-backend",
+  "version": "1.0.0",
+  "description": "Backend for AI Website QA Engineer - crawls, tests, and audits websites automatically (Phase 1 MVP: crawling, responsive testing, broken link detection, Lighthouse reports, console error detection, QA report generation).",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "cheerio": "^1.0.0",
+    "chrome-launcher": "^1.1.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "lighthouse": "^12.2.1",
+    "morgan": "^1.10.0",
+    "p-limit": "^3.1.0",
+    "puppeteer": "^23.6.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

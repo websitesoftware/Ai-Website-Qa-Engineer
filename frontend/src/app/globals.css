@@ -1,0 +1,203 @@
+@import "tailwindcss";
+
+/* =====================================================
+   Theme Variables
+===================================================== */
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+
+  --card: #ffffff;
+  --border: #e2e8f0;
+
+  --sidebar: #ffffff;
+  --header: #ffffff;
+}
+
+html.dark {
+  --background: #020617;
+  --foreground: #f8fafc;
+
+  --card: #0f172a;
+  --border: #1e293b;
+
+  --sidebar: #0f172a;
+  --header: #020617;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* =====================================================
+   Base
+===================================================== */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+
+  transition:
+    background-color .3s ease,
+    color .3s ease;
+}
+
+/* =====================================================
+   Theme Transition
+===================================================== */
+
+* {
+  transition:
+    background-color .25s ease,
+    border-color .25s ease,
+    color .25s ease;
+}
+
+/* =====================================================
+   Animations
+===================================================== */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn .4s ease-out both;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp .45s cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.animate-scale-in {
+  animation: scaleIn .3s cubic-bezier(.16, 1, .3, 1) both;
+}
+
+/* =====================================================
+   Skeleton Loader
+===================================================== */
+
+.skeleton {
+  background:
+    linear-gradient(90deg,
+      #f1f5f9 25%,
+      #e2e8f0 37%,
+      #f1f5f9 63%);
+
+  background-size: 400px 100%;
+
+  animation: shimmer 1.4s ease infinite;
+}
+
+html.dark .skeleton {
+  background:
+    linear-gradient(90deg,
+      #1e293b 25%,
+      #334155 37%,
+      #1e293b 63%);
+
+  background-size: 400px 100%;
+}
+
+/* =====================================================
+   Scrollbar
+===================================================== */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 999px;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+.invisible-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.invisible-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* =====================================================
+   Selection
+===================================================== */
+
+::selection {
+  background: #6366f1;
+  color: white;
+}
+
+/* =====================================================
+   Focus
+===================================================== */
+
+*:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
