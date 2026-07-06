@@ -15,6 +15,8 @@ app.use(morgan(config.env === "development" ? "dev" : "combined"));
 
 // serve captured screenshots so the frontend can render them directly
 app.use("/screenshots", express.static(path.join(__dirname, "..", config.storage.screenshotsDir)));
+app.use("/baselines", express.static(path.join(__dirname, "..", config.storage.baselinesDir))); // Phase 2: visual regression 
+
 
 app.use("/api", routes);
 

@@ -5,6 +5,7 @@ import { DashboardView } from '../pages/Dashboard';
 import { TestManagementPage } from '../pages/TestManagementPage';
 import { ReportsPage } from '../pages/ReportsPage';
 import { useNewTestModal } from '../context/NewTestModalContext';
+import { IssuesPage } from '../pages/IssuesPage';
 
 import { SettingsPage } from '../pages/settingspage';
 
@@ -24,6 +25,8 @@ export default function DashboardPage() {
         return <ReportsPage />;
       case 'Settings':
         return <SettingsPage />;
+      case 'Issues':
+        return <IssuesPage />;
       default:
         return (
           <div className="p-8 bg-white rounded-xl border border-slate-200 text-slate-400 text-center animate-fade-in">
