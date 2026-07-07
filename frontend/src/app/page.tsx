@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useState } from 'react';
 import { Layout } from '../components/Layout';
@@ -11,7 +12,7 @@ import { AIAutomationPage } from '../pages/AIAutomationPage';
 
 import { SettingsPage } from '../pages/settingspage';
 
-type TabType = 'Dashboard' | 'Tests' | 'Reports' | 'Issues' | 'Settings' | 'Phase 2 Results' | 'Phase 3 -  AI Automation Engine';
+type TabType = 'Dashboard' | 'Tests' | 'Reports' | 'Issues' | 'Settings' | 'Phase 2 Results' | 'AI Automation';
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabType>('Dashboard');
@@ -31,7 +32,7 @@ export default function DashboardPage() {
         return <SettingsPage />;
       case 'Issues':
         return <IssuesPage />;
-      case 'Phase 3 - AI Automation Engine':
+      case 'AI Automation':
         return <AIAutomationPage />;
 
       default:

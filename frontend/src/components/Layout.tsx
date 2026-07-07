@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -7,7 +8,7 @@ import { useTheme } from '../context/ThemeContext';
 import { User, SignOut, Key, Envelope, LockOpen, ArrowLeft, CheckSquare, Square, Eye, EyeSlash } from '@phosphor-icons/react';
 import { AnimatePresence, motion } from 'framer-motion';
 
-export type TabType = 'Dashboard' | 'Tests' | 'Reports' | 'Issues' | 'Settings' | 'Phase 2 Results' | 'Phase - 3  AI Automation Engine';
+export type TabType = 'Dashboard' | 'Tests' | 'Reports' | 'Issues' | 'Settings' | 'Phase 2 Results' | 'AI Automation';
 type AuthView = 'LOGIN' | 'FORGOT_PASSWORD' | 'REGISTER';
 
 interface LayoutProps {
@@ -164,6 +165,7 @@ export const Layout: React.FC<LayoutProps> = ({
     { label: 'Issues' as TabType, icon: 'ph-flag' },
     { label: 'Settings' as TabType, icon: 'ph-gear' },
     { label: 'Phase 2 Results' as TabType, icon: 'ph-sparkle' },
+    { label: 'AI Automation' as TabType, icon: 'ph-robot' },
   ];
 
   return (

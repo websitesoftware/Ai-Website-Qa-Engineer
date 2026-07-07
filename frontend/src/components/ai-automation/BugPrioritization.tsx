@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 
 interface PrioritizationProps {
   data: {
@@ -13,9 +14,9 @@ interface PrioritizationProps {
 export const BugPrioritization: React.FC<PrioritizationProps> = ({ data }) => {
   if (!data) {
     return (
-      <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm animate-pulse">
-        <div className="h-5 bg-slate-200 rounded w-1/3 mb-4"></div>
-        <div className="h-10 bg-slate-100 rounded mb-2"></div>
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm animate-pulse mb-6">
+        <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-1/3 mb-4"></div>
+        <div className="h-10 bg-slate-100 dark:bg-slate-700/60 rounded mb-2"></div>
       </div>
     );
   }
@@ -28,14 +29,23 @@ export const BugPrioritization: React.FC<PrioritizationProps> = ({ data }) => {
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:shadow-md mb-6">
+    <motion.div
+      whileHover={{ y: -2 }}
+      transition={{ duration: 0.2 }}
+      className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md mb-6"
+    >
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
           <span>⚡</span> AI Bug Prioritization
         </h3>
-        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${severityStyles[data.severity]}`}>
+        <motion.span
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.25 }}
+          className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${severityStyles[data.severity]}`}
+        >
           {data.severity} Severity
-        </span>
+        </motion.span>
       </div>
 
       <div className="grid grid-cols-2 gap-4 mb-4 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg">
@@ -46,6 +56,14 @@ export const BugPrioritization: React.FC<PrioritizationProps> = ({ data }) => {
         <div>
           <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 block">AI Priority Score</span>
           <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{data.score} <span className="text-xs text-slate-400">/100</span></span>
+          <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden mt-1.5">
+            <motion.div
+              className="h-full bg-indigo-600"
+              initial={{ width: 0 }}
+              animate={{ width: `${data.score}%` }}
+              transition={{ duration: 0.7, ease: 'easeOut', delay: 0.1 }}
+            />
+          </div>
         </div>
       </div>
 
@@ -59,6 +77,6 @@ export const BugPrioritization: React.FC<PrioritizationProps> = ({ data }) => {
           <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{data.impactSummary}</p>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };

@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 
 interface RcaProps {
   data: {
@@ -10,10 +11,18 @@ interface RcaProps {
 }
 
 export const RootCauseAnalysis: React.FC<RcaProps> = ({ data }) => {
-  if (!data) return <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm animate-pulse h-40"></div>;
+  if (!data) {
+    return (
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm animate-pulse h-40 mb-6"></div>
+    );
+  }
 
   return (
-    <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-6">
+    <motion.div
+      whileHover={{ y: -2 }}
+      transition={{ duration: 0.2 }}
+      className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md mb-6"
+    >
       <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-4">
         <span>🔍</span> AI Root Cause Analysis (RCA)
       </h3>
@@ -29,7 +38,12 @@ export const RootCauseAnalysis: React.FC<RcaProps> = ({ data }) => {
           <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 block mb-1">AI Confidence</span>
           <div className="flex items-center gap-2">
             <div className="w-16 bg-slate-100 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
-              <div className="bg-indigo-600 h-full" style={{ width: `${data.confidence * 100}%` }}></div>
+              <motion.div
+                className="bg-indigo-600 h-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${data.confidence * 100}%` }}
+                transition={{ duration: 0.7, ease: 'easeOut', delay: 0.1 }}
+              />
             </div>
             <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{(data.confidence * 100).toFixed(0)}%</span>
           </div>
@@ -42,6 +56,6 @@ export const RootCauseAnalysis: React.FC<RcaProps> = ({ data }) => {
           {data.explanation}
         </p>
       </div>
-    </div>
+    </motion.div>
   );
 };

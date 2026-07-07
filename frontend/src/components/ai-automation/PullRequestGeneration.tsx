@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 
 interface PrProps {
   data: {
@@ -10,10 +11,18 @@ interface PrProps {
 }
 
 export const PullRequestGeneration: React.FC<PrProps> = ({ data }) => {
-  if (!data) return <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm animate-pulse h-36"></div>;
+  if (!data) {
+    return (
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm animate-pulse h-36 mb-6"></div>
+    );
+  }
 
   return (
-    <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-6">
+    <motion.div
+      whileHover={{ y: -2 }}
+      transition={{ duration: 0.2 }}
+      className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md mb-6"
+    >
       <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-4">
         <span>🌿</span> Pull Request Generation
       </h3>
@@ -26,9 +35,14 @@ export const PullRequestGeneration: React.FC<PrProps> = ({ data }) => {
               {data.branchName}
             </code>
           </div>
-          <span className="bg-purple-100 text-purple-800 text-xs px-2.5 py-0.5 rounded-full font-semibold dark:bg-purple-950/50 dark:text-purple-400">
+          <motion.span
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.25 }}
+            className="bg-purple-100 text-purple-800 text-xs px-2.5 py-0.5 rounded-full font-semibold dark:bg-purple-950/50 dark:text-purple-400"
+          >
             PR Status: {data.status}
-          </span>
+          </motion.span>
         </div>
 
         <div>
@@ -37,16 +51,18 @@ export const PullRequestGeneration: React.FC<PrProps> = ({ data }) => {
         </div>
 
         <div className="pt-2">
-          <a 
-            href={data.prUrl} 
-            target="_blank" 
-            rel="noreferrer" 
+          <motion.a
+            href={data.prUrl}
+            target="_blank"
+            rel="noreferrer"
+            whileHover={{ scale: 1.015 }}
+            whileTap={{ scale: 0.98 }}
             className="inline-flex items-center justify-center w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors duration-150 cursor-pointer"
           >
             🚀 View Generated PR on GitHub
-          </a>
+          </motion.a>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
