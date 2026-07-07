@@ -7,10 +7,11 @@ import { ReportsPage } from '../pages/ReportsPage';
 import { useNewTestModal } from '../context/NewTestModalContext';
 import { IssuesPage } from '../pages/IssuesPage';
 import { Phase2ResultsPage } from '../pages/Phase2ResultsPage';
+import { AIAutomationPage } from '../pages/AIAutomationPage';
 
 import { SettingsPage } from '../pages/settingspage';
 
-type TabType = 'Dashboard' | 'Tests' | 'Reports' | 'Issues' | 'Settings' | 'Phase 2 Results';
+type TabType = 'Dashboard' | 'Tests' | 'Reports' | 'Issues' | 'Settings' | 'Phase 2 Results' | 'Phase 3 -  AI Automation Engine';
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabType>('Dashboard');
@@ -30,6 +31,8 @@ export default function DashboardPage() {
         return <SettingsPage />;
       case 'Issues':
         return <IssuesPage />;
+      case 'Phase 3 - AI Automation Engine':
+        return <AIAutomationPage />;
 
       default:
         return (

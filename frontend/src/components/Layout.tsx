@@ -7,7 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 import { User, SignOut, Key, Envelope, LockOpen, ArrowLeft, CheckSquare, Square, Eye, EyeSlash } from '@phosphor-icons/react';
 import { AnimatePresence, motion } from 'framer-motion';
 
-export type TabType = 'Dashboard' | 'Tests' | 'Reports' | 'Issues' | 'Settings' | 'Phase 2 Results';
+export type TabType = 'Dashboard' | 'Tests' | 'Reports' | 'Issues' | 'Settings' | 'Phase 2 Results' | 'Phase - 3  AI Automation Engine';
 type AuthView = 'LOGIN' | 'FORGOT_PASSWORD' | 'REGISTER';
 
 interface LayoutProps {
