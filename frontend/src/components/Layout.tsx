@@ -7,7 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 import { User, SignOut, Key, Envelope, LockOpen, ArrowLeft, CheckSquare, Square, Eye, EyeSlash } from '@phosphor-icons/react';
 import { AnimatePresence, motion } from 'framer-motion';
 
-export type TabType = 'Dashboard' | 'Tests' | 'Reports' | 'Issues' | 'Settings';
+export type TabType = 'Dashboard' | 'Tests' | 'Reports' | 'Issues' | 'Settings' | 'Phase 2 Results';
 type AuthView = 'LOGIN' | 'FORGOT_PASSWORD' | 'REGISTER';
 
 interface LayoutProps {
@@ -163,6 +163,7 @@ export const Layout: React.FC<LayoutProps> = ({
     { label: 'Reports' as TabType, icon: 'ph-chart-bar' },
     { label: 'Issues' as TabType, icon: 'ph-flag' },
     { label: 'Settings' as TabType, icon: 'ph-gear' },
+    { label: 'Phase 2 Results' as TabType, icon: 'ph-sparkle' },
   ];
 
   return (

@@ -6,10 +6,11 @@ import { TestManagementPage } from '../pages/TestManagementPage';
 import { ReportsPage } from '../pages/ReportsPage';
 import { useNewTestModal } from '../context/NewTestModalContext';
 import { IssuesPage } from '../pages/IssuesPage';
+import { Phase2ResultsPage } from '../pages/Phase2ResultsPage';
 
 import { SettingsPage } from '../pages/settingspage';
 
-type TabType = 'Dashboard' | 'Tests' | 'Reports' | 'Issues' | 'Settings';
+type TabType = 'Dashboard' | 'Tests' | 'Reports' | 'Issues' | 'Settings' | 'Phase 2 Results';
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabType>('Dashboard');
@@ -21,12 +22,15 @@ export default function DashboardPage() {
         return <DashboardView />;
       case 'Tests':
         return <TestManagementPage />;
+      case 'Phase 2 Results':
+        return <Phase2ResultsPage />;
       case 'Reports':
         return <ReportsPage />;
       case 'Settings':
         return <SettingsPage />;
       case 'Issues':
         return <IssuesPage />;
+
       default:
         return (
           <div className="p-8 bg-white rounded-xl border border-slate-200 text-slate-400 text-center animate-fade-in">
