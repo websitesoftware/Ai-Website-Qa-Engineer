@@ -33,32 +33,7 @@ const severityBorder: Record<string, string> = {
   low: 'border-slate-400',
 };
 
-// Realistic automated issue rules database to generate clean fix codes
-// const getDynamicFixCode = (title: string): string => {
-//   const normalizedTitle = title.toLowerCase();
 
-//   if (normalizedTitle.includes('unused javascript') || normalizedTitle.includes('script')) {
-//     return `// Optimized: Defer or load scripts asynchronously\n\n<script src="/js/bundle.js" defer></script>\n\n// Alternative for third-party modules:\n<script src="https://example.com/analytics.js" async></script>`;
-//   }
-//   if (normalizedTitle.includes('font display') || normalizedTitle.includes('font-display')) {
-//     return `/* Optimized custom typography configurations */\n@font-face {\n  font-family: 'Inter';\n  font-style: normal;\n  font-weight: 400;\n  font-display: swap; /* Fixes layout shifts during custom rendering */\n  src: url('/fonts/inter.woff2') format('woff2');\n}`;
-//   }
-//   if (normalizedTitle.includes('cache') || normalizedTitle.includes('back/forward')) {
-//     return `# Server configuration response header updates\n# Express.js / Node Server Environment:\nres.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');\n\n# Nginx config modification:\nlocation / {\n    add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0";\n}`;
-//   }
-//   if (normalizedTitle.includes('chrome devtools') || normalizedTitle.includes('panel')) {
-//     return `// DevTools context configuration update wrapper\nconsole.group('QA Automated Diagnostic Logs');\nconsole.warn('Inspection finding flagged within active context framework logs');\nconsole.trace();\nconsole.groupEnd();`;
-//   }
-
-//   return `
-// // Direct contextual resolution strategy
-// function resolveAutomatedAudit() {
-//   const targetNode = document.querySelector('[data-qa-audit]');
-//   if (targetNode) {
-//     targetNode.removeAttribute('style'); // Clear inline rendering blocks
-//   }
-// }\n  }\n}`;
-// };
 const getDynamicFixCode = (title: string): string => {
   const t = title.toLowerCase();
 

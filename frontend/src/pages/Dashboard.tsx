@@ -3,6 +3,7 @@ import React from 'react';
 import { StatCard } from '../components/StatCard';
 import { TestPipeline } from '../components/TestPipeline';
 import { UnresolvedIssues } from '../components/UnresolvedIssues';
+import { AiTestStudio } from '../components/ai-automation/AiTestStudio';
 import { StatCardProps, IssueItem } from '../app/types/dashboard';
 import { useQAData } from '../context/QADataContext';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -47,15 +48,26 @@ export const DashboardView: React.FC = () => {
           : statsData.map((stat, idx) => <StatCard key={idx} {...stat} />)}
       </div>
 
-      {/* Analytics Visualization Details Box */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <TestPipeline test={latestTest} />
+
+      <>
+        {/* Top Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+
+          <div className="lg:col-span-2 self-start">
+            <TestPipeline test={latestTest} />
+          </div>
+
+          <div className="self-start">
+            <UnresolvedIssues issues={activeIssues} />
+          </div>
+
         </div>
-        <div>
-          <UnresolvedIssues issues={activeIssues} />
+
+
+        <div className="mt-6">
+          <AiTestStudio test={latestTest} />
         </div>
-      </div>
+      </>
     </div>
   );
 };

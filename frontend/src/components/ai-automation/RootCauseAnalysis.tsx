@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { motion } from 'framer-motion';
 
@@ -17,6 +18,12 @@ export const RootCauseAnalysis: React.FC<RcaProps> = ({ data }) => {
     );
   }
 
+  // errorLine is 0 when the browser only gave us a page/selector (not a line).
+  const locationLabel =
+    data.errorLine && data.errorLine > 0
+      ? `${data.culpritFile}:${data.errorLine}`
+      : data.culpritFile;
+
   return (
     <motion.div
       whileHover={{ y: -2 }}
@@ -29,9 +36,11 @@ export const RootCauseAnalysis: React.FC<RcaProps> = ({ data }) => {
 
       <div className="flex flex-wrap items-center gap-6 mb-4">
         <div className="flex-1 min-w-[200px]">
-          <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 block mb-1">Suspected Code Location</span>
+          <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 block mb-1">
+            Observed Location (browser-reported)
+          </span>
           <code className="text-xs font-mono bg-amber-50 text-amber-700 px-2 py-1 rounded border border-amber-100 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/50 block truncate">
-            {data.culpritFile}:{data.errorLine}
+            {locationLabel}
           </code>
         </div>
         <div>

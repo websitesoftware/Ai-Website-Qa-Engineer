@@ -39,23 +39,22 @@ export const TestPipeline: React.FC<{ test?: MinimalTest | null }> = ({ test }) 
             <p className="text-xs text-slate-500 mt-0.5">Automated crawl and system verification run metrics</p>
           </div>
           <span
-            className={`font-medium text-xs px-2.5 py-1 rounded-full border ${
-              test.status === 'passed'
+            className={`font-medium text-xs px-2.5 py-1 rounded-full border ${test.status === 'passed'
                 ? 'text-emerald-700 bg-emerald-50 border-emerald-100'
                 : test.status === 'failed'
-                ? 'text-red-700 bg-red-50 border-red-100'
-                : test.status === 'error'
-                ? 'text-slate-600 bg-slate-100 border-slate-200'
-                : 'text-blue-700 bg-blue-50 border-blue-100'
-            }`}
+                  ? 'text-red-700 bg-red-50 border-red-100'
+                  : test.status === 'error'
+                    ? 'text-slate-600 bg-slate-100 border-slate-200'
+                    : 'text-blue-700 bg-blue-50 border-blue-100'
+              }`}
           >
             {test.status === 'passed'
               ? 'Passed'
               : test.status === 'failed'
-              ? 'Failed'
-              : test.status === 'error'
-              ? 'Error'
-              : 'Running'}
+                ? 'Failed'
+                : test.status === 'error'
+                  ? 'Error'
+                  : 'Running'}
           </span>
         </div>
 
@@ -77,13 +76,12 @@ export const TestPipeline: React.FC<{ test?: MinimalTest | null }> = ({ test }) 
                     initial={false}
                     animate={{ scale: active ? [1, 1.12, 1] : 1 }}
                     transition={{ duration: 1.2, repeat: active ? Infinity : 0 }}
-                    className={`w-9 h-9 rounded-full border flex items-center justify-center text-sm font-bold shadow-sm ${
-                      completed
+                    className={`w-9 h-9 rounded-full border flex items-center justify-center text-sm font-bold shadow-sm ${completed
                         ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
                         : active
-                        ? 'bg-indigo-50 text-indigo-500 border-indigo-300'
-                        : 'bg-slate-50 text-slate-400 border-slate-200'
-                    }`}
+                          ? 'bg-indigo-50 text-indigo-500 border-indigo-300'
+                          : 'bg-slate-50 text-slate-400 border-slate-200'
+                      }`}
                   >
                     {completed ? (
                       <i className="ph ph-check"></i>
@@ -97,9 +95,8 @@ export const TestPipeline: React.FC<{ test?: MinimalTest | null }> = ({ test }) 
                 </div>
                 {index < STEP_LABELS.length - 1 && (
                   <div
-                    className={`h-[2px] flex-1 -mt-5 min-w-[30px] transition-colors duration-500 ${
-                      completed ? 'bg-emerald-200' : 'bg-slate-200'
-                    }`}
+                    className={`h-[2px] flex-1 -mt-5 min-w-[30px] transition-colors duration-500 ${completed ? 'bg-emerald-200' : 'bg-slate-200'
+                      }`}
                   />
                 )}
               </React.Fragment>

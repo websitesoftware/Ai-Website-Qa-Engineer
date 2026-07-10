@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { StatsGrid } from '../components/report/StatsGrid';
-import { TrendsAndSeverity } from '../components/report/TrendsAndSeverity';
+import { ReportsCharts } from '../components/report/ReportsCharts';
 import { ReportsTable } from '../components/report/ReportsTable';
 import { useQAData } from '../context/QADataContext';
 import { useToast } from '../context/ToastContext';
@@ -53,7 +53,7 @@ export const ReportsPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Reports & Analytics</h2>
-          <p className="text-sm text-slate-500 mt-1">Live QA scores, issue breakdown, and completed scan history.</p>
+          <p className="text-sm text-slate-500 mt-1">Live QA scores, issue breakdown, and completed scan history — all from real scans.</p>
         </div>
         <button
           onClick={exportCsv}
@@ -64,7 +64,7 @@ export const ReportsPage: React.FC = () => {
       </div>
 
       <StatsGrid />
-      <TrendsAndSeverity />
+      <ReportsCharts />
       <ReportsTable />
     </div>
   );

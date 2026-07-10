@@ -4,15 +4,16 @@ import React, { useState } from 'react';
 import { Layout } from '../components/Layout';
 import { DashboardView } from '../pages/Dashboard';
 import { TestManagementPage } from '../pages/TestManagementPage';
-import { ReportsPage } from '../pages/ReportsPage';
+// import { ReportsPage } from '../pages/ReportsPage';
 import { useNewTestModal } from '../context/NewTestModalContext';
 import { IssuesPage } from '../pages/IssuesPage';
 import { Phase2ResultsPage } from '../pages/Phase2ResultsPage';
 import { AIAutomationPage } from '../pages/AIAutomationPage';
+import ScanlinePhase1Report from '../pages/phase1page';
 
 import { SettingsPage } from '../pages/settingspage';
 
-type TabType = 'Dashboard' | 'Tests' | 'Reports' | 'Issues' | 'Settings' | 'Phase 2 Results' | 'AI Automation';
+type TabType = 'Dashboard' | 'Tests' | 'Issues' | 'Settings' | 'Phase 2 Results' | 'AI Automation' | 'Phase 1 Results';
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabType>('Dashboard');
@@ -26,14 +27,16 @@ export default function DashboardPage() {
         return <TestManagementPage />;
       case 'Phase 2 Results':
         return <Phase2ResultsPage />;
-      case 'Reports':
-        return <ReportsPage />;
+      // case 'Reports':
+      //   return <ReportsPage />;
       case 'Settings':
         return <SettingsPage />;
       case 'Issues':
         return <IssuesPage />;
       case 'AI Automation':
         return <AIAutomationPage />;
+      case 'Phase 1 Results':
+        return <ScanlinePhase1Report />;
 
       default:
         return (
