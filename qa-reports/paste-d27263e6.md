@@ -3,7 +3,7 @@
 **Target:** http://192.168.1.5:3000/
 **Scan ID:** ac865d39-571a-4df7-8ea6-444b7ccd14cd
 **Overall score:** 0/100
-**Generated:** 2026-07-16T10:39:43.714Z
+**Generated:** 2026-07-16T10:44:32.531Z
 
 ## Top priority: Does not use HTTPS
 - **Severity:** High  |  **Priority score:** 88/100
