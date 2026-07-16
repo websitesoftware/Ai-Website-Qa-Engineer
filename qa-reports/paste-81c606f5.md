@@ -3,7 +3,7 @@
 **Target:** http://localhost:3000/
 **Scan ID:** 99008363-df64-4fda-9589-205deb32d399
 **Overall score:** 0/100
-**Generated:** 2026-07-16T11:15:56.626Z
+**Generated:** 2026-07-16T11:16:07.617Z
 
 ## Top priority: Font display
 - **Severity:** High  |  **Priority score:** 88/100
