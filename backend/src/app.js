@@ -2,6 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
 const path = require("path");
+const fs = require("fs");
+const crypto = require("crypto");
 const { chromium } = require("@playwright/test");
 
 const config = require("./config/config");
@@ -52,8 +54,28 @@ app.post("/api/generate-playwright-code", async (req, res) => {
     console.log(`[Studio API] Scanning full page: ${url}`);
 
     browser = await chromium.launch({ headless: true });
-    const page = await browser.newPage();
+    // deviceScaleFactor:2 renders at 2x pixel density so section screenshots
+    // aren't soft/blurry when displayed at full width in the report/PDF.
+    const page = await browser.newPage({
+      viewport: { width: 1440, height: 900 },
+      deviceScaleFactor: 2,
+    });
     await page.goto(url, { waitUntil: "networkidle", timeout: 45000 });
+
+    // Cookie/consent banners render a full-viewport dark backdrop that gets
+    // baked into every section screenshot underneath them, making captures
+    // look dark and "blurry". Hide the common patterns before we scroll or
+    // shoot anything.
+    await page.addStyleTag({
+      content: `
+        [id*="cookie" i], [class*="cookie" i],
+        [id*="consent" i], [class*="consent" i],
+        [id*="gdpr" i], [class*="gdpr" i],
+        [aria-label*="cookie" i], [aria-label*="consent" i] {
+          display: none !important;
+        }
+      `,
+    });
 
     // Force lazy-loaded sections (common footer/nav pattern) to render
     await page.evaluate(async () => {
@@ -93,7 +115,10 @@ app.post("/api/generate-playwright-code", async (req, res) => {
       const pushSection = (el, fallbackName) => {
         if (!el || seen.has(el) || results.length >= MAX_SECTIONS) return;
         seen.add(el);
+        const shotId = `qa-shot-${results.length}`;
+        el.setAttribute("data-qa-shot-id", shotId);
         results.push({
+          shotId,
           name: labelFor(el, fallbackName),
           html: el.innerHTML.substring(0, MAX_HTML_PER_SECTION),
         });
@@ -138,10 +163,8 @@ app.post("/api/generate-playwright-code", async (req, res) => {
       return results;
     });
 
-    await browser.close();
-    browser = null;
-
     if (!sections || sections.length === 0) {
+      await browser.close();
       return res.status(502).json({
         error: "Could not detect any distinct page sections to scan.",
         steps: [],
@@ -151,6 +174,47 @@ app.post("/api/generate-playwright-code", async (req, res) => {
     console.log(
       `[Studio API] Found ${sections.length} sections: ${sections.map((s) => s.name).join(", ")}`,
     );
+
+    // Capture one screenshot per detected section so the exported test pack
+    // can show a real "here's the component under test" image below its
+    // steps. Each element was tagged with a unique data-qa-shot-id above, so
+    // it can be re-located and screenshotted individually (Playwright
+    // auto-scrolls the element into view before capturing it).
+    const runId = crypto.randomBytes(6).toString("hex");
+    const shotsDir = path.join(
+      __dirname,
+      "..",
+      config.storage.screenshotsDir,
+      "studio",
+      runId,
+    );
+    fs.mkdirSync(shotsDir, { recursive: true });
+
+    const sectionScreenshots = {};
+    for (const section of sections) {
+      try {
+        const locator = page.locator(`[data-qa-shot-id="${section.shotId}"]`);
+        const fileName = `${section.shotId}.png`;
+        await locator.screenshot({
+          path: path.join(shotsDir, fileName),
+          timeout: 8000,
+        });
+        sectionScreenshots[section.name] =
+          `${req.protocol}://${req.get("host")}/screenshots/studio/${runId}/${fileName}`;
+      } catch (shotError) {
+        console.warn(
+          `[Studio API] Could not screenshot section "${section.name}": ${shotError.message}`,
+        );
+      }
+    }
+
+    console.log(
+      `[Studio API] Captured ${Object.keys(sectionScreenshots).length}/${sections.length} section screenshots`,
+    );
+
+    await browser.close();
+    browser = null;
+
     console.log("[Studio API] Compiling step matrix via Claude...");
 
     const { steps, error } = await autoDiscoverAndGenerateSteps(url, sections);
@@ -164,6 +228,7 @@ app.post("/api/generate-playwright-code", async (req, res) => {
     return res.json({
       steps,
       sectionOrder: sections.map((s) => s.name),
+      sectionScreenshots,
       pageTitle,
     });
   } catch (error) {

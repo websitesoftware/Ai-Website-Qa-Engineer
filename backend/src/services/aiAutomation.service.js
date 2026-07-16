@@ -18,6 +18,7 @@
 const testsRepo = require("../repositories/tests.repository");
 const llm = require("./llm.service");
 const github = require("./github.service");
+const repoRegistry = require("./repoRegistry.service");
 const logger = require("../utils/logger");
 
 // ---------------------------------------------------------------------------
@@ -398,6 +399,169 @@ function buildReportMarkdown(test, automation) {
   return lines.join("\n");
 }
 
+/**
+ * Build the same prioritization-card shape as buildPrioritization(), but for
+ * one already-known issue instead of picking the top-ranked one. Used by the
+ * paste-an-issue flow, where the caller already knows exactly which issue.
+ */
+function buildPrioritizationForIssue(test, issue) {
+  const open = (test.issues || []).filter((i) => !i.resolved);
+  const counts = open.reduce((acc, i) => {
+    acc[i.category] = (acc[i.category] || 0) + 1;
+    return acc;
+  }, {});
+  const sameCategoryCount = counts[issue.category] || 1;
+  const score = scoreIssue(issue, sameCategoryCount);
+
+  const impactSummary =
+    `A ${issue.severity} ${issue.category.replace(/-/g, " ")} issue on ${issue.url || test.url}.` +
+    (sameCategoryCount > 1 ? ` One of ${sameCategoryCount} in that category.` : "");
+
+  return {
+    bugId: `QA-${issue.id.replace(/[^a-z0-9]/gi, "").slice(0, 8).toUpperCase() || "PASTED"}`,
+    issueId: issue.id,
+    category: issue.category,
+    title: issue.title,
+    severity: SEVERITY_LABEL[issue.severity] || "Medium",
+    score,
+    impactSummary,
+    ranked: [
+      {
+        id: issue.id,
+        title: issue.title,
+        category: issue.category,
+        severity: SEVERITY_LABEL[issue.severity] || "Medium",
+        score,
+        url: issue.url,
+      },
+    ],
+  };
+}
+
+/**
+ * Recover a real, already-scanned issue from a "Copy Issue" clipboard payload
+ * (see IssuesPage.tsx handleCopyForAutomation) — it embeds the exact
+ * testId/issueId, so this looks the real issue up rather than re-parsing
+ * free text. Falls back to best-effort free-text parsing (URL/severity/title/
+ * category/analysis/suggestion lines) for hand-edited or externally-sourced
+ * paste content, so the feature still works if the marker is missing.
+ */
+function parsePastedIssue(pastedText) {
+  const text = String(pastedText || "");
+
+  const refMatch = text.match(/testId=(\S+)\s+issueId=(\S+)/i);
+  if (refMatch) {
+    const test = testsRepo.get(refMatch[1]);
+    const issue = test?.issues.find((i) => i.id === refMatch[2]);
+    if (test && issue) return { test, issue, source: "linked" };
+  }
+
+  const urlMatch = text.match(/URL:\s*(\S+)/i);
+  if (!urlMatch) return null; // nothing to target a repo/PR with
+
+  const severityMatch = text.match(/^\s*\[?(critical|high|medium|low)\]?/im);
+  const categoryMatch = text.match(/Category:\s*(.+)/i);
+  const analysisMatch = text.match(
+    /Analysis:\s*([\s\S]*?)(?:\n\s*\n\s*(?:Suggestion|Code Fix Snippet):|$)/i,
+  );
+  const suggestionMatch = text.match(
+    /Suggestion:\s*([\s\S]*?)(?:\n\s*\n\s*Code Fix Snippet:|$)/i,
+  );
+  const firstLine = text.split("\n")[0] || "";
+  const title =
+    firstLine.replace(/^\s*(\[[^\]]*\]\s*)+/, "").trim() || "Pasted issue";
+
+  const issue = {
+    id: `pasted-${Date.now()}`,
+    category: (categoryMatch?.[1] || "other").trim().toLowerCase().replace(/\s+/g, "-"),
+    severity: (severityMatch?.[1] || "medium").toLowerCase(),
+    title,
+    description: (analysisMatch?.[1] || "").trim() || title,
+    suggestion: suggestionMatch?.[1]?.trim() || null,
+    url: urlMatch[1],
+    resolved: false,
+  };
+  const test = { id: null, url: issue.url, issues: [issue], consoleErrors: [], score: null };
+  return { test, issue, source: "pasted" };
+}
+
+/**
+ * The paste-box "Analyze" action: recover the issue, run the same
+ * prioritize -> RCA -> fix pipeline as a real scan, auto-detect which local
+ * repo the issue's URL belongs to, and open a real PR in one step.
+ */
+async function analyzePastedIssue(pastedText) {
+  const parsed = parsePastedIssue(pastedText);
+  if (!parsed) {
+    return { ready: false, reason: "could_not_parse" };
+  }
+  const { test, issue, source } = parsed;
+
+  const prioritization = buildPrioritizationForIssue(test, issue);
+  const rca = buildRootCause(test, prioritization);
+  const fixes = await buildFixes(test, prioritization);
+  const match = repoRegistry.matchRepoForUrl(issue.url);
+  const repoMatch = { name: match.name, path: match.path, matchedBy: match.matchedBy };
+
+  const result = {
+    ready: true,
+    source, // "linked" (real scan data) | "pasted" (free-text fallback)
+    url: issue.url,
+    generatedAt: new Date().toISOString(),
+    llm: { enabled: llm.isEnabled(), provider: llm.providerName() },
+    github: {
+      configured: github.isConfigured(),
+      repo: match.githubRepo || null,
+      repoName: match.name,
+      matchedBy: match.matchedBy,
+    },
+    prioritization,
+    rca,
+    fixes,
+    pullRequest: null,
+  };
+
+  if (!github.isConfigured()) {
+    result.pullRequest = { configured: false, reason: "github_not_configured" };
+    return result;
+  }
+  if (!match.githubRepo) {
+    result.pullRequest = {
+      configured: true,
+      error: describeRepoMatchFailure(match, issue.url),
+      repoMatch,
+    };
+    return result;
+  }
+
+  const short = issue.id.replace(/[^a-z0-9]/gi, "").slice(0, 8) || "issue";
+  const branchName = `ai-qa/paste-${short}`;
+  const filePath = `qa-reports/paste-${short}.md`;
+  const prTitle = `fix(qa): ${prioritization.title} (QA-${short.toUpperCase()})`;
+  const markdown = buildReportMarkdown(test, { prioritization, rca, fixes });
+
+  try {
+    const pr = await github.openRemediationPR({
+      branchName,
+      filePath,
+      fileContent: markdown,
+      prTitle,
+      prBody: markdown,
+      repo: match.githubRepo,
+    });
+    logger.success(
+      "aiAutomation",
+      `Opened PR ${pr.prUrl} from pasted issue (repo: ${match.githubRepo}, matched by ${match.matchedBy})`,
+    );
+    result.pullRequest = { configured: true, ...pr, repo: match.githubRepo, repoMatch };
+  } catch (err) {
+    logger.error("aiAutomation", `PR creation from pasted issue failed: ${err.message}`);
+    result.pullRequest = { configured: true, error: err.message, repoMatch };
+  }
+
+  return result;
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -432,6 +596,7 @@ async function runAutomation(testId) {
   const rca = buildRootCause(test, prioritization);
   const fixes = await buildFixes(test, prioritization);
   const cicd = buildCicdSummary(test);
+  const repoMatch = repoRegistry.matchRepoForUrl(test.url);
 
   return {
     ready: true,
@@ -439,13 +604,40 @@ async function runAutomation(testId) {
     url: test.url,
     generatedAt: new Date().toISOString(),
     llm: { enabled: llm.isEnabled(), provider: llm.providerName() },
-    github: { configured: github.isConfigured() },
+    github: {
+      configured: github.isConfigured(),
+      repo: repoMatch.githubRepo || null,
+      repoName: repoMatch.name,
+      matchedBy: repoMatch.matchedBy, // "hostname" | "live-port" | "url-path" | "port" | "unmatched" | "ambiguous_*"
+    },
     prioritization,
     rca,
     fixes,
     cicd,
     pullRequest: null, // filled only when the user explicitly triggers PR creation
   };
+}
+
+/**
+ * A human-readable reason `match.githubRepo` is missing — either no repo
+ * could be identified at all, or one was but it has no GitHub remote.
+ */
+function describeRepoMatchFailure(match, url) {
+  if (match.matchedBy === "ambiguous_hostname" || match.matchedBy === "ambiguous_port") {
+    return (
+      `Multiple local repos matched ${url} (${match.matchedBy.replace("ambiguous_", "")} ` +
+      `collision) — can't safely pick one. Set a unique SITE_URL/dev port per repo, or ` +
+      `narrow REPO_SCAN_ROOT.`
+    );
+  }
+  if (match.name) {
+    return `Matched local repo "${match.name}" (${match.path}) has no GitHub remote configured.`;
+  }
+  return (
+    `Could not determine which local repo ${url} belongs to. Open its project folder in ` +
+    `VS Code (or place it under the scan root), and make sure it declares its site URL ` +
+    `(package.json "homepage", or a SITE_URL/APP_URL .env key) or dev-server port.`
+  );
 }
 
 /**
@@ -458,6 +650,18 @@ async function createPullRequest(testId) {
   }
   const test = testId ? testsRepo.get(testId) : latestCompletedTest();
   if (!test) return { configured: true, error: "no_completed_test" };
+
+  // Figure out which local repo the scanned URL actually belongs to — not
+  // always this QA engine's own repo — so the PR lands in the right project.
+  const match = repoRegistry.matchRepoForUrl(test.url);
+  const repoMatch = { name: match.name, path: match.path, matchedBy: match.matchedBy };
+  if (!match.githubRepo) {
+    return {
+      configured: true,
+      error: describeRepoMatchFailure(match, test.url),
+      repoMatch,
+    };
+  }
 
   const automation = await runAutomation(test.id);
   const short = test.id.slice(0, 8);
@@ -475,12 +679,16 @@ async function createPullRequest(testId) {
       fileContent: markdown,
       prTitle,
       prBody: markdown,
+      repo: match.githubRepo,
     });
-    logger.success("aiAutomation", `Opened PR ${pr.prUrl}`);
-    return { configured: true, ...pr };
+    logger.success(
+      "aiAutomation",
+      `Opened PR ${pr.prUrl} (repo: ${match.githubRepo}, matched by ${match.matchedBy})`,
+    );
+    return { configured: true, ...pr, repo: match.githubRepo, repoMatch };
   } catch (err) {
     logger.error("aiAutomation", `PR creation failed: ${err.message}`);
-    return { configured: true, error: err.message };
+    return { configured: true, error: err.message, repoMatch };
   }
 }
 
@@ -496,20 +704,58 @@ async function runCicd(testId) {
   const summary = buildCicdSummary(test);
 
   if (github.isConfigured() && require("../config/config").github.workflow) {
-    try {
-      const run = await github.dispatchWorkflow({ target_url: test.url });
-      if (run) {
-        summary.logs.push(`[INFO] Dispatched GitHub Actions run: ${run.url}`);
-        summary.workflowRun = run;
-      }
-    } catch (err) {
+    const match = repoRegistry.matchRepoForUrl(test.url);
+    if (!match.githubRepo) {
       summary.logs.push(
-        `[INFO] GitHub Actions dispatch skipped: ${err.message}`,
+        `[INFO] GitHub Actions dispatch skipped: ${describeRepoMatchFailure(match, test.url)}`,
       );
+    } else {
+      try {
+        const run = await github.dispatchWorkflow(
+          { target_url: test.url },
+          match.githubRepo,
+        );
+        if (run) {
+          summary.logs.push(
+            `[INFO] Dispatched GitHub Actions run on ${match.githubRepo}: ${run.url}`,
+          );
+          summary.workflowRun = run;
+        }
+      } catch (err) {
+        summary.logs.push(
+          `[INFO] GitHub Actions dispatch skipped: ${err.message}`,
+        );
+      }
     }
   }
 
   return summary;
+}
+
+/**
+ * Merge a PR opened by this engine, but only if it has been approved.
+ * This is the free-plan-safe replacement for GitHub's native branch
+ * protection ("Merge cannot proceed" without an approval) — see
+ * github.service.js#getReviewDecision.
+ */
+async function mergePullRequest(prNumber, repo) {
+  if (!github.isConfigured()) {
+    return { configured: false, reason: "github_not_configured" };
+  }
+  const decision = await github.getReviewDecision(prNumber, repo);
+  if (!decision.approved) {
+    return {
+      configured: true,
+      merged: false,
+      reason: decision.changesRequestedCount > 0
+        ? "changes_requested"
+        : "awaiting_approval",
+      ...decision,
+    };
+  }
+  const result = await github.mergePullRequest(prNumber, repo);
+  logger.success("aiAutomation", `Merged PR #${prNumber} (${result.sha})`);
+  return { configured: true, ...result, ...decision };
 }
 
 module.exports = {
@@ -517,4 +763,6 @@ module.exports = {
   createPullRequest,
   runCicd,
   latestCompletedTest,
+  mergePullRequest,
+  analyzePastedIssue,
 };

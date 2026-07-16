@@ -21,13 +21,13 @@ const tabs: { key: StatusFilter; label: string }[] = [
 export const Filters: React.FC<FiltersProps> = ({ status, onStatusChange, sort, onSortChange }) => {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div className="flex space-x-1 bg-white p-1 rounded-lg border border-slate-200">
+      <div className="flex space-x-1 bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => onStatusChange(tab.key)}
             className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
-              status === tab.key ? 'bg-slate-100 text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              status === tab.key ? 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
             }`}
           >
             {tab.label}
@@ -39,7 +39,7 @@ export const Filters: React.FC<FiltersProps> = ({ status, onStatusChange, sort, 
         <select
           value={sort}
           onChange={(e) => onSortChange(e.target.value as SortOption)}
-          className="border border-slate-200 text-slate-600 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 bg-white"
+          className="border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 bg-white dark:bg-slate-950"
         >
           <option value="newest">Sort by: Newest</option>
           <option value="oldest">Sort by: Oldest</option>

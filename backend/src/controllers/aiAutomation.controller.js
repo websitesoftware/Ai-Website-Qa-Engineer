@@ -54,4 +54,43 @@ async function cicd(req, res, next) {
   }
 }
 
-module.exports = { getStatus, run, createPr, cicd };
+/**
+ * POST /api/ai-automation/merge   body: { prNumber, repo? }
+ * App-level approval gate: merges only if the PR has >=1 approving review
+ * and no pending changes-requested (the free-plan substitute for GitHub's
+ * native required-review branch protection). `repo` ("owner/repo") should be
+ * the same repo the PR was opened in, as returned by /ai-automation/pr.
+ */
+async function merge(req, res, next) {
+  try {
+    const prNumber = req.body?.prNumber;
+    if (!prNumber) return res.status(400).json({ error: "prNumber is required" });
+    const result = await aiAutomation.mergePullRequest(prNumber, req.body?.repo);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/ai-automation/analyze-issue   body: { pastedText }
+ * The "paste an issue, get a PR" flow: recovers the issue (from an embedded
+ * testId/issueId reference when copied via IssuesPage, or best-effort free-
+ * text parsing otherwise), runs the same prioritize -> RCA -> fix pipeline as
+ * a real scan, auto-detects the target repo from the issue's URL, and opens
+ * a real PR — all in one request.
+ */
+async function analyzeIssue(req, res, next) {
+  try {
+    const pastedText = req.body?.pastedText;
+    if (!pastedText || !String(pastedText).trim()) {
+      return res.status(400).json({ error: "pastedText is required" });
+    }
+    const result = await aiAutomation.analyzePastedIssue(pastedText);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { getStatus, run, createPr, cicd, merge, analyzeIssue };

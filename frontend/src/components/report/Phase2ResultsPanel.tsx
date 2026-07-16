@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
-import { api } from '../../lib/api';
 import { BackendTest } from '../../lib/types';
+import { VisualRegressionPanel } from './VisualRegressionPanel';
 
 const impactStyles: Record<string, string> = {
   critical: 'bg-red-50 text-red-600 border-red-100',
@@ -71,24 +71,7 @@ export const Phase2ResultsPanel: React.FC<{ test: BackendTest }> = ({ test }) =>
       {hasVisual && (
         <div className="border border-slate-200 rounded-xl p-4">
           <p className="text-sm font-semibold text-slate-800 mb-3">Visual Regression</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {test.visualRegression!.map((r) => (
-              <div key={r.viewport} className="border border-slate-200 rounded-lg p-3 bg-slate-50">
-                <p className="text-xs font-semibold capitalize text-slate-700">{r.viewport}</p>
-                {r.isNewBaseline ? (
-                  <p className="text-xs text-indigo-500 mt-1">New baseline saved</p>
-                ) : (
-                  <p className={`text-xs mt-1 ${r.significant ? 'text-red-500 font-semibold' : 'text-slate-500'}`}>
-                    {r.diffPercentage}% diff {r.significant ? '⚠️ significant' : ''}
-                  </p>
-                )}
-                {r.diffImagePath && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={api.screenshotUrl(r.diffImagePath)} alt={`${r.viewport} diff`} className="w-full h-24 object-cover rounded mt-2" />
-                )}
-              </div>
-            ))}
-          </div>
+          <VisualRegressionPanel results={test.visualRegression} screenshots={test.screenshots} />
         </div>
       )}
 

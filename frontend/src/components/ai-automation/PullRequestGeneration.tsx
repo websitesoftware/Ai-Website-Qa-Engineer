@@ -1,16 +1,40 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
+interface MergeState {
+  loading: boolean;
+  merged: boolean;
+  reason?: string;
+  approvalCount?: number;
+  changesRequestedCount?: number;
+  error?: string;
+}
+
+interface RepoMatch {
+  name?: string;
+  path?: string;
+  matchedBy?: string; // "hostname" | "live-port" | "url-path" | "port" | "unmatched" | "ambiguous_*"
+}
+
 interface PrProps {
   data: {
     branchName: string;
     prTitle: string;
     prUrl: string;
     status: string;
+    repo?: string;
+    repoMatch?: RepoMatch;
   } | null;
+  merge?: MergeState;
+  onMerge?: () => void;
 }
 
-export const PullRequestGeneration: React.FC<PrProps> = ({ data }) => {
+const MERGE_REASON_COPY: Record<string, string> = {
+  awaiting_approval: 'Not merged: no approving review yet. Approve the PR on GitHub, then try again.',
+  changes_requested: 'Not merged: a reviewer requested changes. Resolve them, then try again.',
+};
+
+export const PullRequestGeneration: React.FC<PrProps> = ({ data, merge, onMerge }) => {
   if (!data) {
     return (
       <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm animate-pulse h-36 mb-6"></div>
@@ -28,6 +52,21 @@ export const PullRequestGeneration: React.FC<PrProps> = ({ data }) => {
       </h3>
 
       <div className="space-y-3">
+        {data.repo && (
+          <div>
+            <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 block">Target Repo</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <code className="text-xs font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200 dark:bg-slate-900/50 dark:text-slate-300 dark:border-slate-700">
+                {data.repo}
+              </code>
+              {data.repoMatch?.matchedBy && (
+                <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                  matched by {data.repoMatch.matchedBy}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <div>
             <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 block">Target Branch</span>
@@ -62,6 +101,46 @@ export const PullRequestGeneration: React.FC<PrProps> = ({ data }) => {
             🚀 View Generated PR on GitHub
           </motion.a>
         </div>
+
+        {onMerge && (
+          <div className="pt-1">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-400">
+                Approval Gate (app-level, no GitHub Pro required)
+              </span>
+              {typeof merge?.approvalCount === 'number' && (
+                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  {merge.approvalCount} approval{merge.approvalCount === 1 ? '' : 's'}
+                  {merge.changesRequestedCount ? ` · ${merge.changesRequestedCount} changes requested` : ''}
+                </span>
+              )}
+            </div>
+
+            {merge?.merged ? (
+              <div className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 rounded-lg px-3 py-2">
+                ✅ Merged into main.
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={onMerge}
+                  disabled={merge?.loading}
+                  className="inline-flex items-center justify-center w-full px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
+                >
+                  {merge?.loading ? 'Checking approval…' : '✅ Check Approval & Merge'}
+                </button>
+                {merge?.reason && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                    {MERGE_REASON_COPY[merge.reason] || merge.reason}
+                  </p>
+                )}
+                {merge?.error && (
+                  <p className="text-xs text-red-600 dark:text-red-400 mt-2">Error: {merge.error}</p>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
     </motion.div>
   );

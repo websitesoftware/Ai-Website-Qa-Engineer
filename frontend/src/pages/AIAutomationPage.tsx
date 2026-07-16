@@ -7,7 +7,9 @@ import { RootCauseAnalysis } from '../components/ai-automation/RootCauseAnalysis
 import { SuggestedFixes } from '../components/ai-automation/SuggestedFixes';
 import { PullRequestGeneration } from '../components/ai-automation/PullRequestGeneration';
 import { CicdIntegration } from '../components/ai-automation/CicdIntegration';
+import { PasteIssueAnalyzer } from '../components/ai-automation/PasteIssueAnalyzer';
 import { API_BASE_URL } from '../lib/api';
+import { usePolling } from '../hooks/usePolling';
 
 // ---------------------------------------------------------------------------
 // Types (match the /api/ai-automation payload)
@@ -38,14 +40,30 @@ interface Cicd {
   logs: string[];
   workflowRun?: { url: string };
 }
+interface RepoMatch {
+  name?: string;
+  path?: string;
+  matchedBy?: string; // "hostname" | "live-port" | "url-path" | "port" | "unmatched" | "ambiguous_*"
+}
 interface PullRequest {
   configured?: boolean;
   branchName?: string;
   prTitle?: string;
   prUrl?: string;
+  prNumber?: number;
+  repo?: string; // "owner/repo" the PR was actually opened in
+  repoMatch?: RepoMatch;
   status?: string;
   error?: string;
   reason?: string;
+}
+interface MergeResult {
+  configured?: boolean;
+  merged?: boolean;
+  reason?: string;
+  approvalCount?: number;
+  changesRequestedCount?: number;
+  error?: string;
 }
 interface AutomationResponse {
   ready: boolean;
@@ -54,7 +72,7 @@ interface AutomationResponse {
   testId?: string;
   url?: string;
   llm?: { enabled: boolean; provider: string };
-  github?: { configured: boolean };
+  github?: { configured: boolean; repo?: string | null; repoName?: string; matchedBy?: string };
   prioritization?: Prioritization | null;
   rca?: Rca | null;
   fixes?: Fixes | null;
@@ -79,6 +97,10 @@ export const AIAutomationPage: React.FC = () => {
   // PR action state
   const [pr, setPr] = useState<PullRequest | null>(null);
   const [prLoading, setPrLoading] = useState(false);
+
+  // Merge (app-level approval gate) state
+  const [mergeResult, setMergeResult] = useState<MergeResult | null>(null);
+  const [mergeLoading, setMergeLoading] = useState(false);
 
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const clearTimers = () => {
@@ -134,9 +156,38 @@ export const AIAutomationPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const running = loading || (stage !== 'idle' && stage !== 'done');
+
+  // Real-time scanning: watch for a newly completed test (from Test Management
+  // running in another tab, or a fresh crawl finishing) and auto re-run the
+  // automation pipeline against it — no manual "re-analyse" click needed.
+  const latestSeenTestId = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    latestSeenTestId.current = resp?.testId;
+  }, [resp?.testId]);
+
+  const checkForNewScan = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/tests`);
+      if (!res.ok) return;
+      const tests: Array<{ id: string; status: string }> = await res.json();
+      const latestCompleted = tests.find(
+        (t) => t.status === 'passed' || t.status === 'failed',
+      );
+      if (latestCompleted && latestCompleted.id !== latestSeenTestId.current && !running) {
+        fetchAutomation();
+      }
+    } catch {
+      // backend unreachable — the manual button / next tick will recover
+    }
+  }, [fetchAutomation, running]);
+
+  usePolling(checkForNewScan, 5000, true);
+
   const createPr = useCallback(async () => {
     if (!resp?.testId) return;
     setPrLoading(true);
+    setMergeResult(null);
     try {
       const res = await fetch(`${API_BASE_URL}/ai-automation/pr`, {
         method: 'POST',
@@ -152,7 +203,24 @@ export const AIAutomationPage: React.FC = () => {
     }
   }, [resp?.testId]);
 
-  const running = loading || (stage !== 'idle' && stage !== 'done');
+  const mergePr = useCallback(async () => {
+    if (!pr?.prNumber) return;
+    setMergeLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/ai-automation/merge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prNumber: pr.prNumber, repo: pr.repo }),
+      });
+      const json: MergeResult = await res.json();
+      setMergeResult(json);
+    } catch (e) {
+      setMergeResult({ error: e instanceof Error ? e.message : 'Merge request failed' });
+    } finally {
+      setMergeLoading(false);
+    }
+  }, [pr?.prNumber, pr?.repo]);
+
   const stageIndex = STAGE_ORDER.indexOf(stage);
   const progressPct = stage === 'idle' ? 0 : Math.round(((stageIndex + 1) / STAGE_ORDER.length) * 100);
 
@@ -186,13 +254,25 @@ export const AIAutomationPage: React.FC = () => {
               {llmEnabled ? `LLM: ${resp?.llm?.provider}` : 'LLM: rules only'}
             </span>
             <span
-              className={`normal-case font-semibold text-[10px] px-2 py-0.5 rounded-full border ${githubConfigured
+              className={`normal-case font-semibold text-[10px] px-2 py-0.5 rounded-full border ${githubConfigured && resp?.github?.repo
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900'
                   : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900'
                 }`}
             >
-              {githubConfigured ? 'GitHub: connected' : 'GitHub: not connected'}
+              {!githubConfigured
+                ? 'GitHub: not connected'
+                : resp?.github?.repo
+                  ? `GitHub: ${resp.github.repo}`
+                  : 'GitHub: repo not identified'}
             </span>
+            {githubConfigured && resp?.github?.matchedBy && (
+              <span
+                className="normal-case font-medium text-[10px] px-2 py-0.5 rounded-full border bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
+                title="How the scanned URL was matched to a local repo"
+              >
+                matched by: {resp.github.matchedBy}
+              </span>
+            )}
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
             Phase 3 – AI Automation Engine
@@ -289,6 +369,17 @@ export const AIAutomationPage: React.FC = () => {
                       prTitle: pr.prTitle || '',
                       prUrl: pr.prUrl,
                       status: pr.status || 'Open',
+                      repo: pr.repo,
+                      repoMatch: pr.repoMatch,
+                    }}
+                    onMerge={mergePr}
+                    merge={{
+                      loading: mergeLoading,
+                      merged: Boolean(mergeResult?.merged),
+                      reason: mergeResult?.reason,
+                      approvalCount: mergeResult?.approvalCount,
+                      changesRequestedCount: mergeResult?.changesRequestedCount,
+                      error: mergeResult?.error,
                     }}
                   />
                 ) : (
@@ -354,6 +445,14 @@ export const AIAutomationPage: React.FC = () => {
             </div>
           </main>
         </>
+      )}
+
+      {/* Paste-an-issue analyzer — independent of whatever the "latest scan"
+          happens to be right now, so it stays available even in the empty state. */}
+      {!error && (
+        <div className="max-w-7xl mx-auto mt-2">
+          <PasteIssueAnalyzer />
+        </div>
       )}
     </div>
   );

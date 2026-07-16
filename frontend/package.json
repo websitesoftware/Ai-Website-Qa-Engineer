@@ -12,6 +12,7 @@
     "@phosphor-icons/react": "^2.1.10",
     "docx": "^9.0.2",
     "framer-motion": "^12.42.2",
+    "html2canvas-pro": "^2.2.4",
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.4",
     "jszip": "^3.10.1",

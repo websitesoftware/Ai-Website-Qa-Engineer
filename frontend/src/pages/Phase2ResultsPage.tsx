@@ -42,22 +42,22 @@ const DownloadMenu: React.FC<{ test: BackendTest }> = ({ test }) => {
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 mt-2 w-44 bg-white border border-slate-200 rounded-lg shadow-lg z-20 overflow-hidden">
+          <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg z-20 overflow-hidden">
             <button
               onClick={() => handle(() => exportReportPDF(test), 'PDF')}
-              className="w-full flex items-center gap-2 px-3.5 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+              className="w-full flex items-center gap-2 px-3.5 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
             >
               <FilePdf className="w-4 h-4 text-red-500" /> PDF
             </button>
             <button
               onClick={() => handle(() => exportReportCSV(test), 'CSV')}
-              className="w-full flex items-center gap-2 px-3.5 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-t border-slate-100"
+              className="w-full flex items-center gap-2 px-3.5 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors border-t border-slate-100 dark:border-slate-800"
             >
               <FileCsv className="w-4 h-4 text-emerald-600" /> CSV
             </button>
             <button
               onClick={() => handle(() => exportReportDocx(test), 'Word')}
-              className="w-full flex items-center gap-2 px-3.5 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-t border-slate-100"
+              className="w-full flex items-center gap-2 px-3.5 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors border-t border-slate-100 dark:border-slate-800"
             >
               <FileDoc className="w-4 h-4 text-blue-600" /> Word (.docx)
             </button>
@@ -85,12 +85,12 @@ export const Phase2ResultsPage: React.FC = () => {
 
   return (
     <div className="space-y-6 w-full max-w-[1600px] mx-auto px-4 py-2 animate-fade-in">
-      <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-5">
+      <div className="flex items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-5">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
             <Sparkle className="text-indigo-600 w-7 h-7" /> Intelligent QA (Phase 2)
           </h2>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
             Accessibility, SEO, visual regression, cross-browser, and performance benchmark results across your scans.
           </p>
         </div>
@@ -114,17 +114,17 @@ export const Phase2ResultsPage: React.FC = () => {
         />
       ) : (
         <div
-          className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col lg:flex-row"
+          className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col lg:flex-row"
           style={{ height: '75vh' }}
         >
           {/* Left list */}
-          <section className="w-full lg:w-4/12 border-r border-slate-200 overflow-y-auto bg-slate-50/40 min-w-[300px]">
-            <div className="px-5 py-4 bg-white border-b border-slate-200 sticky top-0 z-10">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+          <section className="w-full lg:w-4/12 border-r border-slate-200 dark:border-slate-700 overflow-y-auto bg-slate-50/40 dark:bg-slate-900/50 min-w-[300px]">
+            <div className="px-5 py-4 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                 {phase2Tests.length} scan{phase2Tests.length === 1 ? '' : 's'} with Phase 2 data
               </span>
             </div>
-            <div className="divide-y divide-slate-100 bg-white">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-800">
               {phase2Tests.map((t) => {
                 const isSelected = activeTest?.id === t.id;
                 const modules = ranModules(t);
@@ -132,18 +132,18 @@ export const Phase2ResultsPage: React.FC = () => {
                   <div
                     key={t.id}
                     onClick={() => setSelectedId(t.id)}
-                    className={`p-4 cursor-pointer transition-colors ${isSelected ? 'bg-indigo-50/50 border-l-4 border-indigo-500' : 'hover:bg-slate-50 border-l-4 border-transparent'
+                    className={`p-4 cursor-pointer transition-colors ${isSelected ? 'bg-indigo-50/50 dark:bg-indigo-950/30 border-l-4 border-indigo-500' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 border-l-4 border-transparent'
                       }`}
                   >
-                    <p className="text-sm font-semibold text-slate-800 truncate">{t.url}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">{timeAgo(t.completedAt || t.createdAt)}</p>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{t.url}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{timeAgo(t.completedAt || t.createdAt)}</p>
                     <div className="flex flex-wrap gap-1 mt-2">
                       {modules.map((m) => {
                         const meta = PHASE2_MODULES.find((p) => p.id === m);
                         return (
                           <span
                             key={m}
-                            className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100"
+                            className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900"
                           >
                             {meta?.label || m}
                           </span>
@@ -151,7 +151,7 @@ export const Phase2ResultsPage: React.FC = () => {
                       })}
                     </div>
                     {(t.status === 'queued' || t.status === 'running') && (
-                      <span className="inline-block mt-2 text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded">
+                      <span className="inline-block mt-2 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900 px-1.5 py-0.5 rounded">
                         Scan in progress — {t.progress}%
                       </span>
                     )}
@@ -165,15 +165,15 @@ export const Phase2ResultsPage: React.FC = () => {
           <section className="hidden lg:block lg:w-8/12 overflow-y-auto p-6">
             {activeTest ? (
               activeTest.status === 'queued' || activeTest.status === 'running' ? (
-                <div className="bg-indigo-50/60 border border-indigo-100 rounded-xl p-6 text-center">
+                <div className="bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900 rounded-xl p-6 text-center">
                   <i className="ph ph-spinner-gap animate-spin text-3xl text-indigo-500 block mb-3"></i>
-                  <p className="font-semibold text-indigo-700">Scan in progress — {activeTest.progress}% complete</p>
+                  <p className="font-semibold text-indigo-700 dark:text-indigo-400">Scan in progress — {activeTest.progress}% complete</p>
                 </div>
               ) : (
                 <Phase2ResultsPanel test={activeTest} />
               )
             ) : (
-              <div className="h-full w-full flex items-center justify-center text-slate-400 text-sm font-medium">
+              <div className="h-full w-full flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm font-medium">
                 Select a scan from the list to view its Phase 2 results.
               </div>
             )}

@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* ThemeContext toggles a .dark class on <html> manually (not tied to OS
+   preference), so Tailwind's dark: variant must match that class instead of
+   its v4 default of @media (prefers-color-scheme: dark) — otherwise every
+   dark: utility across the app silently ignores the in-app theme toggle. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* =====================================================
    Theme Variables
 ===================================================== */

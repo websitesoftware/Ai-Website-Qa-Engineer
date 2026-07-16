@@ -11,10 +11,10 @@ import { useToast } from '../../context/ToastContext';
 import { Phase2ResultsPanel } from './Phase2ResultsPanel';
 
 const severityStyles: Record<string, { dot: string; badge: string }> = {
-  critical: { dot: 'bg-red-500', badge: 'bg-red-50 text-red-600 border-red-100' },
-  high: { dot: 'bg-orange-500', badge: 'bg-orange-50 text-orange-600 border-orange-100' },
-  medium: { dot: 'bg-amber-500', badge: 'bg-amber-50 text-amber-600 border-amber-100' },
-  low: { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-600 border-slate-200' },
+  critical: { dot: 'bg-red-500', badge: 'bg-red-50 text-red-600 border-red-100 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900' },
+  high: { dot: 'bg-orange-500', badge: 'bg-orange-50 text-orange-600 border-orange-100 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-900' },
+  medium: { dot: 'bg-amber-500', badge: 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900' },
+  low: { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700' },
 };
 
 const stageLabels: Record<string, string> = {
@@ -73,7 +73,7 @@ export const ReportDetailModal: React.FC<{ testId: string | null; onClose: () =>
           onClick={onClose}
         >
           <motion.div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[88vh] overflow-hidden flex flex-col"
+            className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[88vh] overflow-hidden flex flex-col"
             initial={{ opacity: 0, y: 24, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.98 }}
@@ -81,23 +81,23 @@ export const ReportDetailModal: React.FC<{ testId: string | null; onClose: () =>
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/60 shrink-0">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/60 dark:bg-slate-900/50 shrink-0">
               <div className="min-w-0">
-                <h3 className="text-lg font-bold text-slate-900 truncate">{test?.name || 'Loading report...'}</h3>
-                {test && <p className="text-xs text-slate-500 mt-0.5 truncate">{test.url}</p>}
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate">{test?.name || 'Loading report...'}</h3>
+                {test && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{test.url}</p>}
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {test && (test.status === 'passed' || test.status === 'failed' || test.status === 'error') && (
                   <button
                     onClick={handleRerun}
-                    className="text-xs font-semibold text-indigo-600 hover:bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100 transition-colors flex items-center gap-1.5"
+                    className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 px-3 py-1.5 rounded-lg border border-indigo-100 dark:border-indigo-900 transition-colors flex items-center gap-1.5"
                   >
                     <i className="ph ph-arrow-clockwise"></i> Re-run
                   </button>
                 )}
                 <button
                   onClick={onClose}
-                  className="text-slate-400 hover:text-slate-600 transition-colors w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100"
+                  className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
                 >
                   <i className="ph ph-x text-xl"></i>
                 </button>
@@ -115,7 +115,7 @@ export const ReportDetailModal: React.FC<{ testId: string | null; onClose: () =>
               )}
 
               {error && !loading && !test && (
-                <div className="text-center py-10 text-red-500 text-sm">
+                <div className="text-center py-10 text-red-500 dark:text-red-400 text-sm">
                   <i className="ph ph-warning-circle text-3xl block mb-2"></i>
                   {error}
                 </div>
@@ -125,11 +125,11 @@ export const ReportDetailModal: React.FC<{ testId: string | null; onClose: () =>
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="bg-indigo-50/60 border border-indigo-100 rounded-xl p-6 text-center"
+                  className="bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900 rounded-xl p-6 text-center"
                 >
-                  <i className="ph ph-spinner-gap animate-spin text-3xl text-indigo-500 block mb-3"></i>
-                  <p className="font-semibold text-indigo-700">{stageLabels[test.currentStage || ''] || 'Starting scan...'}</p>
-                  <div className="w-full max-w-sm mx-auto bg-white rounded-full h-2 mt-4 overflow-hidden border border-indigo-100">
+                  <i className="ph ph-spinner-gap animate-spin text-3xl text-indigo-500 dark:text-indigo-400 block mb-3"></i>
+                  <p className="font-semibold text-indigo-700 dark:text-indigo-400">{stageLabels[test.currentStage || ''] || 'Starting scan...'}</p>
+                  <div className="w-full max-w-sm mx-auto bg-white dark:bg-slate-800 rounded-full h-2 mt-4 overflow-hidden border border-indigo-100 dark:border-indigo-900">
                     <motion.div
                       className="h-full bg-indigo-500 rounded-full"
                       initial={{ width: 0 }}
@@ -137,18 +137,18 @@ export const ReportDetailModal: React.FC<{ testId: string | null; onClose: () =>
                       transition={{ ease: 'easeOut', duration: 0.6 }}
                     />
                   </div>
-                  <p className="text-xs text-indigo-400 mt-2">{test.progress}% complete — updates live</p>
+                  <p className="text-xs text-indigo-400 dark:text-indigo-500 mt-2">{test.progress}% complete — updates live</p>
                 </motion.div>
               )}
 
               {test && test.score !== null && (
-                <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-6 items-center bg-white border border-slate-200 rounded-xl p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-6 items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6">
                   <ScoreGauge score={test.score} size={110} label="Overall" />
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full">
                     {(['performance', 'accessibility', 'seo', 'bestPractices'] as const).map((key) => (
                       <div key={key} className="text-center">
                         <ScoreGauge score={test.scores[key]} size={64} strokeWidth={6} />
-                        <p className="text-[11px] font-medium text-slate-500 mt-1 capitalize">
+                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-1 capitalize">
                           {key === 'bestPractices' ? 'Best Practices' : key}
                         </p>
                       </div>
@@ -159,16 +159,16 @@ export const ReportDetailModal: React.FC<{ testId: string | null; onClose: () =>
 
               {test && test.screenshots?.length > 0 && (
                 <div>
-                  <h4 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
-                    <i className="ph ph-devices text-indigo-500"></i> Responsive Screenshots
+                  <h4 className="font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+                    <i className="ph ph-devices text-indigo-500 dark:text-indigo-400"></i> Responsive Screenshots
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {test.screenshots.map((s) => (
-                      <div key={s.viewport} className="border border-slate-200 rounded-lg overflow-hidden bg-slate-50">
-                        <div className="px-3 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 bg-white capitalize flex items-center justify-between">
+                      <div key={s.viewport} className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-900/50">
+                        <div className="px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 capitalize flex items-center justify-between">
                           {s.viewport}
                           {s.width && (
-                            <span className="text-slate-400 font-normal">
+                            <span className="text-slate-400 dark:text-slate-500 font-normal">
                               {s.width}×{s.height}
                             </span>
                           )}
@@ -181,7 +181,7 @@ export const ReportDetailModal: React.FC<{ testId: string | null; onClose: () =>
                             className="w-full h-40 object-cover object-top"
                           />
                         ) : (
-                          <div className="h-40 flex items-center justify-center text-xs text-red-400">Capture failed</div>
+                          <div className="h-40 flex items-center justify-center text-xs text-red-400 dark:text-red-500">Capture failed</div>
                         )}
                       </div>
                     ))}
@@ -194,8 +194,8 @@ export const ReportDetailModal: React.FC<{ testId: string | null; onClose: () =>
 
               {test && test.issues?.length > 0 && (
                 <div>
-                  <h4 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
-                    <i className="ph ph-bug text-red-500"></i> Issues ({test.issues.filter((i) => !i.resolved).length} open)
+                  <h4 className="font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+                    <i className="ph ph-bug text-red-500 dark:text-red-400"></i> Issues ({test.issues.filter((i) => !i.resolved).length} open)
                   </h4>
                   <div className="space-y-2">
                     {test.issues.map((issue, i) => {
@@ -206,7 +206,7 @@ export const ReportDetailModal: React.FC<{ testId: string | null; onClose: () =>
                           initial={{ opacity: 0, y: 8 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: Math.min(i * 0.03, 0.3) }}
-                          className={`border rounded-lg p-3 flex items-start gap-3 ${issue.resolved ? 'bg-slate-50 border-slate-100 opacity-60' : 'bg-white border-slate-200'
+                          className={`border rounded-lg p-3 flex items-start gap-3 ${issue.resolved ? 'bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800 opacity-60' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
                             }`}
                         >
                           <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${styles.dot}`}></span>
@@ -215,17 +215,17 @@ export const ReportDetailModal: React.FC<{ testId: string | null; onClose: () =>
                               <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded border ${styles.badge}`}>
                                 {issue.severity}
                               </span>
-                              <span className="text-xs text-slate-400">{issue.category}</span>
+                              <span className="text-xs text-slate-400 dark:text-slate-500">{issue.category}</span>
                             </div>
-                            <p className={`text-sm font-medium text-slate-800 mt-1 ${issue.resolved ? 'line-through' : ''}`}>
+                            <p className={`text-sm font-medium text-slate-800 dark:text-slate-200 mt-1 ${issue.resolved ? 'line-through' : ''}`}>
                               {issue.title}
                             </p>
-                            {issue.suggestion && <p className="text-xs text-slate-500 mt-1">{issue.suggestion}</p>}
+                            {issue.suggestion && <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{issue.suggestion}</p>}
                           </div>
                           <button
                             onClick={() => toggleIssue(issue.id, !issue.resolved)}
                             disabled={resolvingId === issue.id}
-                            className={`text-xs font-semibold px-2.5 py-1 rounded-lg shrink-0 transition-colors ${issue.resolved ? 'text-slate-500 hover:bg-slate-100' : 'text-emerald-600 hover:bg-emerald-50'
+                            className={`text-xs font-semibold px-2.5 py-1 rounded-lg shrink-0 transition-colors ${issue.resolved ? 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800' : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
                               }`}
                           >
                             {resolvingId === issue.id ? (
@@ -244,21 +244,21 @@ export const ReportDetailModal: React.FC<{ testId: string | null; onClose: () =>
               )}
 
               {test && (test.status === 'passed' || test.status === 'failed') && test.issues?.length === 0 && (
-                <div className="text-center py-8 text-emerald-600">
+                <div className="text-center py-8 text-emerald-600 dark:text-emerald-400">
                   <i className="ph ph-check-circle text-3xl block mb-2"></i>
                   No issues found — clean scan!
                 </div>
               )}
 
               {test && test.status === 'error' && (
-                <div className="text-center py-8 text-red-500 text-sm">
+                <div className="text-center py-8 text-red-500 dark:text-red-400 text-sm">
                   <i className="ph ph-x-circle text-3xl block mb-2"></i>
                   Scan failed: {test.error}
                 </div>
               )}
 
               {test && (
-                <p className="text-xs text-slate-400 text-center pt-2 border-t border-slate-100">
+                <p className="text-xs text-slate-400 dark:text-slate-500 text-center pt-2 border-t border-slate-100 dark:border-slate-800">
                   Scanned {test.pagesScanned} page{test.pagesScanned === 1 ? '' : 's'} · Started {timeAgo(test.startedAt)} ·{' '}
                   {test.completedAt ? `Completed ${formatDate(test.completedAt)}` : 'In progress'}
                 </p>

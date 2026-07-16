@@ -52,12 +52,12 @@ export const ReportsPage: React.FC = () => {
     <div className="space-y-6 animate-fade-in w-full">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Reports & Analytics</h2>
-          <p className="text-sm text-slate-500 mt-1">Live QA scores, issue breakdown, and completed scan history — all from real scans.</p>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Reports & Analytics</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Live QA scores, issue breakdown, and completed scan history — all from real scans.</p>
         </div>
         <button
           onClick={exportCsv}
-          className="border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors flex items-center gap-2"
+          className="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors flex items-center gap-2"
         >
           <i className="ph ph-download-simple"></i> Export CSV
         </button>

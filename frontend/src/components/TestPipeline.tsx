@@ -21,7 +21,7 @@ export const TestPipeline: React.FC<{ test?: MinimalTest | null }> = ({ test }) 
 
   if (!test) {
     return (
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center h-full text-center text-slate-400 py-12">
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col items-center justify-center h-full text-center text-slate-400 dark:text-slate-500 py-12">
         <i className="ph ph-flask text-3xl mb-2"></i>
         <p className="text-sm">Run your first test to see live pipeline progress here.</p>
       </div>
@@ -31,21 +31,21 @@ export const TestPipeline: React.FC<{ test?: MinimalTest | null }> = ({ test }) 
   const currentStageIndex = STAGE_ORDER.indexOf(test.currentStage || '');
 
   return (
-    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full">
+    <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between h-full">
       <div>
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
           <div>
-            <h3 className="font-bold text-slate-900">Latest Test Pipeline</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Automated crawl and system verification run metrics</p>
+            <h3 className="font-bold text-slate-900 dark:text-slate-100">Latest Test Pipeline</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Automated crawl and system verification run metrics</p>
           </div>
           <span
             className={`font-medium text-xs px-2.5 py-1 rounded-full border ${test.status === 'passed'
-                ? 'text-emerald-700 bg-emerald-50 border-emerald-100'
+                ? 'text-emerald-700 bg-emerald-50 border-emerald-100 dark:text-emerald-400 dark:bg-emerald-950/40 dark:border-emerald-900'
                 : test.status === 'failed'
-                  ? 'text-red-700 bg-red-50 border-red-100'
+                  ? 'text-red-700 bg-red-50 border-red-100 dark:text-red-400 dark:bg-red-950/40 dark:border-red-900'
                   : test.status === 'error'
-                    ? 'text-slate-600 bg-slate-100 border-slate-200'
-                    : 'text-blue-700 bg-blue-50 border-blue-100'
+                    ? 'text-slate-600 bg-slate-100 border-slate-200 dark:text-slate-400 dark:bg-slate-800 dark:border-slate-700'
+                    : 'text-blue-700 bg-blue-50 border-blue-100 dark:text-blue-400 dark:bg-blue-950/40 dark:border-blue-900'
               }`}
           >
             {test.status === 'passed'
@@ -58,8 +58,8 @@ export const TestPipeline: React.FC<{ test?: MinimalTest | null }> = ({ test }) 
           </span>
         </div>
 
-        <div className="flex items-center gap-2 font-semibold text-slate-900 mb-8 text-sm">
-          <i className="ph ph-globe text-[#6366F1] text-lg"></i>
+        <div className="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-100 mb-8 text-sm">
+          <i className="ph ph-globe text-[#6366F1] dark:text-indigo-400 text-lg"></i>
           <span className="truncate">{test.url}</span>
         </div>
 
@@ -77,10 +77,10 @@ export const TestPipeline: React.FC<{ test?: MinimalTest | null }> = ({ test }) 
                     animate={{ scale: active ? [1, 1.12, 1] : 1 }}
                     transition={{ duration: 1.2, repeat: active ? Infinity : 0 }}
                     className={`w-9 h-9 rounded-full border flex items-center justify-center text-sm font-bold shadow-sm ${completed
-                        ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                        ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900'
                         : active
-                          ? 'bg-indigo-50 text-indigo-500 border-indigo-300'
-                          : 'bg-slate-50 text-slate-400 border-slate-200'
+                          ? 'bg-indigo-50 text-indigo-500 border-indigo-300 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800'
+                          : 'bg-slate-50 text-slate-400 border-slate-200 dark:bg-slate-900/50 dark:text-slate-500 dark:border-slate-700'
                       }`}
                   >
                     {completed ? (
@@ -91,11 +91,11 @@ export const TestPipeline: React.FC<{ test?: MinimalTest | null }> = ({ test }) 
                       index + 1
                     )}
                   </motion.div>
-                  <span className="text-xs font-medium text-slate-600 mt-2">{step.label}</span>
+                  <span className="text-xs font-medium text-slate-600 dark:text-slate-400 mt-2">{step.label}</span>
                 </div>
                 {index < STEP_LABELS.length - 1 && (
                   <div
-                    className={`h-[2px] flex-1 -mt-5 min-w-[30px] transition-colors duration-500 ${completed ? 'bg-emerald-200' : 'bg-slate-200'
+                    className={`h-[2px] flex-1 -mt-5 min-w-[30px] transition-colors duration-500 ${completed ? 'bg-emerald-200 dark:bg-emerald-800' : 'bg-slate-200 dark:bg-slate-700'
                       }`}
                   />
                 )}
@@ -105,10 +105,10 @@ export const TestPipeline: React.FC<{ test?: MinimalTest | null }> = ({ test }) 
         </div>
       </div>
 
-      <div className="pt-6 border-t border-slate-100 mt-8 flex justify-end">
+      <div className="pt-6 border-t border-slate-100 dark:border-slate-800 mt-8 flex justify-end">
         <button
           onClick={() => openReport(test.id)}
-          className="border border-[#6366F1] text-[#6366F1] hover:bg-indigo-50/50 font-medium text-sm px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+          className="border border-[#6366F1] text-[#6366F1] dark:border-indigo-500 dark:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/40 font-medium text-sm px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
         >
           View Full Report
           <i className="ph ph-arrow-right"></i>

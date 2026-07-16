@@ -40,7 +40,7 @@ export default function DashboardPage() {
 
       default:
         return (
-          <div className="p-8 bg-white rounded-xl border border-slate-200 text-slate-400 text-center animate-fade-in">
+          <div className="p-8 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 text-center animate-fade-in">
             <i className="ph ph-hourglass text-3xl mb-2 block"></i>
             {activeTab} content is coming soon!
           </div>
