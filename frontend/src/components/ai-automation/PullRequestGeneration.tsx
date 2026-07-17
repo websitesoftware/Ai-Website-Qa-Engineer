@@ -24,6 +24,7 @@ interface PrProps {
     status: string;
     repo?: string;
     repoMatch?: RepoMatch;
+    filePath?: string | null;
   } | null;
   merge?: MergeState;
   onMerge?: () => void;
@@ -87,6 +88,10 @@ export const PullRequestGeneration: React.FC<PrProps> = ({ data, merge, onMerge 
         <div>
           <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 block">Automated Commit Header</span>
           <div className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{data.prTitle}</div>
+        </div>
+
+        <div className="text-xs font-semibold rounded-lg px-3 py-2 border bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900">
+          ✅ Patches {data.filePath || 'a real source file'} directly — a real code change, not a report.
         </div>
 
         <div className="pt-2">

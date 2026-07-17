@@ -19,7 +19,12 @@ const testsRepo = require("../repositories/tests.repository");
 const llm = require("./llm.service");
 const github = require("./github.service");
 const repoRegistry = require("./repoRegistry.service");
+const fileLocator = require("./fileLocator.service");
 const logger = require("../utils/logger");
+
+function normalizeWhitespace(str) {
+  return String(str || "").replace(/\s+/g, " ").trim();
+}
 
 // ---------------------------------------------------------------------------
 // Severity / category weighting
@@ -277,17 +282,124 @@ function deterministicFix(issue) {
   }
 }
 
-async function buildFixes(test, prioritization) {
+/**
+ * Deterministic transform applied directly to a REAL snippet read from the
+ * matched repo's source file. Only returns autoFixable:true for the narrow
+ * set of cases we can safely patch without knowing the app's intent (a
+ * missing attribute/tag) — never for things like "what should this broken
+ * link actually point to" or "what should this script do instead."
+ */
+function buildGroundedPatch(issue, located) {
+  const original = located.original;
+
+  if (issue.category === "accessibility" || /image-alt/i.test(issue.title)) {
+    if (/<img\b/i.test(original) && !/\balt\s*=/i.test(original)) {
+      const patched = original.replace(
+        /<img\b([^>]*?)(\/?)>/i,
+        (_m, attrs, selfClose) =>
+          `<img${attrs} alt="Describe this image's content or purpose"${selfClose ? " /" : ""}>`,
+      );
+      if (patched !== original) return { patched, autoFixable: true };
+    }
+  }
+
+  if (issue.category === "seo") {
+    if (/title/i.test(issue.title) && !/<title>/i.test(original)) {
+      const patched = original.replace(
+        /(<head[^>]*>)/i,
+        `$1\n  <title>Add a clear, unique page title (50-60 characters)</title>`,
+      );
+      if (patched !== original) return { patched, autoFixable: true };
+    }
+    if (
+      /meta description/i.test(issue.title) &&
+      !/name=["']description["']/i.test(original)
+    ) {
+      const patched = original.replace(
+        /(<\/head>)/i,
+        `  <meta name="description" content="A concise, unique summary of this page (120-160 characters)." />\n$1`,
+      );
+      if (patched !== original) return { patched, autoFixable: true };
+    }
+    if (/\bh1\b/i.test(issue.title) && !/<h1[\s>]/i.test(original)) {
+      const patched = original.replace(
+        /(<body[^>]*>)/i,
+        `$1\n  <h1>Page heading — replace with a concise, descriptive title</h1>`,
+      );
+      if (patched !== original) return { patched, autoFixable: true };
+    }
+  }
+
+  return { patched: original, autoFixable: false };
+}
+
+async function buildFixes(test, prioritization, repoMatch) {
   if (!prioritization) return null;
   const issue = (test.issues || []).find(
     (i) => i.id === prioritization.issueId,
   );
   if (!issue) return null;
 
+  const located = repoMatch?.path ? fileLocator.locate(repoMatch.path, issue) : null;
+
+  if (located) {
+    const grounded = buildGroundedPatch(issue, located);
+    let patched = grounded.patched;
+    let source = "rules";
+
+    if (llm.isEnabled()) {
+      const json = await llm.completeJSON({
+        system:
+          "You are a senior web QA engineer. You are given the EXACT real snippet " +
+          "from the target repository's source file. Echo it back verbatim as " +
+          '"original", and return a minimal "patched" version that fixes ONLY the ' +
+          "described issue — do not alter unrelated code, formatting, or " +
+          "surrounding markup. Return ONLY JSON with keys \"original\" and \"patched\".",
+        prompt: JSON.stringify({
+          filePath: located.relPath,
+          url: issue.url || test.url,
+          category: issue.category,
+          severity: issue.severity,
+          title: issue.title,
+          description: issue.description,
+          original: located.original,
+        }),
+        maxTokens: 600,
+        temperature: 0.1,
+      });
+      if (
+        json &&
+        typeof json.original === "string" &&
+        typeof json.patched === "string" &&
+        normalizeWhitespace(json.original) === normalizeWhitespace(located.original)
+      ) {
+        patched = json.patched;
+        source = llm.providerName();
+      }
+      // else: grounding check failed (LLM didn't echo the real snippet back
+      // exactly) — discard its output and keep the deterministic patch above
+      // rather than risk applying a fabricated diff to a real file.
+    }
+
+    return {
+      original: located.original,
+      patched,
+      filePath: located.relPath,
+      fileFullPath: located.absPath,
+      line: located.line,
+      grounded: true,
+      autoFixable: Boolean(grounded.autoFixable && patched !== located.original),
+      source,
+    };
+  }
+
+  // No confident match in the matched repo (or no repo matched at all) —
+  // keep the best-effort guess, but say so honestly rather than presenting
+  // it as a verified fix.
   const fallback = deterministicFix(issue);
 
   if (!llm.isEnabled()) {
-    return { ...fallback, source: "rules" };
+    return { ...fallback, grounded: false, autoFixable: false, source: "rules" };
   }
 
   const json = await llm.completeJSON({
@@ -317,10 +429,12 @@ async function buildFixes(test, prioritization) {
     return {
       original: json.original,
       patched: json.patched,
+      grounded: false,
+      autoFixable: false,
       source: llm.providerName(),
     };
   }
-  return { ...fallback, source: "rules" };
+  return { ...fallback, grounded: false, autoFixable: false, source: "rules" };
 }
 
 // ---------------------------------------------------------------------------
@@ -352,50 +466,19 @@ function buildCicdSummary(test) {
 }
 
 // ---------------------------------------------------------------------------
-// PR body / remediation report (used for the real GitHub PR)
+// PR description (metadata on the PR itself — never a file committed into
+// the repo). Only ever called once we already have a real, grounded,
+// auto-fixable patch — so it always has a genuine diff, never a guess.
 // ---------------------------------------------------------------------------
-function buildReportMarkdown(test, automation) {
-  const p = automation.prioritization;
+function buildPrBody(prioritization, fixes) {
   const lines = [];
-  lines.push(`# QA Remediation Report`);
+  lines.push(`## ${prioritization.title} — \`${fixes.filePath}\``);
+  lines.push(`**Severity:** ${prioritization.severity}  |  **Priority score:** ${prioritization.score}/100`);
   lines.push("");
-  lines.push(`**Target:** ${test.url}`);
-  lines.push(`**Scan ID:** ${test.id}`);
-  lines.push(`**Overall score:** ${test.score ?? "n/a"}/100`);
-  lines.push(`**Generated:** ${new Date().toISOString()}`);
-  lines.push("");
-  if (p) {
-    lines.push(`## Top priority: ${p.title}`);
-    lines.push(
-      `- **Severity:** ${p.severity}  |  **Priority score:** ${p.score}/100`,
-    );
-    lines.push(`- **Impact:** ${p.impactSummary}`);
-    if (automation.rca) {
-      lines.push(`- **Observed location:** \`${automation.rca.culpritFile}\``);
-      lines.push(`- **Analysis:** ${automation.rca.explanation}`);
-    }
-    if (automation.fixes) {
-      lines.push("");
-      lines.push("### Suggested fix");
-      lines.push("```diff");
-      lines.push("- " + automation.fixes.original.split("\n").join("\n- "));
-      lines.push("+ " + automation.fixes.patched.split("\n").join("\n+ "));
-      lines.push("```");
-    }
-    lines.push("");
-    lines.push("## All prioritized issues");
-    lines.push("| # | Severity | Category | Score | Issue | URL |");
-    lines.push("|---|----------|----------|-------|-------|-----|");
-    p.ranked.forEach((r, idx) => {
-      lines.push(
-        `| ${idx + 1} | ${r.severity} | ${r.category} | ${r.score} | ${String(r.title).replace(/\|/g, "\\|")} | ${r.url || "-"} |`,
-      );
-    });
-  } else {
-    lines.push(
-      `No open issues were found in this scan. Nothing to remediate. ✅`,
-    );
-  }
+  lines.push("```diff");
+  lines.push("- " + fixes.original.split("\n").join("\n- "));
+  lines.push("+ " + fixes.patched.split("\n").join("\n+ "));
+  lines.push("```");
   return lines.join("\n");
 }
 
@@ -499,9 +582,9 @@ async function analyzePastedIssue(pastedText) {
 
   const prioritization = buildPrioritizationForIssue(test, issue);
   const rca = buildRootCause(test, prioritization);
-  const fixes = await buildFixes(test, prioritization);
   const match = repoRegistry.matchRepoForUrl(issue.url);
   const repoMatch = { name: match.name, path: match.path, matchedBy: match.matchedBy };
+  const fixes = await buildFixes(test, prioritization, match);
 
   const result = {
     ready: true,
@@ -534,25 +617,42 @@ async function analyzePastedIssue(pastedText) {
     return result;
   }
 
+  const canPatchRealFile = Boolean(fixes?.grounded && fixes?.autoFixable && fixes?.filePath);
+  if (!canPatchRealFile) {
+    result.pullRequest = {
+      configured: true,
+      noCodeChange: true,
+      error:
+        "No auto-fixable code change was found for this issue in the matched repo — " +
+        "nothing real to open a PR for.",
+      repoMatch,
+    };
+    return result;
+  }
+
   const short = issue.id.replace(/[^a-z0-9]/gi, "").slice(0, 8) || "issue";
   const branchName = `ai-qa/paste-${short}`;
-  const filePath = `qa-reports/paste-${short}.md`;
   const prTitle = `fix(qa): ${prioritization.title} (QA-${short.toUpperCase()})`;
-  const markdown = buildReportMarkdown(test, { prioritization, rca, fixes });
+  const prBody = buildPrBody(prioritization, fixes);
 
   try {
-    const pr = await github.openRemediationPR({
+    const pr = await github.applyRemediation({
       branchName,
-      filePath,
-      fileContent: markdown,
       prTitle,
-      prBody: markdown,
+      prBody,
       repo: match.githubRepo,
+      filePatch: { path: fixes.filePath, original: fixes.original, patched: fixes.patched },
     });
     logger.success(
       "aiAutomation",
-      `Opened PR ${pr.prUrl} from pasted issue (repo: ${match.githubRepo}, matched by ${match.matchedBy})`,
+      `Opened PR ${pr.prUrl} from pasted issue (repo: ${match.githubRepo}, matched by ${match.matchedBy}, patched ${fixes.filePath})`,
     );
+    // Only persist appliedFix for real, previously-scanned issues (source ===
+    // "linked") — the free-text "pasted" fallback has a synthetic test.id
+    // (null) with nothing in testsRepo to attach it to.
+    if (source === "linked") {
+      await recordAppliedFix(test, issue.id, { fixes, pr, repo: match.githubRepo });
+    }
     result.pullRequest = { configured: true, ...pr, repo: match.githubRepo, repoMatch };
   } catch (err) {
     logger.error("aiAutomation", `PR creation from pasted issue failed: ${err.message}`);
@@ -594,9 +694,9 @@ async function runAutomation(testId) {
 
   const prioritization = buildPrioritization(test);
   const rca = buildRootCause(test, prioritization);
-  const fixes = await buildFixes(test, prioritization);
-  const cicd = buildCicdSummary(test);
   const repoMatch = repoRegistry.matchRepoForUrl(test.url);
+  const fixes = await buildFixes(test, prioritization, repoMatch);
+  const cicd = buildCicdSummary(test);
 
   return {
     ready: true,
@@ -641,8 +741,10 @@ function describeRepoMatchFailure(match, url) {
 }
 
 /**
- * Open a real PR on the configured GitHub repo containing the remediation
- * report for a test. Returns { configured:false } if GitHub isn't set up.
+ * Open a real PR on the configured GitHub repo that patches the actual
+ * source file for the top-priority issue. Returns { configured:false } if
+ * GitHub isn't set up, and refuses to open a PR at all — rather than a
+ * hollow "report" one — when no auto-fixable code change was found.
  */
 async function createPullRequest(testId) {
   if (!github.isConfigured()) {
@@ -664,32 +766,75 @@ async function createPullRequest(testId) {
   }
 
   const automation = await runAutomation(test.id);
+  const fixes = automation.fixes;
+  const canPatchRealFile = Boolean(
+    automation.prioritization && fixes?.grounded && fixes?.autoFixable && fixes?.filePath,
+  );
+  if (!canPatchRealFile) {
+    return {
+      configured: true,
+      noCodeChange: true,
+      error:
+        "No auto-fixable code change was found for the top-priority issue in the matched " +
+        "repo — nothing real to open a PR for.",
+      repoMatch,
+    };
+  }
+
   const short = test.id.slice(0, 8);
   const branchName = `ai-qa/fix-${short}`;
-  const filePath = `qa-reports/${short}.md`;
-  const prTitle = automation.prioritization
-    ? `fix(qa): ${automation.prioritization.title} (QA-${short.toUpperCase()})`
-    : `chore(qa): QA report for ${short}`;
-  const markdown = buildReportMarkdown(test, automation);
+  const prTitle = `fix(qa): ${automation.prioritization.title} (QA-${short.toUpperCase()})`;
+  const prBody = buildPrBody(automation.prioritization, fixes);
 
   try {
-    const pr = await github.openRemediationPR({
+    const pr = await github.applyRemediation({
       branchName,
-      filePath,
-      fileContent: markdown,
       prTitle,
-      prBody: markdown,
+      prBody,
       repo: match.githubRepo,
+      filePatch: { path: fixes.filePath, original: fixes.original, patched: fixes.patched },
     });
     logger.success(
       "aiAutomation",
-      `Opened PR ${pr.prUrl} (repo: ${match.githubRepo}, matched by ${match.matchedBy})`,
+      `Opened PR ${pr.prUrl} (repo: ${match.githubRepo}, matched by ${match.matchedBy}, patched ${fixes.filePath})`,
     );
+    await recordAppliedFix(test, automation.prioritization.issueId, {
+      fixes,
+      pr,
+      repo: match.githubRepo,
+    });
     return { configured: true, ...pr, repo: match.githubRepo, repoMatch };
   } catch (err) {
     logger.error("aiAutomation", `PR creation failed: ${err.message}`);
     return { configured: true, error: err.message, repoMatch };
   }
+}
+
+/**
+ * Persist the real patch that was actually applied in a PR onto the issue
+ * record, so the UI can show the real fixed code instead of a generic
+ * template, and so mergePullRequest() can later find this issue again by
+ * prNumber/repo to auto-mark it resolved on a real merge. Only ever called
+ * after a successful github.applyRemediation() — i.e. a real file patch.
+ */
+async function recordAppliedFix(test, issueId, { fixes, pr, repo }) {
+  if (!test?.id || !fixes) return;
+  const issue = (test.issues || []).find((i) => i.id === issueId);
+  if (!issue) return;
+  issue.appliedFix = {
+    filePath: fixes.filePath,
+    original: fixes.original,
+    patched: fixes.patched,
+    grounded: true,
+    autoFixable: true,
+    repo,
+    prNumber: pr.prNumber,
+    prUrl: pr.prUrl,
+    branchName: pr.branchName,
+    appliedAt: new Date().toISOString(),
+    mergedAt: null,
+  };
+  await testsRepo.update(test.id, { issues: test.issues });
 }
 
 /**
@@ -755,7 +900,34 @@ async function mergePullRequest(prNumber, repo) {
   }
   const result = await github.mergePullRequest(prNumber, repo);
   logger.success("aiAutomation", `Merged PR #${prNumber} (${result.sha})`);
+  if (result.merged) {
+    await markIssueResolvedByMerge(prNumber, repo);
+  }
   return { configured: true, ...result, ...decision };
+}
+
+/**
+ * A merged PR is a real, verifiable signal that a fix landed — so unlike the
+ * manual "Mark As Fixed" toggle, this can safely auto-resolve the issue it
+ * came from. Finds the issue across all tests by the prNumber/repo recorded
+ * in recordAppliedFix() and flips it, keeping the applied diff attached so
+ * the UI can show exactly what fixed it.
+ */
+async function markIssueResolvedByMerge(prNumber, repo) {
+  for (const test of testsRepo.list()) {
+    const issue = (test.issues || []).find(
+      (i) => i.appliedFix?.prNumber === prNumber && i.appliedFix?.repo === repo,
+    );
+    if (!issue) continue;
+    issue.resolved = true;
+    issue.appliedFix.mergedAt = new Date().toISOString();
+    await testsRepo.update(test.id, { issues: test.issues });
+    logger.success(
+      "aiAutomation",
+      `Auto-resolved issue ${issue.id} on merge of PR #${prNumber} (${repo})`,
+    );
+    return;
+  }
 }
 
 module.exports = {

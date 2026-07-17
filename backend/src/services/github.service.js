@@ -102,26 +102,10 @@ function toBase64(str) {
   return Buffer.from(str, "utf-8").toString("base64");
 }
 
-/**
- * Create a branch off the base branch, write a single file, and open a PR.
- * Returns { branchName, prTitle, prUrl, prNumber, status: 'Open' }.
- */
-async function openRemediationPR({
-  branchName,
-  filePath,
-  fileContent,
-  prTitle,
-  prBody,
-  repo: repoOverride,
-}) {
-  const { owner, repo } = repoParts(repoOverride);
-  const base = config.github.baseBranch;
-
-  // 1. Get the base branch's latest commit SHA.
+/** Create a branch off the base branch (ignores "already exists" so re-runs don't crash). */
+async function ensureBranch(owner, repo, branchName, base) {
   const ref = await gh(`/repos/${owner}/${repo}/git/ref/heads/${base}`);
   const baseSha = ref.object.sha;
-
-  // 2. Create the new branch (ignore "already exists" so re-runs don't crash).
   try {
     await gh(`/repos/${owner}/${repo}/git/refs`, {
       method: "POST",
@@ -130,63 +114,95 @@ async function openRemediationPR({
   } catch (err) {
     if (!/already exists/i.test(err.message)) throw err;
   }
+}
 
-  // 3. Create or update the report file on that branch.
-  let existingSha;
-  try {
-    const existing = await gh(
-      `/repos/${owner}/${repo}/contents/${encodeURIComponent(filePath)}?ref=${branchName}`,
-    );
-    existingSha = existing.sha;
-  } catch {
-    /* file doesn't exist yet — fine */
-  }
-
-  await gh(`/repos/${owner}/${repo}/contents/${encodeURIComponent(filePath)}`, {
-    method: "PUT",
-    body: JSON.stringify({
-      message: prTitle,
-      content: toBase64(fileContent),
-      branch: branchName,
-      ...(existingSha ? { sha: existingSha } : {}),
-    }),
-  });
-
-  // 4. Open the PR (reuse the existing one if it's already open).
+/** Open a PR, or return the already-open one for this branch if it exists. */
+async function openOrFindPR(owner, repo, { branchName, base, prTitle, prBody }) {
   try {
     const pr = await gh(`/repos/${owner}/${repo}/pulls`, {
       method: "POST",
-      body: JSON.stringify({
-        title: prTitle,
-        head: branchName,
-        base,
-        body: prBody,
-      }),
+      body: JSON.stringify({ title: prTitle, head: branchName, base, body: prBody }),
     });
-    return {
-      branchName,
-      prTitle,
-      prUrl: pr.html_url,
-      prNumber: pr.number,
-      status: "Open",
-    };
+    return { prUrl: pr.html_url, prNumber: pr.number };
   } catch (err) {
     if (/A pull request already exists/i.test(err.message)) {
       const list = await gh(
         `/repos/${owner}/${repo}/pulls?head=${owner}:${branchName}&state=open`,
       );
-      if (list[0]) {
-        return {
-          branchName,
-          prTitle,
-          prUrl: list[0].html_url,
-          prNumber: list[0].number,
-          status: "Open",
-        };
-      }
+      if (list[0]) return { prUrl: list[0].html_url, prNumber: list[0].number };
     }
     throw err;
   }
+}
+
+/** Thrown when the real file on GitHub no longer contains the snippet we read locally. */
+class FileDriftedError extends Error {
+  constructor(filePath) {
+    super(`FILE_DRIFTED: ${filePath} no longer contains the expected original snippet`);
+    this.code = "FILE_DRIFTED";
+  }
+}
+
+/** Thrown when there is no real code change to open a PR for. */
+class NoCodeChangeError extends Error {
+  constructor() {
+    super("NO_CODE_CHANGE: no real source-file patch to open a PR for");
+    this.code = "NO_CODE_CHANGE";
+  }
+}
+
+/**
+ * Create a branch, patch a real source file on it (only if its current
+ * GitHub content still contains `filePatch.original` verbatim — otherwise
+ * throws FileDriftedError rather than risk corrupting the file), and open
+ * the PR against that actual code change. There is no fallback "just write
+ * a report file" mode — a PR with no real code change is refused
+ * (NoCodeChangeError) rather than opened with nothing but commentary.
+ *
+ * @param {object} args
+ * @param {{path:string, original:string, patched:string}} args.filePatch
+ * @returns {Promise<{branchName, prTitle, prUrl, prNumber, status}>}
+ */
+async function applyRemediation({
+  branchName,
+  prTitle,
+  prBody,
+  repo: repoOverride,
+  filePatch,
+}) {
+  if (!filePatch) throw new NoCodeChangeError();
+
+  const { owner, repo } = repoParts(repoOverride);
+  const base = config.github.baseBranch;
+
+  await ensureBranch(owner, repo, branchName, base);
+
+  const existing = await gh(
+    `/repos/${owner}/${repo}/contents/${encodeURIComponent(filePatch.path)}?ref=${branchName}`,
+  );
+  const currentContent = Buffer.from(existing.content, "base64").toString("utf-8");
+  if (!currentContent.includes(filePatch.original)) {
+    throw new FileDriftedError(filePatch.path);
+  }
+  const updatedContent = currentContent.replace(filePatch.original, filePatch.patched);
+  await gh(`/repos/${owner}/${repo}/contents/${encodeURIComponent(filePatch.path)}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      message: prTitle,
+      content: toBase64(updatedContent),
+      branch: branchName,
+      sha: existing.sha,
+    }),
+  });
+
+  const { prUrl, prNumber } = await openOrFindPR(owner, repo, {
+    branchName,
+    base,
+    prTitle,
+    prBody,
+  });
+
+  return { branchName, prTitle, prUrl, prNumber, status: "Open" };
 }
 
 /** Dispatch a workflow_dispatch run. Requires config.github.workflow. */
@@ -274,7 +290,7 @@ async function mergePullRequest(prNumber, repoOverride) {
 
 module.exports = {
   isConfigured,
-  openRemediationPR,
+  applyRemediation,
   dispatchWorkflow,
   getRun,
   getReviewDecision,

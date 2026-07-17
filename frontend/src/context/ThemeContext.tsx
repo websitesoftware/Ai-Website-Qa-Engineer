@@ -30,7 +30,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY) as Theme | null;
 
+    // Hydration-safe theme restore: localStorage doesn't exist during SSR, so
+    // this can't be a useState lazy initializer — it must run post-mount.
     if (saved) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setThemeState(saved);
     }
   }, []);

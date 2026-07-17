@@ -31,6 +31,12 @@ async function runAccessibilityAudit(browser, url) {
         helpUrl: v.helpUrl,
         nodes: v.nodes.length,
         targets: v.nodes.slice(0, 5).map((n) => n.target.join(" ")),
+        // Real, observed markup for the first few violating nodes — used to
+        // ground automated fixes in the actual source instead of guessing.
+        locators: v.nodes.slice(0, 3).map((n) => ({
+          selector: n.target.join(" "),
+          html: n.html,
+        })),
       })),
       passes: results.passes.length,
       incomplete: results.incomplete.length,

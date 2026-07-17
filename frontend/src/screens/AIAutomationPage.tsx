@@ -33,6 +33,9 @@ interface Fixes {
   original: string;
   patched: string;
   source?: string;
+  filePath?: string | null;
+  grounded?: boolean;
+  autoFixable?: boolean;
 }
 interface Cicd {
   status: 'Passed' | 'Failed' | 'Running' | 'Idle';
@@ -56,6 +59,7 @@ interface PullRequest {
   status?: string;
   error?: string;
   reason?: string;
+  noCodeChange?: boolean;
 }
 interface MergeResult {
   configured?: boolean;
@@ -151,6 +155,8 @@ export const AIAutomationPage: React.FC = () => {
   }, [revealSequence]);
 
   useEffect(() => {
+    // Initial data fetch on mount — intentional, not a derived-state loop.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchAutomation();
     return clearTimers;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -184,6 +190,10 @@ export const AIAutomationPage: React.FC = () => {
 
   usePolling(checkForNewScan, 5000, true);
 
+  // Deliberately narrow deps (only the fields actually used) so this isn't
+  // recreated on every unrelated `resp` change — the compiler's inferred
+  // whole-object dep would defeat that intentionally.
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const createPr = useCallback(async () => {
     if (!resp?.testId) return;
     setPrLoading(true);
@@ -203,6 +213,8 @@ export const AIAutomationPage: React.FC = () => {
     }
   }, [resp?.testId]);
 
+  // Same rationale as createPr above: narrow deps are intentional.
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const mergePr = useCallback(async () => {
     if (!pr?.prNumber) return;
     setMergeLoading(true);
@@ -371,6 +383,7 @@ export const AIAutomationPage: React.FC = () => {
                       status: pr.status || 'Open',
                       repo: pr.repo,
                       repoMatch: pr.repoMatch,
+                      filePath: resp.fixes?.filePath,
                     }}
                     onMerge={mergePr}
                     merge={{
@@ -388,12 +401,19 @@ export const AIAutomationPage: React.FC = () => {
                       <span>🌿</span> Pull Request Generation
                     </h3>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                      Opens a real PR on your connected repo containing the prioritised
-                      remediation report for this scan.
+                      Opens a real PR that patches the actual offending source file in your
+                      connected repo — never a generic report.
                     </p>
-                    {pr?.error && (
+                    {pr?.noCodeChange ? (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
+                        No auto-fixable code change was found for this issue in your repo, so no PR
+                        was opened — opening one with nothing but commentary would be dishonest.
+                        Fix it manually, or re-analyse once you have (see Root Cause Analysis for
+                        the observed location).
+                      </p>
+                    ) : pr?.error ? (
                       <p className="text-xs text-red-600 dark:text-red-400 mb-3">Error: {pr.error}</p>
-                    )}
+                    ) : null}
                     <button
                       onClick={createPr}
                       disabled={prLoading}
@@ -423,6 +443,9 @@ export const AIAutomationPage: React.FC = () => {
                 <SuggestedFixes
                   codeBefore={(showFix && resp.fixes?.original) || ''}
                   codeAfter={(showFix && resp.fixes?.patched) || ''}
+                  filePath={resp.fixes?.filePath}
+                  grounded={resp.fixes?.grounded}
+                  autoFixable={resp.fixes?.autoFixable}
                 />
                 {showFix && resp.fixes?.source && (
                   <p className="-mt-4 mb-6 text-[11px] text-slate-400 dark:text-slate-500 px-1">

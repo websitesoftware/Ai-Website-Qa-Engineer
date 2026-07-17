@@ -51,6 +51,28 @@ async function runLighthouseAudit(url) {
       timeToInteractive: lhr.audits["interactive"]?.numericValue ?? null,
     };
 
+    // Several Core Web Vitals metric audits (numeric value, no element) have
+    // a companion diagnostic audit that DOES name the actual offending
+    // element — cross-referencing them turns "LCP is 12.6s" into a real,
+    // groundable DOM location instead of a page-level number.
+    const ELEMENT_AUDIT_FOR = {
+      "largest-contentful-paint": "largest-contentful-paint-element",
+      "cumulative-layout-shift": "layout-shift-elements",
+    };
+
+    /** Dig a `{selector, snippet}` node out of an audit's (sometimes nested) details.items. */
+    function firstNodeIn(audit) {
+      const items = audit?.details?.items || [];
+      for (const item of items) {
+        if (item?.node) return { node: item.node, url: item.url || null };
+        // "list" of "table" audits (e.g. largest-contentful-paint-element)
+        // nest the real rows one level deeper.
+        const nested = item?.items?.find((i) => i?.node);
+        if (nested) return { node: nested.node, url: nested.url || null };
+      }
+      return null;
+    }
+
     const failingAudits = Object.values(lhr.audits)
       .filter(
         (a) =>
@@ -58,13 +80,25 @@ async function runLighthouseAudit(url) {
       )
       .sort((a, b) => (a.score ?? 1) - (b.score ?? 1))
       .slice(0, 20)
-      .map((a) => ({
-        id: a.id,
-        title: a.title,
-        description: a.description?.replace(/\[.*?\]\(.*?\)/g, "").trim(),
-        score: a.score,
-        displayValue: a.displayValue || null,
-      }));
+      .map((a) => {
+        // Real, observed element detail for the worst-offending item, when
+        // Lighthouse's own audit details include one — used to ground
+        // automated fixes instead of guessing. Not every audit has this.
+        let found = firstNodeIn(a);
+        if (!found && ELEMENT_AUDIT_FOR[a.id]) {
+          found = firstNodeIn(lhr.audits[ELEMENT_AUDIT_FOR[a.id]]);
+        }
+        return {
+          id: a.id,
+          title: a.title,
+          description: a.description?.replace(/\[.*?\]\(.*?\)/g, "").trim(),
+          score: a.score,
+          displayValue: a.displayValue || null,
+          selector: found?.node?.selector || null,
+          snippet: found?.node?.snippet || null,
+          elementUrl: found?.url || null,
+        };
+      });
 
     return { scores, metrics, failingAudits };
   } catch (err) {

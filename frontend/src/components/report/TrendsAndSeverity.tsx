@@ -35,6 +35,33 @@ const generateDynamicTrendData = () => {
   return data;
 };
 
+interface TrendTooltipEntry {
+  value?: string | number;
+  payload?: { name?: string };
+}
+
+// Declared outside the component (not per-render) so Recharts doesn't get a
+// freshly-created component instance on every render.
+const CustomTooltip = ({
+  active,
+  payload,
+  metricLabel,
+}: {
+  active?: boolean;
+  payload?: TrendTooltipEntry[];
+  metricLabel: string;
+}) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-900 dark:bg-slate-950 text-white text-xs font-bold px-3 py-1.5 rounded shadow-md flex items-center gap-1.5 border border-transparent dark:border-slate-700">
+        <span className="w-2 h-2 rounded-full bg-indigo-400"></span>
+        {payload[0].value}% {metricLabel} ({payload[0].payload?.name})
+      </div>
+    );
+  }
+  return null;
+};
+
 export const TrendsAndSeverity: React.FC = () => {
   const { stats } = useQAData();
   const { resolvedTheme } = useTheme();
@@ -53,19 +80,7 @@ export const TrendsAndSeverity: React.FC = () => {
     { key: 'low', label: 'Cosmetic', icon: <CircleDashed />, color: 'text-slate-500 dark:text-slate-400', bar: 'bg-slate-400', count: 39 },
   ];
 
-  // Dynamic Black Box Tooltip Wrapper
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const metricLabel = activeMetric === 'quality' ? 'Quality' : 'Coverage';
-      return (
-        <div className="bg-slate-900 dark:bg-slate-950 text-white text-xs font-bold px-3 py-1.5 rounded shadow-md flex items-center gap-1.5 border border-transparent dark:border-slate-700">
-          <span className="w-2 h-2 rounded-full bg-indigo-400"></span>
-          {payload[0].value}% {metricLabel} ({payload[0].payload.name})
-        </div>
-      );
-    }
-    return null;
-  };
+  const metricLabel = activeMetric === 'quality' ? 'Quality' : 'Coverage';
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -121,7 +136,7 @@ export const TrendsAndSeverity: React.FC = () => {
                 tickLine={false}
                 hide={true}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }} />
+              <Tooltip content={<CustomTooltip metricLabel={metricLabel} />} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }} />
               <Area
                 type="monotone"
                 dataKey={activeMetric} // Dynamic key mapping based on state (quality or coverage)
