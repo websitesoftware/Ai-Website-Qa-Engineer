@@ -3,7 +3,7 @@
 **Target:** http://localhost:3000/
 **Scan ID:** 04694446-2852-4167-bc46-2e5fd01f0f48
 **Overall score:** 0/100
-**Generated:** 2026-07-17T07:11:03.309Z
+**Generated:** 2026-07-17T07:12:03.469Z
 
 ## Top priority: Largest Contentful Paint
 - **Severity:** High  |  **Priority score:** 88/100
