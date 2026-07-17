@@ -1,7 +1,6 @@
-
 'use client';
 import React, { useMemo, useRef, useState } from 'react';
-import { Sparkle, DownloadSimple, FilePdf, FileCsv, FileDoc } from '@phosphor-icons/react';
+import { Sparkle, DownloadSimple, FilePdf, FileCsv, FileDoc, SpinnerGap } from '@phosphor-icons/react';
 import { useQAData } from '../context/QADataContext';
 import { PHASE2_MODULES, BackendTest } from '../lib/types';
 import { timeAgo } from '../lib/format';
@@ -35,29 +34,29 @@ const DownloadMenu: React.FC<{ test: BackendTest }> = ({ test }) => {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-3.5 py-2 rounded-lg transition-colors shadow-sm"
+        className="group flex items-center gap-2 text-xs font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 px-4 py-2.5 rounded-xl transition-all duration-300 shadow-md shadow-indigo-500/20 hover:shadow-lg hover:shadow-indigo-500/30 hover:-translate-y-0.5 active:translate-y-0"
       >
-        <DownloadSimple className="w-4 h-4" /> Download Report
+        <DownloadSimple className="w-4 h-4 transition-transform duration-300 group-hover:translate-y-0.5" /> Download Report
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg z-20 overflow-hidden">
+          <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl shadow-slate-900/10 dark:shadow-black/40 z-20 overflow-hidden animate-scale-in origin-top-right">
             <button
               onClick={() => handle(() => exportReportPDF(test), 'PDF')}
-              className="w-full flex items-center gap-2 px-3.5 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+              className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400 transition-colors"
             >
               <FilePdf className="w-4 h-4 text-red-500" /> PDF
             </button>
             <button
               onClick={() => handle(() => exportReportCSV(test), 'CSV')}
-              className="w-full flex items-center gap-2 px-3.5 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors border-t border-slate-100 dark:border-slate-800"
+              className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors border-t border-slate-100 dark:border-slate-800"
             >
               <FileCsv className="w-4 h-4 text-emerald-600" /> CSV
             </button>
             <button
               onClick={() => handle(() => exportReportDocx(test), 'Word')}
-              className="w-full flex items-center gap-2 px-3.5 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors border-t border-slate-100 dark:border-slate-800"
+              className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:text-blue-600 dark:hover:text-blue-400 transition-colors border-t border-slate-100 dark:border-slate-800"
             >
               <FileDoc className="w-4 h-4 text-blue-600" /> Word (.docx)
             </button>
@@ -86,13 +85,18 @@ export const Phase2ResultsPage: React.FC = () => {
   return (
     <div className="space-y-6 w-full max-w-[1600px] mx-auto px-4 py-2 animate-fade-in">
       <div className="flex items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-5">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
-            <Sparkle className="text-indigo-600 w-7 h-7" /> Intelligent QA (Phase 2)
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Accessibility, SEO, visual regression, cross-browser, and performance benchmark results across your scans.
-          </p>
+        <div className="flex items-center gap-3.5">
+          <div className="relative w-11 h-11 shrink-0 rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 animate-gradient flex items-center justify-center shadow-md shadow-indigo-500/25">
+            <Sparkle className="text-white w-6 h-6" weight="fill" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+              Intelligent QA <span className="text-indigo-500 dark:text-indigo-400">(Phase 2)</span>
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+              Accessibility, SEO, visual regression, cross-browser, and performance benchmark results across your scans.
+            </p>
+          </div>
         </div>
         {canDownload && <DownloadMenu test={activeTest!} />}
       </div>
@@ -114,28 +118,40 @@ export const Phase2ResultsPage: React.FC = () => {
         />
       ) : (
         <div
-          className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col lg:flex-row"
+          className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow duration-500 overflow-hidden flex flex-col lg:flex-row animate-fade-in-up"
           style={{ height: '75vh' }}
         >
           {/* Left list */}
           <section className="w-full lg:w-4/12 border-r border-slate-200 dark:border-slate-700 overflow-y-auto bg-slate-50/40 dark:bg-slate-900/50 min-w-[300px]">
-            <div className="px-5 py-4 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
+            <div className="px-5 py-4 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
               <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                 {phase2Tests.length} scan{phase2Tests.length === 1 ? '' : 's'} with Phase 2 data
               </span>
             </div>
             <div className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-800">
-              {phase2Tests.map((t) => {
+              {phase2Tests.map((t, idx) => {
                 const isSelected = activeTest?.id === t.id;
                 const modules = ranModules(t);
+                const isActive = t.status === 'queued' || t.status === 'running';
                 return (
                   <div
                     key={t.id}
                     onClick={() => setSelectedId(t.id)}
-                    className={`p-4 cursor-pointer transition-colors ${isSelected ? 'bg-indigo-50/50 dark:bg-indigo-950/30 border-l-4 border-indigo-500' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 border-l-4 border-transparent'
-                      }`}
+                    style={{ animationDelay: `${Math.min(idx, 12) * 35}ms` }}
+                    className={`relative p-4 cursor-pointer transition-all duration-200 animate-fade-in-up group ${
+                      isSelected
+                        ? 'bg-indigo-50/60 dark:bg-indigo-950/30'
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                    }`}
                   >
-                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{t.url}</p>
+                    <span
+                      className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-r-full bg-gradient-to-b from-indigo-500 to-violet-500 transition-transform duration-300 origin-top ${
+                        isSelected ? 'scale-y-100' : 'scale-y-0'
+                      }`}
+                    />
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate transition-colors group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                      {t.url}
+                    </p>
                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{timeAgo(t.completedAt || t.createdAt)}</p>
                     <div className="flex flex-wrap gap-1 mt-2">
                       {modules.map((m) => {
@@ -143,15 +159,16 @@ export const Phase2ResultsPage: React.FC = () => {
                         return (
                           <span
                             key={m}
-                            className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900"
+                            className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900 transition-colors group-hover:border-indigo-300 dark:group-hover:border-indigo-700"
                           >
                             {meta?.label || m}
                           </span>
                         );
                       })}
                     </div>
-                    {(t.status === 'queued' || t.status === 'running') && (
-                      <span className="inline-block mt-2 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900 px-1.5 py-0.5 rounded">
+                    {isActive && (
+                      <span className="inline-flex items-center gap-1 mt-2 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900 px-1.5 py-0.5 rounded">
+                        <SpinnerGap className="w-2.5 h-2.5 animate-spin" weight="bold" />
                         Scan in progress — {t.progress}%
                       </span>
                     )}
@@ -165,12 +182,23 @@ export const Phase2ResultsPage: React.FC = () => {
           <section className="hidden lg:block lg:w-8/12 overflow-y-auto p-6">
             {activeTest ? (
               activeTest.status === 'queued' || activeTest.status === 'running' ? (
-                <div className="bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900 rounded-xl p-6 text-center">
-                  <i className="ph ph-spinner-gap animate-spin text-3xl text-indigo-500 block mb-3"></i>
+                <div key={activeTest.id} className="bg-gradient-to-br from-indigo-50 to-violet-50/60 dark:from-indigo-950/30 dark:to-violet-950/20 border border-indigo-100 dark:border-indigo-900 rounded-2xl p-8 text-center animate-scale-in">
+                  <div className="relative w-14 h-14 mx-auto mb-4">
+                    <div className="absolute inset-0 rounded-full bg-indigo-400/20 animate-soft-pulse" />
+                    <SpinnerGap className="w-14 h-14 text-indigo-500 animate-spin relative" weight="bold" />
+                  </div>
                   <p className="font-semibold text-indigo-700 dark:text-indigo-400">Scan in progress — {activeTest.progress}% complete</p>
+                  <div className="mt-4 h-2 w-full max-w-xs mx-auto bg-indigo-100 dark:bg-indigo-950/50 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full transition-all duration-700 ease-out"
+                      style={{ width: `${activeTest.progress}%` }}
+                    />
+                  </div>
                 </div>
               ) : (
-                <Phase2ResultsPanel test={activeTest} />
+                <div key={activeTest.id} className="animate-fade-in-up">
+                  <Phase2ResultsPanel test={activeTest} />
+                </div>
               )
             ) : (
               <div className="h-full w-full flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm font-medium">
