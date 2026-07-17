@@ -23,7 +23,9 @@ const fileLocator = require("./fileLocator.service");
 const logger = require("../utils/logger");
 
 function normalizeWhitespace(str) {
-  return String(str || "").replace(/\s+/g, " ").trim();
+  return String(str || "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 // ---------------------------------------------------------------------------
@@ -234,7 +236,8 @@ function deterministicFix(issue) {
 
     case "accessibility":
       return {
-        original: '<img src="banner.png">',
+        original:
+          '<img src="banner.png" alt="Describe the image\'s content or purpose">',
         patched:
           '<img src="banner.png" alt="Describe the image\'s content or purpose">\n' +
           "<!-- Rule details: " +
@@ -340,7 +343,9 @@ async function buildFixes(test, prioritization, repoMatch) {
   );
   if (!issue) return null;
 
-  const located = repoMatch?.path ? fileLocator.locate(repoMatch.path, issue) : null;
+  const located = repoMatch?.path
+    ? fileLocator.locate(repoMatch.path, issue)
+    : null;
 
   if (located) {
     const grounded = buildGroundedPatch(issue, located);
@@ -354,7 +359,7 @@ async function buildFixes(test, prioritization, repoMatch) {
           "from the target repository's source file. Echo it back verbatim as " +
           '"original", and return a minimal "patched" version that fixes ONLY the ' +
           "described issue — do not alter unrelated code, formatting, or " +
-          "surrounding markup. Return ONLY JSON with keys \"original\" and \"patched\".",
+          'surrounding markup. Return ONLY JSON with keys "original" and "patched".',
         prompt: JSON.stringify({
           filePath: located.relPath,
           url: issue.url || test.url,
@@ -371,7 +376,8 @@ async function buildFixes(test, prioritization, repoMatch) {
         json &&
         typeof json.original === "string" &&
         typeof json.patched === "string" &&
-        normalizeWhitespace(json.original) === normalizeWhitespace(located.original)
+        normalizeWhitespace(json.original) ===
+          normalizeWhitespace(located.original)
       ) {
         patched = json.patched;
         source = llm.providerName();
@@ -388,7 +394,9 @@ async function buildFixes(test, prioritization, repoMatch) {
       fileFullPath: located.absPath,
       line: located.line,
       grounded: true,
-      autoFixable: Boolean(grounded.autoFixable && patched !== located.original),
+      autoFixable: Boolean(
+        grounded.autoFixable && patched !== located.original,
+      ),
       source,
     };
   }
@@ -399,7 +407,12 @@ async function buildFixes(test, prioritization, repoMatch) {
   const fallback = deterministicFix(issue);
 
   if (!llm.isEnabled()) {
-    return { ...fallback, grounded: false, autoFixable: false, source: "rules" };
+    return {
+      ...fallback,
+      grounded: false,
+      autoFixable: false,
+      source: "rules",
+    };
   }
 
   const json = await llm.completeJSON({
@@ -473,7 +486,9 @@ function buildCicdSummary(test) {
 function buildPrBody(prioritization, fixes) {
   const lines = [];
   lines.push(`## ${prioritization.title} — \`${fixes.filePath}\``);
-  lines.push(`**Severity:** ${prioritization.severity}  |  **Priority score:** ${prioritization.score}/100`);
+  lines.push(
+    `**Severity:** ${prioritization.severity}  |  **Priority score:** ${prioritization.score}/100`,
+  );
   lines.push("");
   lines.push("```diff");
   lines.push("- " + fixes.original.split("\n").join("\n- "));
@@ -498,10 +513,17 @@ function buildPrioritizationForIssue(test, issue) {
 
   const impactSummary =
     `A ${issue.severity} ${issue.category.replace(/-/g, " ")} issue on ${issue.url || test.url}.` +
-    (sameCategoryCount > 1 ? ` One of ${sameCategoryCount} in that category.` : "");
+    (sameCategoryCount > 1
+      ? ` One of ${sameCategoryCount} in that category.`
+      : "");
 
   return {
-    bugId: `QA-${issue.id.replace(/[^a-z0-9]/gi, "").slice(0, 8).toUpperCase() || "PASTED"}`,
+    bugId: `QA-${
+      issue.id
+        .replace(/[^a-z0-9]/gi, "")
+        .slice(0, 8)
+        .toUpperCase() || "PASTED"
+    }`,
     issueId: issue.id,
     category: issue.category,
     title: issue.title,
@@ -556,7 +578,10 @@ function parsePastedIssue(pastedText) {
 
   const issue = {
     id: `pasted-${Date.now()}`,
-    category: (categoryMatch?.[1] || "other").trim().toLowerCase().replace(/\s+/g, "-"),
+    category: (categoryMatch?.[1] || "other")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-"),
     severity: (severityMatch?.[1] || "medium").toLowerCase(),
     title,
     description: (analysisMatch?.[1] || "").trim() || title,
@@ -564,7 +589,13 @@ function parsePastedIssue(pastedText) {
     url: urlMatch[1],
     resolved: false,
   };
-  const test = { id: null, url: issue.url, issues: [issue], consoleErrors: [], score: null };
+  const test = {
+    id: null,
+    url: issue.url,
+    issues: [issue],
+    consoleErrors: [],
+    score: null,
+  };
   return { test, issue, source: "pasted" };
 }
 
@@ -583,7 +614,11 @@ async function analyzePastedIssue(pastedText) {
   const prioritization = buildPrioritizationForIssue(test, issue);
   const rca = buildRootCause(test, prioritization);
   const match = repoRegistry.matchRepoForUrl(issue.url);
-  const repoMatch = { name: match.name, path: match.path, matchedBy: match.matchedBy };
+  const repoMatch = {
+    name: match.name,
+    path: match.path,
+    matchedBy: match.matchedBy,
+  };
   const fixes = await buildFixes(test, prioritization, match);
 
   const result = {
@@ -617,7 +652,9 @@ async function analyzePastedIssue(pastedText) {
     return result;
   }
 
-  const canPatchRealFile = Boolean(fixes?.grounded && fixes?.autoFixable && fixes?.filePath);
+  const canPatchRealFile = Boolean(
+    fixes?.grounded && fixes?.autoFixable && fixes?.filePath,
+  );
   if (!canPatchRealFile) {
     result.pullRequest = {
       configured: true,
@@ -641,7 +678,11 @@ async function analyzePastedIssue(pastedText) {
       prTitle,
       prBody,
       repo: match.githubRepo,
-      filePatch: { path: fixes.filePath, original: fixes.original, patched: fixes.patched },
+      filePatch: {
+        path: fixes.filePath,
+        original: fixes.original,
+        patched: fixes.patched,
+      },
     });
     logger.success(
       "aiAutomation",
@@ -651,11 +692,23 @@ async function analyzePastedIssue(pastedText) {
     // "linked") — the free-text "pasted" fallback has a synthetic test.id
     // (null) with nothing in testsRepo to attach it to.
     if (source === "linked") {
-      await recordAppliedFix(test, issue.id, { fixes, pr, repo: match.githubRepo });
+      await recordAppliedFix(test, issue.id, {
+        fixes,
+        pr,
+        repo: match.githubRepo,
+      });
     }
-    result.pullRequest = { configured: true, ...pr, repo: match.githubRepo, repoMatch };
+    result.pullRequest = {
+      configured: true,
+      ...pr,
+      repo: match.githubRepo,
+      repoMatch,
+    };
   } catch (err) {
-    logger.error("aiAutomation", `PR creation from pasted issue failed: ${err.message}`);
+    logger.error(
+      "aiAutomation",
+      `PR creation from pasted issue failed: ${err.message}`,
+    );
     result.pullRequest = { configured: true, error: err.message, repoMatch };
   }
 
@@ -723,7 +776,10 @@ async function runAutomation(testId) {
  * could be identified at all, or one was but it has no GitHub remote.
  */
 function describeRepoMatchFailure(match, url) {
-  if (match.matchedBy === "ambiguous_hostname" || match.matchedBy === "ambiguous_port") {
+  if (
+    match.matchedBy === "ambiguous_hostname" ||
+    match.matchedBy === "ambiguous_port"
+  ) {
     return (
       `Multiple local repos matched ${url} (${match.matchedBy.replace("ambiguous_", "")} ` +
       `collision) — can't safely pick one. Set a unique SITE_URL/dev port per repo, or ` +
@@ -756,7 +812,11 @@ async function createPullRequest(testId) {
   // Figure out which local repo the scanned URL actually belongs to — not
   // always this QA engine's own repo — so the PR lands in the right project.
   const match = repoRegistry.matchRepoForUrl(test.url);
-  const repoMatch = { name: match.name, path: match.path, matchedBy: match.matchedBy };
+  const repoMatch = {
+    name: match.name,
+    path: match.path,
+    matchedBy: match.matchedBy,
+  };
   if (!match.githubRepo) {
     return {
       configured: true,
@@ -768,7 +828,10 @@ async function createPullRequest(testId) {
   const automation = await runAutomation(test.id);
   const fixes = automation.fixes;
   const canPatchRealFile = Boolean(
-    automation.prioritization && fixes?.grounded && fixes?.autoFixable && fixes?.filePath,
+    automation.prioritization &&
+    fixes?.grounded &&
+    fixes?.autoFixable &&
+    fixes?.filePath,
   );
   if (!canPatchRealFile) {
     return {
@@ -792,7 +855,11 @@ async function createPullRequest(testId) {
       prTitle,
       prBody,
       repo: match.githubRepo,
-      filePatch: { path: fixes.filePath, original: fixes.original, patched: fixes.patched },
+      filePatch: {
+        path: fixes.filePath,
+        original: fixes.original,
+        patched: fixes.patched,
+      },
     });
     logger.success(
       "aiAutomation",
@@ -892,9 +959,10 @@ async function mergePullRequest(prNumber, repo) {
     return {
       configured: true,
       merged: false,
-      reason: decision.changesRequestedCount > 0
-        ? "changes_requested"
-        : "awaiting_approval",
+      reason:
+        decision.changesRequestedCount > 0
+          ? "changes_requested"
+          : "awaiting_approval",
       ...decision,
     };
   }
