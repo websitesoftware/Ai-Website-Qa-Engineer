@@ -158,6 +158,34 @@ export const IssuesPage: React.FC = () => {
     showToast('Hidden from this view until the next scan', 'info');
   };
 
+  // The real applied patch when the AI Automation pipeline grounded and
+  // (optionally) auto-applied one — falls back to the generic keyword-
+  // matched template only when no real fix exists yet for this issue.
+  const getFixDisplay = (row: Row) => {
+    const applied = row.appliedFix;
+    if (applied) {
+      const header = applied.filePath
+        ? `// ${applied.filePath}${applied.autoFixable ? ' (applied)' : ' (suggested — review before applying)'}`
+        : '// Guidance only — no exact source line matched in your repo';
+      const code =
+        `${header}\n\n--- before\n${applied.original}\n\n+++ after\n${applied.patched}`;
+      return {
+        code,
+        label: applied.autoFixable
+          ? 'Grounded fix — applied in a real PR'
+          : applied.grounded
+            ? 'Grounded location — review before applying'
+            : 'Best-effort guidance (no matching file found)',
+        grounded: applied.grounded,
+      };
+    }
+    return {
+      code: getDynamicFixCode(row.title),
+      label: 'Generic guidance — run AI Automation on this scan for a fix grounded in your repo',
+      grounded: false,
+    };
+  };
+
   const handleCopy = async (row: Row, explicitCode?: string) => {
     const text =
       `[${row.severity.toUpperCase()}] [${PHASES[row.phase].label}] ${row.title}\n` +
@@ -368,7 +396,9 @@ export const IssuesPage: React.FC = () => {
               Fix that separately — a bottom sheet or a routed detail view. */}
           <section className="hidden lg:flex lg:w-7/12 flex-col bg-white dark:bg-slate-800 overflow-y-auto">
             <AnimatePresence mode="wait">
-              {activeRow ? (
+              {activeRow ? (() => {
+                const fixDisplay = getFixDisplay(activeRow);
+                return (
                 <motion.div
                   key={rowKey(activeRow)}
                   initial={{ opacity: 0, scale: 0.99 }}
@@ -388,6 +418,16 @@ export const IssuesPage: React.FC = () => {
                             {PHASES[activeRow.phase].label}
                           </span>
                           <span className="text-xs font-mono font-bold text-slate-400 dark:text-slate-500">{activeRow.repId}</span>
+                          {activeRow.appliedFix?.mergedAt && (
+                            <a
+                              href={activeRow.appliedFix.prUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded border bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900 hover:underline"
+                            >
+                              ✅ Resolved — merged in PR #{activeRow.appliedFix.prNumber}
+                            </a>
+                          )}
                         </div>
                         <button
                           onClick={() => handleCopyForAutomation(activeRow)}
@@ -419,26 +459,48 @@ export const IssuesPage: React.FC = () => {
                     </div>
 
                     <div className="space-y-3">
-                      <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                        <Lightbulb className="text-base text-amber-500" /> Resolution Blueprint &amp; Code Implementation
-                      </h4>
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                          <Lightbulb className="text-base text-amber-500" /> Resolution Blueprint &amp; Code Implementation
+                        </h4>
+                        <span
+                          className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border ${fixDisplay.grounded
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900'
+                              : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+                            }`}
+                        >
+                          {fixDisplay.label}
+                        </span>
+                      </div>
+                      {activeRow.appliedFix?.prUrl && (
+                        <a
+                          href={activeRow.appliedFix.prUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
+                        >
+                          View the pull request that carries this fix →
+                        </a>
+                      )}
                       <div className="rounded-xl overflow-hidden bg-slate-950 shadow-md border border-slate-900 flex flex-col">
                         <div className="flex items-center justify-between px-4 py-2 bg-slate-900 text-slate-400 text-xs font-mono border-b border-slate-900">
                           <span className="flex items-center gap-2">
                             <span className="w-2.5 h-2.5 rounded-full bg-red-500/80 inline-block" />
                             <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80 inline-block" />
                             <span className="w-2.5 h-2.5 rounded-full bg-green-500/80 inline-block" />
-                            <span className="ml-1 text-slate-500 font-sans font-semibold">{activeRow.category} fix template</span>
+                            <span className="ml-1 text-slate-500 font-sans font-semibold">
+                              {activeRow.appliedFix?.filePath || `${activeRow.category} fix`}
+                            </span>
                           </span>
                           <button
-                            onClick={() => handleCopy(activeRow, getDynamicFixCode(activeRow.title))}
+                            onClick={() => handleCopy(activeRow, fixDisplay.code)}
                             className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer font-sans font-bold"
                           >
                             <Copy className="text-xs" /> Copy Solution Code
                           </button>
                         </div>
                         <div className="p-4 overflow-x-auto font-mono text-xs text-indigo-200/90 leading-relaxed whitespace-pre bg-slate-950/95">
-                          {getDynamicFixCode(activeRow.title)}
+                          {fixDisplay.code}
                         </div>
                       </div>
                     </div>
@@ -468,7 +530,8 @@ export const IssuesPage: React.FC = () => {
                     </div>
                   </div>
                 </motion.div>
-              ) : (
+                );
+              })() : (
                 <div className="h-full w-full flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm font-medium">
                   Select an issue to inspect it.
                 </div>

@@ -4,6 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface FixesProps {
   codeBefore: string;
   codeAfter: string;
+  filePath?: string | null;
+  grounded?: boolean;
+  autoFixable?: boolean;
 }
 
 const CodeBlock: React.FC<{ code: string; variant: 'before' | 'after' }> = ({ code, variant }) => {
@@ -33,14 +36,32 @@ const CodeBlock: React.FC<{ code: string; variant: 'before' | 'after' }> = ({ co
   );
 };
 
-export const SuggestedFixes: React.FC<FixesProps> = ({ codeBefore, codeAfter }) => {
+export const SuggestedFixes: React.FC<FixesProps> = ({ codeBefore, codeAfter, filePath, grounded, autoFixable }) => {
   const ready = Boolean(codeBefore && codeAfter);
 
   return (
     <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-6">
-      <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-4">
-        <span>🛠️</span> Suggested Code Fixes
-      </h3>
+      <div className="flex items-center justify-between gap-2 flex-wrap mb-4">
+        <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <span>🛠️</span> Suggested Code Fixes
+        </h3>
+        {ready && (
+          <span
+            className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border ${autoFixable
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900'
+                : grounded
+                  ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900'
+                  : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+              }`}
+          >
+            {autoFixable
+              ? `Patches ${filePath || 'a real file'} directly`
+              : grounded
+                ? `Located in ${filePath || 'your repo'} — review before applying`
+                : 'Guidance only — no matching source line found'}
+          </span>
+        )}
+      </div>
 
       <AnimatePresence mode="wait">
         {ready ? (

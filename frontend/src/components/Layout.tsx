@@ -144,8 +144,8 @@ export const Layout: React.FC<LayoutProps> = ({
       setIsLoginOpen(false);
       setPassword('');
       setEmail('');
-    } catch (err: any) {
-      setApiError(err.message || 'Something went wrong');
+    } catch (err) {
+      setApiError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
       setLoading(false);
     }
@@ -172,8 +172,8 @@ export const Layout: React.FC<LayoutProps> = ({
         setSuccessMessage('');
         setAuthView('LOGIN');
       }, 4000);
-    } catch (err: any) {
-      setApiError(err.message || 'Failed to process request');
+    } catch (err) {
+      setApiError(err instanceof Error ? err.message : 'Failed to process request');
     } finally {
       setLoading(false);
     }
@@ -201,8 +201,8 @@ export const Layout: React.FC<LayoutProps> = ({
       setIsLoginOpen(false);
       setPassword('');
       setEmail('');
-    } catch (err: any) {
-      setApiError(err.message || 'Failed to register account');
+    } catch (err) {
+      setApiError(err instanceof Error ? err.message : 'Failed to register account');
     } finally {
       setLoading(false);
     }
@@ -362,7 +362,7 @@ export const Layout: React.FC<LayoutProps> = ({
                           </button>
 
                           <div className="text-center pt-2 border-t border-slate-100 dark:border-slate-800/60">
-                            <span className="text-xs text-slate-400 font-medium">Don't have an account? <button type="button" onClick={() => { setAuthView('REGISTER'); setApiError(''); }} className="text-indigo-500 font-bold hover:underline bg-transparent border-none cursor-pointer">Sign Up</button></span>
+                            <span className="text-xs text-slate-400 font-medium">Don&apos;t have an account? <button type="button" onClick={() => { setAuthView('REGISTER'); setApiError(''); }} className="text-indigo-500 font-bold hover:underline bg-transparent border-none cursor-pointer">Sign Up</button></span>
                           </div>
                         </form>
                       )}

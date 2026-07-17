@@ -8,6 +8,9 @@ function makeIssue({
   description,
   url,
   suggestion,
+  selector,
+  snippet,
+  sourceLocation,
 }) {
   return {
     id: uuidv4(),
@@ -19,6 +22,12 @@ function makeIssue({
     suggestion: suggestion || null,
     resolved: false,
     detectedAt: new Date().toISOString(),
+    // Real, observed locator info (when the scan captured one) — grounds
+    // automated fix generation in the actual page/source instead of
+    // guessing. Omitted (undefined) rather than fabricated when unknown.
+    selector: selector || null,
+    snippet: snippet || null,
+    sourceLocation: sourceLocation || null,
   };
 }
 
@@ -52,6 +61,7 @@ function fromConsoleErrors(consoleErrors, pageUrl) {
       url: pageUrl,
       suggestion:
         "Check browser devtools console and fix the underlying script error.",
+      sourceLocation: e.location?.url ? e.location : null,
     }),
   );
 }
@@ -69,6 +79,9 @@ function fromLighthouse(failingAudits, pageUrl) {
       suggestion: audit.displayValue
         ? `Current value: ${audit.displayValue}`
         : null,
+      selector: audit.selector || null,
+      snippet: audit.snippet || null,
+      sourceLocation: audit.elementUrl ? { url: audit.elementUrl } : null,
     });
   });
 }
@@ -76,8 +89,9 @@ function fromLighthouse(failingAudits, pageUrl) {
 // ---- Phase 2 issue builders ----
 
 function fromAccessibility(violations, pageUrl) {
-  return violations.map((v) =>
-    makeIssue({
+  return violations.map((v) => {
+    const locator = v.locators?.[0];
+    return makeIssue({
       category: "accessibility",
       severity:
         v.impact === "critical"
@@ -91,8 +105,10 @@ function fromAccessibility(violations, pageUrl) {
       description: `${v.description} (${v.nodes} element${v.nodes === 1 ? "" : "s"} affected)`,
       url: pageUrl,
       suggestion: v.helpUrl,
-    }),
-  );
+      selector: locator?.selector || null,
+      snippet: locator?.html || null,
+    });
+  });
 }
 
 function fromSEO(checks, pageUrl) {
@@ -108,6 +124,7 @@ function fromSEO(checks, pageUrl) {
         description: c.message,
         url: pageUrl,
         suggestion: null,
+        snippet: c.snippet || null,
       }),
     );
 }

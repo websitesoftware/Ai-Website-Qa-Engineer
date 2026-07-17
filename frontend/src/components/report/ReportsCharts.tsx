@@ -55,12 +55,25 @@ const fmtDate = (iso: string | null): string => {
 };
 
 // Simple white tooltip that matches the light theme.
-const LightTooltip = ({ active, payload, label, suffix = '' }: any) => {
+interface TooltipEntry {
+  name?: string;
+  value?: string | number;
+  color?: string;
+  payload?: { fill?: string };
+}
+interface LightTooltipProps {
+  active?: boolean;
+  payload?: TooltipEntry[];
+  label?: string | number;
+  suffix?: string;
+}
+
+const LightTooltip = ({ active, payload, label, suffix = '' }: LightTooltipProps) => {
   if (!active || !payload || !payload.length) return null;
   return (
     <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md rounded-lg px-3 py-2 text-xs">
       {label != null && <p className="font-semibold text-slate-700 dark:text-slate-300 mb-0.5">{label}</p>}
-      {payload.map((p: any, i: number) => (
+      {payload.map((p, i) => (
         <p key={i} className="text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full" style={{ background: p.color || p.payload?.fill }} />
           {p.name}: <span className="font-bold text-slate-800 dark:text-slate-200">{p.value}{suffix}</span>

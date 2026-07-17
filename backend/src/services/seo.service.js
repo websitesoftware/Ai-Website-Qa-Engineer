@@ -34,6 +34,10 @@ async function auditSEO(browser, url) {
   const $ = cheerio.load(html);
   const checks = [];
 
+  // The real <head> markup, kept only for checks that fail — used to ground
+  // automated fixes in the actual source instead of guessing at markup.
+  const headSnippet = $.html($("head").first()) || null;
+
   const title = $("title").first().text().trim();
   checks.push({
     id: "title",
@@ -43,6 +47,7 @@ async function auditSEO(browser, url) {
       : title.length > 60
         ? `Title too long (${title.length} chars, keep under 60)`
         : "Title tag present and well sized",
+    snippet: title.length > 0 && title.length <= 60 ? null : headSnippet,
   });
 
   const metaDesc = $('meta[name="description"]').attr("content") || "";
@@ -54,6 +59,7 @@ async function auditSEO(browser, url) {
       : metaDesc.length > 160
         ? `Meta description too long (${metaDesc.length} chars)`
         : "Meta description present and well sized",
+    snippet: metaDesc.length > 0 && metaDesc.length <= 160 ? null : headSnippet,
   });
 
   const h1s = $("h1");
@@ -66,9 +72,11 @@ async function auditSEO(browser, url) {
         : h1s.length > 1
           ? `Multiple <h1> tags found (${h1s.length})`
           : "Exactly one <h1> found",
+    snippet: h1s.length === 1 ? null : $.html($("body").first()) || null,
   });
 
   const imgs = $("img");
+  const firstImgMissingAlt = imgs.filter((_, el) => !$(el).attr("alt")).first();
   const imgsMissingAlt = imgs.filter((_, el) => !$(el).attr("alt")).length;
   checks.push({
     id: "image-alt",
@@ -77,6 +85,7 @@ async function auditSEO(browser, url) {
       imgsMissingAlt === 0
         ? "All images have alt text"
         : `${imgsMissingAlt} of ${imgs.length} images missing alt text`,
+    snippet: imgsMissingAlt === 0 ? null : $.html(firstImgMissingAlt) || null,
   });
 
   const canonical = $('link[rel="canonical"]').attr("href");

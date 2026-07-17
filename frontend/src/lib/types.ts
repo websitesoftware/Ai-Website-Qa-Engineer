@@ -1,6 +1,20 @@
 
 export type TestStatus = 'queued' | 'running' | 'passed' | 'failed' | 'error';
 
+export interface BackendAppliedFix {
+  filePath: string | null;
+  original: string;
+  patched: string;
+  grounded: boolean;
+  autoFixable: boolean;
+  repo?: string;
+  prNumber?: number;
+  prUrl?: string;
+  branchName?: string;
+  appliedAt: string;
+  mergedAt: string | null;
+}
+
 export interface BackendIssue {
   id: string;
   category: 'broken-link' | 'console-error' | 'lighthouse' | 'accessibility' | 'seo' | 'visual-regression' | 'cross-browser' | string;
@@ -11,6 +25,13 @@ export interface BackendIssue {
   suggestion: string | null;
   resolved: boolean;
   detectedAt: string;
+  // Real, observed locator info — present only when the scan actually
+  // captured one (never fabricated).
+  selector?: string | null;
+  snippet?: string | null;
+  sourceLocation?: { url: string; lineNumber?: number; columnNumber?: number } | null;
+  // The real patch applied (or proposed) by the AI Automation pipeline, if any.
+  appliedFix?: BackendAppliedFix | null;
 }
 
 export interface BackendScreenshot {

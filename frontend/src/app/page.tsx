@@ -2,16 +2,16 @@
 'use client';
 import React, { useState } from 'react';
 import { Layout } from '../components/Layout';
-import { DashboardView } from '../pages/Dashboard';
-import { TestManagementPage } from '../pages/TestManagementPage';
-// import { ReportsPage } from '../pages/ReportsPage';
+import { DashboardView } from '../screens/Dashboard';
+import { TestManagementPage } from '../screens/TestManagementPage';
+// import { ReportsPage } from '../screens/ReportsPage';
 import { useNewTestModal } from '../context/NewTestModalContext';
-import { IssuesPage } from '../pages/IssuesPage';
-import { Phase2ResultsPage } from '../pages/Phase2ResultsPage';
-import { AIAutomationPage } from '../pages/AIAutomationPage';
-import ScanlinePhase1Report from '../pages/phase1page';
+import { IssuesPage } from '../screens/IssuesPage';
+import { Phase2ResultsPage } from '../screens/Phase2ResultsPage';
+import { AIAutomationPage } from '../screens/AIAutomationPage';
+import ScanlinePhase1Report from '../screens/phase1page';
 
-import { SettingsPage } from '../pages/settingspage';
+import { SettingsPage } from '../screens/settingspage';
 
 type TabType = 'Dashboard' | 'Tests' | 'Issues' | 'Settings' | 'Phase 2 Results' | 'AI Automation' | 'Phase 1 Results';
 

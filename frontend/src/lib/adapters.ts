@@ -1,4 +1,4 @@
-import { BackendTest, BackendIssue } from './types';
+import { BackendTest, BackendIssue, BackendAppliedFix } from './types';
 import { categoryLabel } from './format';
 
 export interface IssueRow {
@@ -14,6 +14,7 @@ export interface IssueRow {
   suggestion: string | null;
   resolved: boolean;
   detectedAt: string;
+  appliedFix?: BackendAppliedFix | null;
 }
 
 export function buildIssueRows(tests: BackendTest[]): IssueRow[] {
@@ -35,6 +36,7 @@ export function buildIssueRows(tests: BackendTest[]): IssueRow[] {
         suggestion: issue.suggestion,
         resolved: issue.resolved,
         detectedAt: issue.detectedAt,
+        appliedFix: issue.appliedFix,
       });
     });
   });

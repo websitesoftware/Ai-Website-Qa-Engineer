@@ -65,7 +65,7 @@ export const DashboardView: React.FC = () => {
 
 
         <div className="mt-6">
-          <AiTestStudio test={latestTest} />
+          <AiTestStudio />
         </div>
       </>
     </div>

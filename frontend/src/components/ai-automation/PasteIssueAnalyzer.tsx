@@ -92,8 +92,8 @@ export const PasteIssueAnalyzer: React.FC = () => {
         <span>📋</span> Paste an Issue &rarr; Auto-Generate PR
       </h3>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-        Copy an issue from the Issues page ("Copy for AI Automation") and paste it here. Analyzing
-        it auto-detects the target repo from the issue's URL and opens a real PR.
+        Copy an issue from the Issues page (&quot;Copy for AI Automation&quot;) and paste it here. Analyzing
+        it auto-detects the target repo from the issue&apos;s URL and opens a real PR.
       </p>
 
       <textarea
