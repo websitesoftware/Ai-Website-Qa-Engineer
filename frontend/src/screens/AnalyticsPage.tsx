@@ -91,11 +91,11 @@ export const AnalyticsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+    // No fetch to make while signed out — the component renders its own
+    // "sign in required" state below without ever reading `loading`.
+    if (!user) return;
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off the fetch below; mirrors QADataContext's fetch-on-mount pattern
     setLoading(true);
     api.analytics
       .get(days)

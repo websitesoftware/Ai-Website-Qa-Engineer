@@ -32,6 +32,13 @@ const EMPTY_THRESHOLDS: PolicyThresholds = {
   bestPractices: null,
 };
 
+const SignInNotice: React.FC<{ what: string }> = ({ what }) => (
+  <div className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">
+    <i className="ph ph-lock-key text-3xl mb-2 block text-slate-300 dark:text-slate-600"></i>
+    Sign in from the Account menu to manage {what}.
+  </div>
+);
+
 export const SettingsPage: React.FC = () => {
   const { tests } = useQAData();
   const { showToast } = useToast();
@@ -90,6 +97,7 @@ export const SettingsPage: React.FC = () => {
   }, [user, showToast]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tab-triggered fetch, mirrors QADataContext's fetch-on-mount pattern
     if (activeTab === 'automation') fetchMonitors();
   }, [activeTab, fetchMonitors]);
 
@@ -161,6 +169,7 @@ export const SettingsPage: React.FC = () => {
   }, [user, showToast]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tab-triggered fetch, mirrors QADataContext's fetch-on-mount pattern
     if (activeTab === 'policies') fetchPolicies();
   }, [activeTab, fetchPolicies]);
 
@@ -220,6 +229,7 @@ export const SettingsPage: React.FC = () => {
   }, [showToast]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tab-triggered fetch, mirrors QADataContext's fetch-on-mount pattern
     if (activeTab === 'branding') fetchBranding();
   }, [activeTab, fetchBranding]);
 
@@ -269,6 +279,7 @@ export const SettingsPage: React.FC = () => {
   }, [user, showToast]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tab-triggered fetch, mirrors QADataContext's fetch-on-mount pattern
     if (activeTab === 'team') fetchTeam();
   }, [activeTab, fetchTeam]);
 
@@ -310,13 +321,6 @@ export const SettingsPage: React.FC = () => {
       showToast(err instanceof Error ? err.message : 'Could not remove member', 'error');
     }
   };
-
-  const SignInNotice = ({ what }: { what: string }) => (
-    <div className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">
-      <i className="ph ph-lock-key text-3xl mb-2 block text-slate-300 dark:text-slate-600"></i>
-      Sign in from the Account menu to manage {what}.
-    </div>
-  );
 
   return (
     <div className="space-y-6 animate-fade-in w-full">

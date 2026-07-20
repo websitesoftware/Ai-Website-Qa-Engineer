@@ -20,11 +20,11 @@ export const TeamDashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+    // No fetch to make while signed out — the component renders its own
+    // "sign in required" state below without ever reading `loading`.
+    if (!user) return;
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off the fetch below; mirrors QADataContext's fetch-on-mount pattern
     setLoading(true);
     api.team
       .listMembers()
@@ -37,6 +37,9 @@ export const TeamDashboardPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  // Approximate "this week" window for a stat card — a stale render-to-render
+  // value here has no real consequence, so a plain Date.now() read is fine.
+  // eslint-disable-next-line react-hooks/purity
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const testsThisWeek = tests.filter((t) => new Date(t.createdAt).getTime() >= weekAgo);
 
@@ -71,7 +74,7 @@ export const TeamDashboardPage: React.FC = () => {
     <div className="space-y-6 animate-fade-in w-full">
       <div>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Team Dashboard</h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Who's on the team and what they've been scanning.</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Who&apos;s on the team and what they&apos;ve been scanning.</p>
       </div>
 
       {loading ? (

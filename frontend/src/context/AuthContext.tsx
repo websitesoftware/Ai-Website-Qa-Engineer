@@ -60,6 +60,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const saved = readSession();
     if (!saved?.token) {
+      // No session to validate — nothing async follows, so this is a plain
+      // derived-state update rather than a real effect subscription.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setReady(true);
       return;
     }
