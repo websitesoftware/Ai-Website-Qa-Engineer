@@ -93,23 +93,4 @@ async function analyzeIssue(req, res, next) {
   }
 }
 
-/**
- * GET /api/ai-automation/locate?testId=...&issueId=...
- * Read-only: resolves the local repo file + line an issue lives in without
- * running the full pipeline (no LLM call, no PR) — powers the "file to
- * modify" hint shown on the issue detail panel.
- */
-async function locate(req, res, next) {
-  try {
-    const { testId, issueId } = req.query;
-    if (!testId || !issueId) {
-      return res.status(400).json({ error: "testId and issueId are required" });
-    }
-    const result = await aiAutomation.locateIssue(testId, issueId);
-    res.json(result);
-  } catch (err) {
-    next(err);
-  }
-}
-
-module.exports = { getStatus, run, createPr, cicd, merge, analyzeIssue, locate };
+module.exports = { getStatus, run, createPr, cicd, merge, analyzeIssue };

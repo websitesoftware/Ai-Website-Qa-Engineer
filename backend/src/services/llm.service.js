@@ -133,38 +133,4 @@ async function completeJSON(args) {
   }
 }
 
-// Prose lines models sometimes prepend/append to a code value despite being
-// told to return code only (e.g. "Here's the fix:", "Explanation: ...").
-const PROSE_LINE = /^\s*(here'?s|explanation|note|summary|this (fix|change)|the (fix|change|following))\b.*[:.]?\s*$/i;
-
-/**
- * Reduce a code string coming out of an LLM JSON field to code only: strips
- * any stray ``` fences (with optional language tag) and leading/trailing
- * prose lines the model may have added despite the "code only" instruction.
- * Interior lines are left untouched so real code is never mangled.
- */
-function sanitizeCode(code) {
-  if (typeof code !== "string") return code;
-  let lines = code.replace(/\r\n/g, "\n").split("\n");
-
-  // Drop a fenced-block wrapper if the whole value is one.
-  if (lines.length >= 2 && /^```/.test(lines[0].trim())) {
-    lines.shift();
-    if (lines.length && /^```\s*$/.test(lines[lines.length - 1].trim())) {
-      lines.pop();
-    }
-  }
-
-  while (lines.length && PROSE_LINE.test(lines[0])) lines.shift();
-  while (lines.length && PROSE_LINE.test(lines[lines.length - 1])) lines.pop();
-
-  return lines.join("\n").trim();
-}
-
-module.exports = {
-  isEnabled,
-  providerName,
-  complete,
-  completeJSON,
-  sanitizeCode,
-};
+module.exports = { isEnabled, providerName, complete, completeJSON };

@@ -33,7 +33,6 @@ router.post("/ai-automation/pr", aiAutomationController.createPr);
 router.post("/ai-automation/cicd", aiAutomationController.cicd);
 router.post("/ai-automation/merge", aiAutomationController.merge);
 router.post("/ai-automation/analyze-issue", aiAutomationController.analyzeIssue);
-router.get("/ai-automation/locate", aiAutomationController.locate);
 
 router.get("/health", (req, res) =>
   res.json({ status: "ok", uptime: process.uptime() }),

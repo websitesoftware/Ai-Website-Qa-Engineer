@@ -251,4 +251,4 @@ function locate(repoPath, issue) {
   return null;
 }
 
-module.exports = { locate, listCandidateFiles, readFileSafe };
+module.exports = { locate };

@@ -3,8 +3,6 @@ export type TestStatus = 'queued' | 'running' | 'passed' | 'failed' | 'error';
 
 export interface BackendAppliedFix {
   filePath: string | null;
-  fileFullPath?: string | null;
-  line?: number | null;
   original: string;
   patched: string;
   grounded: boolean;

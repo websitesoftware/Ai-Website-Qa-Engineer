@@ -8,13 +8,9 @@ interface NewTestModalProps {
   isOpen: boolean;
   onClose: () => void;
   onStartTest: (url: string, modules: string[]) => Promise<void>;
-  // Fires once the exit animation has actually finished (not a guessed
-  // delay) — callers can safely mount another "fixed inset-0" overlay only
-  // after this, avoiding two backdrop-blur layers stacking at once.
-  onExited?: () => void;
 }
 
-export const NewTestModal: React.FC<NewTestModalProps> = ({ isOpen, onClose, onStartTest, onExited }) => {
+export const NewTestModal: React.FC<NewTestModalProps> = ({ isOpen, onClose, onStartTest }) => {
   const [isInitializing, setIsInitializing] = useState<boolean>(false);
   const [url, setUrl] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +38,7 @@ export const NewTestModal: React.FC<NewTestModalProps> = ({ isOpen, onClose, onS
   };
 
   return (
-    <AnimatePresence onExitComplete={onExited}>
+    <AnimatePresence>
       {isOpen && (
         <motion.div
           className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"

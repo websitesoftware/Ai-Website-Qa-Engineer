@@ -359,15 +359,7 @@ async function buildFixes(test, prioritization, repoMatch) {
           "from the target repository's source file. Echo it back verbatim as " +
           '"original", and return a minimal "patched" version that fixes ONLY the ' +
           "described issue — do not alter unrelated code, formatting, or " +
-          "surrounding markup. The patched code must be clean, complete, and " +
-          "immediately usable: resolve any CSS problems it touches (invalid or " +
-          "missing units, broken selectors, layout-breaking rules) and replace " +
-          "hardcoded values (colors, pixel sizes, URLs, magic numbers) with " +
-          "proper values consistent with the surrounding code where the fix " +
-          "requires touching them. Never leave placeholders, TODOs, or " +
-          'unresolved fragments. Return ONLY JSON with keys "original" and ' +
-          '"patched" — both must contain code only, with no explanations, ' +
-          "notes, or commentary outside the code itself.",
+          'surrounding markup. Return ONLY JSON with keys "original" and "patched".',
         prompt: JSON.stringify({
           filePath: located.relPath,
           url: issue.url || test.url,
@@ -380,10 +372,6 @@ async function buildFixes(test, prioritization, repoMatch) {
         maxTokens: 600,
         temperature: 0.1,
       });
-      if (json) {
-        json.original = llm.sanitizeCode(json.original);
-        json.patched = llm.sanitizeCode(json.patched);
-      }
       if (
         json &&
         typeof json.original === "string" &&
@@ -433,13 +421,7 @@ async function buildFixes(test, prioritization, repoMatch) {
       "website issue, output a concrete remediation. Return ONLY JSON with keys " +
       '"original" (the problematic markup/code as it likely appears) and ' +
       '"patched" (the corrected version). Keep each under 15 lines. Do not invent ' +
-      "framework-specific file paths you cannot know. The patched code must be " +
-      "clean, complete, and fully functional: resolve any CSS problems (invalid " +
-      "or missing units, broken selectors, layout-breaking rules) and replace " +
-      "hardcoded values (colors, pixel sizes, URLs, magic numbers) with proper, " +
-      "maintainable ones. Never leave placeholders, TODOs, or unresolved " +
-      'fragments. Both "original" and "patched" must contain code only — no ' +
-      "explanations, notes, or commentary outside the code itself.",
+      "framework-specific file paths you cannot know.",
     prompt: JSON.stringify({
       url: issue.url || test.url,
       category: issue.category,
@@ -451,11 +433,6 @@ async function buildFixes(test, prioritization, repoMatch) {
     maxTokens: 500,
     temperature: 0.2,
   });
-
-  if (json) {
-    json.original = llm.sanitizeCode(json.original);
-    json.patched = llm.sanitizeCode(json.patched);
-  }
 
   if (
     json &&
@@ -913,8 +890,6 @@ async function recordAppliedFix(test, issueId, { fixes, pr, repo }) {
   if (!issue) return;
   issue.appliedFix = {
     filePath: fixes.filePath,
-    fileFullPath: fixes.fileFullPath,
-    line: fixes.line,
     original: fixes.original,
     patched: fixes.patched,
     grounded: true,
@@ -1023,175 +998,6 @@ async function markIssueResolvedByMerge(prNumber, repo) {
   }
 }
 
-/**
- * Cheap, read-only counterpart to buildFixes(): resolves which local file
- * (and line) an issue lives in — no LLM call, no patch, no PR — so the UI
- * can show "this is the file to modify" as soon as an issue is opened,
- * without requiring the user to run the full AI Automation / PR pipeline.
- */
-const STOPWORDS = new Set([
-  "the", "and", "for", "with", "that", "this", "have", "has", "are", "was",
-  "not", "your", "you", "does", "must", "should", "will", "from", "into",
-  "page", "element", "elements", "found", "detected",
-]);
-
-/** Lowercase word tokens (len > 2, not a stopword) pulled from free text. */
-function keywordsOf(text) {
-  return Array.from(
-    new Set(
-      String(text || "")
-        .toLowerCase()
-        .split(/[^a-z0-9]+/)
-        .filter((w) => w.length > 2 && !STOPWORDS.has(w)),
-    ),
-  );
-}
-
-/** Leading tag name from an HTML snippet, e.g. "<button class=..." -> "button". */
-function tagOf(snippet) {
-  const m = String(snippet || "").match(/^\s*<\s*([a-zA-Z][a-zA-Z0-9-]*)/);
-  return m ? m[1].toLowerCase() : null;
-}
-
-/**
- * Rank candidate source files by how likely they are to contain the DOM
- * element an issue refers to, using only cheap signals (filename/dirname
- * keyword overlap, then a bounded content grep for the element's tag) —
- * never the whole repo's content, so this stays fast even in large repos.
- */
-function rankCandidateFiles(repoPath, issue, limit) {
-  const files = fileLocator.listCandidateFiles(repoPath);
-  const terms = [
-    ...keywordsOf(issue.title),
-    ...keywordsOf(issue.category),
-    ...keywordsOf(issue.selector),
-  ];
-
-  const scored = files.map((absPath) => {
-    const rel = require("path").relative(repoPath, absPath).toLowerCase();
-    const score = terms.reduce((s, t) => (rel.includes(t) ? s + 1 : s), 0);
-    return { absPath, score };
-  });
-  scored.sort((a, b) => b.score - a.score);
-
-  let top = scored.filter((f) => f.score > 0).slice(0, limit);
-  if (top.length < limit) {
-    const tag = tagOf(issue.snippet);
-    if (tag) {
-      const needle = `<${tag}`;
-      const already = new Set(top.map((f) => f.absPath));
-      for (const f of scored) {
-        if (top.length >= limit) break;
-        if (already.has(f.absPath)) continue;
-        const content = fileLocator.readFileSafe(f.absPath);
-        if (content && content.includes(needle)) {
-          top.push(f);
-          already.add(f.absPath);
-        }
-      }
-    }
-  }
-  return top.map((f) => f.absPath);
-}
-
-const MAX_AI_LOCATE_CANDIDATES = 12;
-const MAX_AI_LOCATE_PREVIEW_CHARS = 2000;
-
-/**
- * AI-assisted fallback for when fileLocator's exact/attribute matching can't
- * find the file (the common case for React/JSX, where the rendered DOM axe
- * or Lighthouse captured rarely appears verbatim in the source). Shows the
- * model only a short, ranked shortlist of real files from THIS repo and asks
- * it to pick one — never lets it invent a path outside that list. Returns
- * null (never a low-confidence guess dressed up as certain) if the model
- * isn't confident or the LLM is disabled.
- */
-async function aiLocate(repoPath, issue) {
-  if (!llm.isEnabled()) return null;
-  const path = require("path");
-  const candidates = rankCandidateFiles(repoPath, issue, MAX_AI_LOCATE_CANDIDATES);
-  if (!candidates.length) return null;
-
-  const files = candidates.map((absPath) => ({
-    filePath: path.relative(repoPath, absPath).replace(/\\/g, "/"),
-    preview: (fileLocator.readFileSafe(absPath) || "").slice(0, MAX_AI_LOCATE_PREVIEW_CHARS),
-  }));
-
-  const json = await llm.completeJSON({
-    system:
-      "You are a senior web engineer locating a QA-reported issue inside a " +
-      "real codebase. You are given a shortlist of real files (path + a " +
-      "content preview) from the target repo and one QA issue. Pick the " +
-      "SINGLE file most likely responsible and the 1-based line number " +
-      "closest to the relevant code, and explain in one or two sentences " +
-      "exactly what to change. You MUST only use a filePath that appears " +
-      'verbatim in the provided list — never invent one. If none of the ' +
-      'files look responsible, return {"found": false}. Return ONLY JSON ' +
-      'with keys "found" (boolean), "filePath", "line" (number), and ' +
-      '"explanation".',
-    prompt: JSON.stringify({ issue: { category: issue.category, title: issue.title, description: issue.description, selector: issue.selector, snippet: issue.snippet }, files }),
-    maxTokens: 500,
-    temperature: 0.1,
-  });
-
-  if (!json || json.found !== true) return null;
-  const match = files.find((f) => f.filePath === json.filePath);
-  if (!match || typeof json.line !== "number" || json.line < 1) return null;
-
-  return {
-    relPath: match.filePath,
-    absPath: path.join(repoPath, match.filePath),
-    line: Math.round(json.line),
-    explanation: typeof json.explanation === "string" ? json.explanation : null,
-  };
-}
-
-async function locateIssue(testId, issueId) {
-  const test = testsRepo.get(testId);
-  if (!test) return { grounded: false };
-  const issue = (test.issues || []).find((i) => i.id === issueId);
-  if (!issue) return { grounded: false };
-
-  const repoMatch = repoRegistry.matchRepoForUrl(issue.url || test.url);
-  const located = repoMatch?.path ? fileLocator.locate(repoMatch.path, issue) : null;
-  const aiGuess = !located && repoMatch?.path ? await aiLocate(repoMatch.path, issue) : null;
-
-  if (located) {
-    return {
-      grounded: true,
-      aiSuggested: false,
-      filePath: located.relPath,
-      fileFullPath: located.absPath,
-      line: located.line,
-      explanation: null,
-      repo: repoMatch?.name ?? null,
-      matchedBy: repoMatch?.matchedBy ?? null,
-    };
-  }
-  if (aiGuess) {
-    return {
-      grounded: false,
-      aiSuggested: true,
-      filePath: aiGuess.relPath,
-      fileFullPath: aiGuess.absPath,
-      line: aiGuess.line,
-      explanation: aiGuess.explanation,
-      repo: repoMatch?.name ?? null,
-      matchedBy: repoMatch?.matchedBy ?? null,
-    };
-  }
-  return {
-    grounded: false,
-    aiSuggested: false,
-    filePath: null,
-    fileFullPath: null,
-    line: null,
-    explanation: null,
-    repo: repoMatch?.name ?? null,
-    matchedBy: repoMatch?.matchedBy ?? null,
-  };
-}
-
 module.exports = {
   runAutomation,
   createPullRequest,
@@ -1199,5 +1005,4 @@ module.exports = {
   latestCompletedTest,
   mergePullRequest,
   analyzePastedIssue,
-  locateIssue,
 };

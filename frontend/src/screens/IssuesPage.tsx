@@ -1,7 +1,7 @@
 
 
 'use client';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bug,
@@ -23,7 +23,6 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { Skeleton } from '../components/ui/Skeleton';
 import { getPhase, getEffort, PHASES, PHASE_ORDER, PhaseId } from '../lib/phases';
 import { getDynamicFixCode } from '../lib/fixTemplates'; // <- move your 200-line
-import { api } from '../lib/api';
 
 
 const severityBadge: Record<string, string> = {
@@ -91,24 +90,6 @@ export const IssuesPage: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<'Open' | 'Critical' | 'Resolved'>('Open');
   const [searchQuery, setSearchQuery] = useState('');
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
-  // Cheap, read-only file/line lookups (no LLM, no PR) so the detail panel
-  // can point at the real source location even before AI Automation runs.
-  // `aiSuggested` means the exact-match locator found nothing and an LLM
-  // (when enabled) picked the file instead — shown with a distinct, less
-  // certain label so it's never confused with a grounded, verified match.
-  const [locatedByKey, setLocatedByKey] = useState<
-    Record<
-      string,
-      {
-        filePath: string | null;
-        fileFullPath: string | null;
-        line: number | null;
-        grounded: boolean;
-        aiSuggested: boolean;
-        explanation: string | null;
-      }
-    >
-  >({});
 
   // ---- filtering -----------------------------------------------------------
   /**
@@ -150,48 +131,6 @@ export const IssuesPage: React.FC = () => {
   const activeRow: Row | null =
     visibleRows.find((r) => rowKey(r) === activeKey) || visibleRows[0] || null;
 
-  // Resolve the real source file/line for whichever issue is open, once,
-  // skipping issues that already have a grounded appliedFix from a real PR.
-  useEffect(() => {
-    if (!activeRow || activeRow.appliedFix) return;
-    const key = rowKey(activeRow);
-    if (key in locatedByKey) return;
-    let cancelled = false;
-    api
-      .locateIssue(activeRow.testId, activeRow.id)
-      .then((result) => {
-        if (cancelled) return;
-        setLocatedByKey((prev) => ({
-          ...prev,
-          [key]: {
-            filePath: result.filePath,
-            fileFullPath: result.fileFullPath,
-            line: result.line,
-            grounded: result.grounded,
-            aiSuggested: result.aiSuggested,
-            explanation: result.explanation,
-          },
-        }));
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setLocatedByKey((prev) => ({
-          ...prev,
-          [key]: {
-            filePath: null,
-            fileFullPath: null,
-            line: null,
-            grounded: false,
-            aiSuggested: false,
-            explanation: null,
-          },
-        }));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeRow, locatedByKey]);
-
   // ---- handlers ------------------------------------------------------------
   const handleResolveToggle = async (row: Row) => {
     try {
@@ -225,13 +164,8 @@ export const IssuesPage: React.FC = () => {
   const getFixDisplay = (row: Row) => {
     const applied = row.appliedFix;
     if (applied) {
-      const location = applied.filePath
-        ? applied.line
-          ? `${applied.filePath}:${applied.line}`
-          : applied.filePath
-        : null;
-      const header = location
-        ? `// ${location}${applied.autoFixable ? ' (applied)' : ' (suggested — review before applying)'}`
+      const header = applied.filePath
+        ? `// ${applied.filePath}${applied.autoFixable ? ' (applied)' : ' (suggested — review before applying)'}`
         : '// Guidance only — no exact source line matched in your repo';
       const code =
         `${header}\n\n--- before\n${applied.original}\n\n+++ after\n${applied.patched}`;
@@ -243,54 +177,13 @@ export const IssuesPage: React.FC = () => {
             ? 'Grounded location — review before applying'
             : 'Best-effort guidance (no matching file found)',
         grounded: applied.grounded,
-        aiSuggested: false,
-        filePath: applied.filePath,
-        fileFullPath: applied.fileFullPath ?? null,
-        line: applied.line ?? null,
       };
     }
-
-    // No real applied fix yet — fall back to the cheap, read-only file/line
-    // lookup (locatedByKey) so we can still point at the exact source file,
-    // even before the user runs the full AI Automation pipeline. When exact
-    // matching found nothing, this may instead be an AI *guess* — kept
-    // visually and textually distinct from a grounded/exact match so it's
-    // never mistaken for a verified location.
-    const located = locatedByKey[rowKey(row)];
-    const location = located?.filePath
-      ? located.line
-        ? `${located.filePath}:${located.line}`
-        : located.filePath
-      : null;
-    const header = !location
-      ? '// Guidance only — no local repo linked, or no exact source line matched'
-      : located?.aiSuggested
-        ? `// ${location} (AI-suggested — not an exact match, verify before applying)`
-        : `// ${location} (found in your local repo — review before applying)`;
-    const explanationBlock = located?.aiSuggested && located.explanation
-      ? `\n\n// What to change:\n// ${located.explanation}`
-      : '';
     return {
-      code: `${header}${explanationBlock}\n\n${getDynamicFixCode(row.title)}`,
-      label: !location
-        ? 'Generic guidance — run AI Automation on this scan for a fix grounded in your repo'
-        : located?.aiSuggested
-          ? 'AI-suggested location — not exact, verify before applying'
-          : 'File located in your repo — run AI Automation for a grounded patch',
+      code: getDynamicFixCode(row.title),
+      label: 'Generic guidance — run AI Automation on this scan for a fix grounded in your repo',
       grounded: false,
-      aiSuggested: Boolean(located?.aiSuggested),
-      filePath: located?.filePath ?? null,
-      fileFullPath: located?.fileFullPath ?? null,
-      line: located?.line ?? null,
     };
-  };
-
-  /** vscode://file/<absolute-path>:<line> opens VS Code desktop at the exact location, when registered as a URL handler. */
-  const vscodeFileUrl = (fileFullPath: string | null, line: number | null) => {
-    if (!fileFullPath) return null;
-    const normalized = fileFullPath.replace(/\\/g, '/');
-    const prefixed = normalized.startsWith('/') ? normalized : `/${normalized}`;
-    return `vscode://file${prefixed}${line ? `:${line}` : ''}`;
   };
 
   const handleCopy = async (row: Row, explicitCode?: string) => {
@@ -536,41 +429,13 @@ export const IssuesPage: React.FC = () => {
                             </a>
                           )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          {(() => {
-                            const editorUrl = vscodeFileUrl(fixDisplay.fileFullPath, fixDisplay.line);
-                            const label = fixDisplay.filePath
-                              ? `${fixDisplay.filePath}${fixDisplay.line ? `:${fixDisplay.line}` : ''}`
-                              : null;
-                            return (
-                              <button
-                                onClick={() => {
-                                  if (editorUrl) window.location.href = editorUrl;
-                                }}
-                                disabled={!editorUrl}
-                                title={
-                                  editorUrl
-                                    ? `Open ${label} in VS Code`
-                                    : 'No local source file matched for this issue yet'
-                                }
-                                className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-colors ${
-                                  editorUrl
-                                    ? 'text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 border-indigo-200 dark:border-indigo-900/50 bg-indigo-50 dark:bg-indigo-950/30 cursor-pointer'
-                                    : 'text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30 cursor-not-allowed'
-                                }`}
-                              >
-                                <Folder className="w-3.5 h-3.5" /> {editorUrl ? 'Go to File' : 'Locating file…'}
-                              </button>
-                            );
-                          })()}
-                          <button
-                            onClick={() => handleCopyForAutomation(activeRow)}
-                            title="Copy this issue, then paste it into the AI Automation page to auto-generate a PR"
-                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50 dark:bg-indigo-950/30 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
-                          >
-                            <Copy className="w-3.5 h-3.5" /> Copy for AI Automation
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => handleCopyForAutomation(activeRow)}
+                          title="Copy this issue, then paste it into the AI Automation page to auto-generate a PR"
+                          className="inline-flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50 dark:bg-indigo-950/30 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Copy className="w-3.5 h-3.5" /> Copy for AI Automation
+                        </button>
                       </div>
                       <h3 className="text-xl font-extrabold text-slate-950 dark:text-white tracking-tight leading-snug">{activeRow.title}</h3>
                       <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -583,29 +448,6 @@ export const IssuesPage: React.FC = () => {
                         <Globe className="text-slate-400 dark:text-slate-500 text-base flex-shrink-0" />
                         <span className="truncate">{activeRow.url}</span>
                       </div>
-                      {(() => {
-                        const fd = fixDisplay;
-                        if (!fd.filePath) return null;
-                        const editorUrl = vscodeFileUrl(fd.fileFullPath, fd.line);
-                        const label = `${fd.filePath}${fd.line ? `:${fd.line}` : ''}`;
-                        return (
-                          <div className="flex items-center gap-2 text-xs font-mono bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-900 px-3 py-1.5 rounded-lg w-fit max-w-full truncate mt-2">
-                            <Folder className="text-indigo-400 dark:text-indigo-500 text-base flex-shrink-0" />
-                            {editorUrl ? (
-                              <a href={editorUrl} className="truncate hover:underline" title="Open in VS Code">
-                                {label}
-                              </a>
-                            ) : (
-                              <span className="truncate">{label}</span>
-                            )}
-                            {fd.aiSuggested && (
-                              <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-indigo-200/60 dark:bg-indigo-900/50 flex-shrink-0">
-                                AI guess
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })()}
                     </div>
 
                     <div className="bg-indigo-50/30 dark:bg-indigo-950/20 p-5 rounded-xl border border-indigo-100/50 dark:border-indigo-900/40">
@@ -624,9 +466,7 @@ export const IssuesPage: React.FC = () => {
                         <span
                           className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border ${fixDisplay.grounded
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900'
-                              : fixDisplay.aiSuggested
-                                ? 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-900'
-                                : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+                              : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
                             }`}
                         >
                           {fixDisplay.label}
@@ -648,23 +488,9 @@ export const IssuesPage: React.FC = () => {
                             <span className="w-2.5 h-2.5 rounded-full bg-red-500/80 inline-block" />
                             <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80 inline-block" />
                             <span className="w-2.5 h-2.5 rounded-full bg-green-500/80 inline-block" />
-                            {(() => {
-                              const label = fixDisplay.filePath
-                                ? `${fixDisplay.filePath}${fixDisplay.line ? `:${fixDisplay.line}` : ''}`
-                                : `${activeRow.category} fix`;
-                              const editorUrl = vscodeFileUrl(fixDisplay.fileFullPath, fixDisplay.line);
-                              return editorUrl ? (
-                                <a
-                                  href={editorUrl}
-                                  className="ml-1 text-slate-500 font-sans font-semibold hover:text-indigo-400 hover:underline"
-                                  title="Open in VS Code"
-                                >
-                                  {label}
-                                </a>
-                              ) : (
-                                <span className="ml-1 text-slate-500 font-sans font-semibold">{label}</span>
-                              );
-                            })()}
+                            <span className="ml-1 text-slate-500 font-sans font-semibold">
+                              {activeRow.appliedFix?.filePath || `${activeRow.category} fix`}
+                            </span>
                           </span>
                           <button
                             onClick={() => handleCopy(activeRow, fixDisplay.code)}
