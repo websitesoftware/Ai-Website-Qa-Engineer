@@ -158,6 +158,10 @@ export interface BackendTest {
   crossBrowser?: BackendCrossBrowserResult[];
   performanceBenchmark?: BackendPerformanceBenchmark | null;
   options: { maxPages?: number; maxDepth?: number; device?: string; modules?: string[] };
+  createdBy?: string | null;
+  createdByName?: string | null;
+  monitorId?: string | null;
+  policyResult?: BackendPolicyResult | null;
   createdAt: string;
   startedAt: string | null;
   completedAt: string | null;
@@ -189,4 +193,113 @@ export interface BackendPipeline {
   activeScans: BackendPipelineItem[];
   activeCount: number;
   pendingCount: number;
+}
+
+// ---- Phase 4 types ----
+
+export interface PolicyThresholds {
+  overallScore: number | null;
+  performance: number | null;
+  accessibility: number | null;
+  seo: number | null;
+  bestPractices: number | null;
+}
+
+export type PolicyFailSeverity = 'critical' | 'high' | 'medium' | 'none';
+
+export interface BackendPolicy {
+  id: string;
+  name: string;
+  thresholds: PolicyThresholds;
+  failSeverity: PolicyFailSeverity;
+  active: boolean;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BackendPolicyResult {
+  policyId: string;
+  policyName: string;
+  passed: boolean;
+  violations: string[];
+}
+
+export interface BackendBranding {
+  companyName: string;
+  primaryColor: string;
+  footerText: string;
+  logoUrl: string | null;
+  updatedAt: string | null;
+}
+
+export type TeamRole = 'owner' | 'admin' | 'editor' | 'viewer';
+
+export interface BackendTeamMember {
+  id: string;
+  name: string;
+  email: string;
+  role: TeamRole;
+  teamStatus: 'active' | null;
+  createdAt: string;
+  testCount: number;
+  lastActive: string | null;
+}
+
+export type MonitorFrequency = 'hourly' | 'daily' | 'weekly';
+
+export interface BackendMonitor {
+  id: string;
+  url: string;
+  name: string;
+  frequency: MonitorFrequency;
+  modules: string[];
+  alertOnCritical: boolean;
+  enabled: boolean;
+  nextRunAt: number;
+  lastRunAt: string | null;
+  lastTestId: string | null;
+  lastRunHadCriticalIssues: boolean;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+export interface AnalyticsScorePoint {
+  date: string;
+  avgScore: number | null;
+  count: number;
+}
+
+export interface AnalyticsPassFailPoint {
+  date: string;
+  passed: number;
+  failed: number;
+}
+
+export interface AnalyticsSeverityPoint {
+  date: string;
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+}
+
+export interface AnalyticsTopDomain {
+  url: string;
+  avgScore: number | null;
+  testCount: number;
+  lastScan: string;
+}
+
+export interface BackendAnalytics {
+  scoreTrend: AnalyticsScorePoint[];
+  passFailTrend: AnalyticsPassFailPoint[];
+  issuesBySeverityTrend: AnalyticsSeverityPoint[];
+  topDomains: AnalyticsTopDomain[];
+  summary: {
+    totalTests: number;
+    avgScoreAllTime: number | null;
+    avgScoreLast7d: number | null;
+    scoreDeltaPct: number | null;
+  };
 }

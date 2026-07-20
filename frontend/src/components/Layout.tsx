@@ -4,17 +4,23 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useQAData } from '../context/QADataContext';
+import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
 import { useTheme } from '../context/ThemeContext';
 import { User, SignOut, Key, Envelope, LockOpen, ArrowLeft, CheckSquare, Square, Eye, EyeSlash } from '@phosphor-icons/react';
 import { AnimatePresence, motion } from 'framer-motion';
 
-export type TabType = 'Dashboard' | 'Tests' | 'Issues' | 'Settings' | 'Phase 2 Results' | 'AI Automation' | 'Phase 1 Results';
+export type TabType =
+  | 'Dashboard'
+  | 'Tests'
+  | 'Issues'
+  | 'Settings'
+  | 'Phase 2 Results'
+  | 'AI Automation'
+  | 'Phase 1 Results'
+  | 'Team Dashboard'
+  | 'Analytics';
 type AuthView = 'LOGIN' | 'FORGOT_PASSWORD' | 'REGISTER';
-
-// Where the session is persisted so a page reload keeps the user signed in.
-const STORAGE_KEY = 'qa_auth';
-const AUTH_BASE = 'http://localhost:5000/api/auth';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -36,10 +42,7 @@ export const Layout: React.FC<LayoutProps> = ({
 }) => {
   const { error } = useQAData();
   const { resolvedTheme } = useTheme();
-
-  // Dynamic Auth State (Managed locally or can be wired via Context API)
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const { user, login, register, forgotPassword, logout } = useAuth();
 
   // UI Panels Engine States
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -55,56 +58,6 @@ export const Layout: React.FC<LayoutProps> = ({
   const [loading, setLoading] = useState(false);
 
   const popupRef = useRef<HTMLDivElement>(null);
-
-  // Persist the session (localStorage if "remember me", else sessionStorage).
-  const persistSession = (tok: string, usr: { name: string; email: string }, remember: boolean) => {
-    try {
-      const payload = JSON.stringify({ token: tok, user: usr });
-      const store = remember ? localStorage : sessionStorage;
-      store.setItem(STORAGE_KEY, payload);
-      (remember ? sessionStorage : localStorage).removeItem(STORAGE_KEY);
-    } catch {
-      /* storage unavailable — ignore */
-    }
-  };
-
-  const clearSession = () => {
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-      sessionStorage.removeItem(STORAGE_KEY);
-    } catch {
-      /* ignore */
-    }
-  };
-
-  // On first load, restore a saved session and validate the token via /me.
-  useEffect(() => {
-    let saved: string | null = null;
-    try {
-      saved = localStorage.getItem(STORAGE_KEY) || sessionStorage.getItem(STORAGE_KEY);
-    } catch {
-      saved = null;
-    }
-    if (!saved) return;
-
-    let savedToken: string | null = null;
-    try {
-      savedToken = JSON.parse(saved).token;
-    } catch {
-      clearSession();
-      return;
-    }
-    if (!savedToken) return;
-
-    fetch(`${AUTH_BASE}/me`, { headers: { Authorization: `Bearer ${savedToken}` } })
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((data) => {
-        setUser(data.user);
-        setToken(savedToken);
-      })
-      .catch(() => clearSession()); // token invalid/expired
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Auto-close on click outside layout boundary box
   useEffect(() => {
@@ -127,20 +80,8 @@ export const Layout: React.FC<LayoutProps> = ({
     e.preventDefault();
     setApiError('');
     setLoading(true);
-
     try {
-      const response = await fetch(`${AUTH_BASE}/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await response.json();
-
-      if (!response.ok) throw new Error(data.message || 'Authentication failed');
-
-      setUser(data.user);
-      setToken(data.token);
-      persistSession(data.token, data.user, rememberMe);
+      await login(email, password, rememberMe);
       setIsLoginOpen(false);
       setPassword('');
       setEmail('');
@@ -156,18 +97,9 @@ export const Layout: React.FC<LayoutProps> = ({
     e.preventDefault();
     setApiError('');
     setLoading(true);
-
     try {
-      const response = await fetch(`${AUTH_BASE}/forgot-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      const data = await response.json();
-
-      if (!response.ok) throw new Error(data.message || 'Request failed');
-
-      setSuccessMessage(data.message);
+      const message = await forgotPassword(email);
+      setSuccessMessage(message);
       setTimeout(() => {
         setSuccessMessage('');
         setAuthView('LOGIN');
@@ -184,20 +116,8 @@ export const Layout: React.FC<LayoutProps> = ({
     e.preventDefault();
     setApiError('');
     setLoading(true);
-
     try {
-      const response = await fetch(`${AUTH_BASE}/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await response.json();
-
-      if (!response.ok) throw new Error(data.message || 'Registration failed');
-
-      setUser(data.user);
-      setToken(data.token);
-      persistSession(data.token, data.user, rememberMe);
+      await register(email, password, rememberMe);
       setIsLoginOpen(false);
       setPassword('');
       setEmail('');
@@ -209,9 +129,7 @@ export const Layout: React.FC<LayoutProps> = ({
   };
 
   const handleLogout = () => {
-    setUser(null);
-    setToken(null);
-    clearSession();
+    logout();
     setIsLoginOpen(false);
     setAuthView('LOGIN');
   };
@@ -226,6 +144,8 @@ export const Layout: React.FC<LayoutProps> = ({
     { label: 'Phase 2 Results' as TabType, icon: 'ph-sparkle' },
     { label: 'AI Automation' as TabType, icon: 'ph-robot' },
     { label: 'Issues' as TabType, icon: 'ph-flag' },
+    { label: 'Team Dashboard' as TabType, icon: 'ph-users-three' },
+    { label: 'Analytics' as TabType, icon: 'ph-chart-line-up' },
 
     { label: 'Settings' as TabType, icon: 'ph-gear' },
   ];

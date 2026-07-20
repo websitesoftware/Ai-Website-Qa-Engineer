@@ -5,6 +5,7 @@ const path = require("path");
 const config = require("../config/config");
 const logger = require("../utils/logger");
 const testsRepo = require("../repositories/tests.repository");
+const policiesRepo = require("../repositories/policies.repository");
 const { getBrowser } = require("./browser.service");
 const { crawlSite } = require("./crawler.service");
 const { checkLinks } = require("./linkChecker.service");
@@ -22,6 +23,34 @@ const REPORTS_DIR = path.join(__dirname, "..", "..", config.storage.reportsDir);
 
 async function updateStage(testId, stage, progress) {
   await testsRepo.update(testId, { currentStage: stage, progress });
+}
+
+const SEVERITY_RANK = { critical: 3, high: 2, medium: 1, low: 0 };
+
+function evaluatePolicy(policy, { score, scores, issues }) {
+  const violations = [];
+
+  Object.entries(policy.thresholds).forEach(([key, min]) => {
+    if (min === null || min === undefined) return;
+    const actual = key === "overallScore" ? score : scores[key];
+    if (actual !== null && actual !== undefined && actual < min) {
+      violations.push(`${key} score ${actual} is below the required minimum of ${min}`);
+    }
+  });
+
+  if (policy.failSeverity !== "none") {
+    const threshold = SEVERITY_RANK[policy.failSeverity];
+    const breaching = issues.filter(
+      (i) => SEVERITY_RANK[i.severity] !== undefined && SEVERITY_RANK[i.severity] >= threshold
+    );
+    if (breaching.length) {
+      violations.push(
+        `${breaching.length} issue(s) at or above "${policy.failSeverity}" severity`
+      );
+    }
+  }
+
+  return { passed: violations.length === 0, violations };
 }
 
 function hasModule(test, name) {
@@ -128,11 +157,19 @@ async function runScan(testId) {
     });
 
     const completedAt = new Date().toISOString();
-    const finalStatus = issues.some(
+    let finalStatus = issues.some(
       (i) => i.severity === "critical" || i.severity === "high",
     )
       ? "failed"
       : "passed";
+
+    const activePolicy = policiesRepo.getActive();
+    let policyResult = null;
+    if (activePolicy) {
+      const { passed, violations } = evaluatePolicy(activePolicy, { score, scores, issues });
+      policyResult = { policyId: activePolicy.id, policyName: activePolicy.name, passed, violations };
+      if (!passed) finalStatus = "failed";
+    }
 
     const report = {
       testId,
@@ -152,6 +189,7 @@ async function runScan(testId) {
       visualRegression: visualRegressionResults,
       crossBrowser: crossBrowserResults,
       performanceBenchmark,
+      policyResult,
     };
 
     fs.mkdirSync(REPORTS_DIR, { recursive: true });
@@ -177,6 +215,7 @@ async function runScan(testId) {
       visualRegression: visualRegressionResults,
       crossBrowser: crossBrowserResults,
       performanceBenchmark,
+      policyResult,
       completedAt,
     });
 
