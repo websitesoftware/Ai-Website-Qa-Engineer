@@ -23,6 +23,7 @@ const logger = require("./src/utils/logger");
 const { closeBrowser } = require("./src/services/browser.service");
 const { chromium } = require("@playwright/test");
 const { autoDiscoverAndGenerateSteps } = require("./src/utils/testGenerator");
+const { startScheduler } = require("./src/services/monitorScheduler.service");
 
 // =========================================================================
 // 🚀 INJECTING STUDIO API DIRECTLY ON APP INSTANCE TO FIX 404
@@ -107,6 +108,7 @@ const server = app.listen(config.port, () => {
     "server",
     `AI QA Engineer backend running on http://localhost:${config.port}`,
   );
+  startScheduler();
 });
 
 async function shutdown(signal) {

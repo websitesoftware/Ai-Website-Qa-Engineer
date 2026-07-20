@@ -6,12 +6,15 @@ const { v4: uuidv4 } = require("uuid");
  * Phase 1 fields are unchanged. Phase 2 fields are always present but stay
  * empty/null unless the matching module was selected in `options.modules`.
  */
-function createTest({ url, name, options = {} }) {
+function createTest({ url, name, options = {}, createdBy = null, createdByName = null }) {
   const now = new Date().toISOString();
   return {
     id: uuidv4(),
     name: name || url,
     url,
+    createdBy,
+    createdByName,
+    monitorId: options.monitorId || null,
     status: "queued", // queued | running | passed | failed | error
     progress: 0,
     currentStage: null,
@@ -42,6 +45,7 @@ function createTest({ url, name, options = {} }) {
     visualRegression: [],
     crossBrowser: [],
     performanceBenchmark: null,
+    policyResult: null,
 
     options: {
       maxPages: options.maxPages,

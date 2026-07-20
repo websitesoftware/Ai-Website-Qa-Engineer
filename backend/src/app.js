@@ -26,6 +26,10 @@ app.use(
   "/baselines",
   express.static(path.join(__dirname, "..", config.storage.baselinesDir)),
 ); // Phase 2: visual regression
+app.use(
+  "/branding",
+  express.static(path.join(__dirname, "..", config.storage.brandingDir)),
+); // Phase 4: white-label logo
 
 // =========================================================================
 // 🚀 FIX FOR THE 404 STATUS REPEATED CRASH

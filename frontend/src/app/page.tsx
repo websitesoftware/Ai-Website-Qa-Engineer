@@ -10,10 +10,21 @@ import { IssuesPage } from '../screens/IssuesPage';
 import { Phase2ResultsPage } from '../screens/Phase2ResultsPage';
 import { AIAutomationPage } from '../screens/AIAutomationPage';
 import ScanlinePhase1Report from '../screens/phase1page';
+import { TeamDashboardPage } from '../screens/TeamDashboardPage';
+import { AnalyticsPage } from '../screens/AnalyticsPage';
 
 import { SettingsPage } from '../screens/settingspage';
 
-type TabType = 'Dashboard' | 'Tests' | 'Issues' | 'Settings' | 'Phase 2 Results' | 'AI Automation' | 'Phase 1 Results';
+type TabType =
+  | 'Dashboard'
+  | 'Tests'
+  | 'Issues'
+  | 'Settings'
+  | 'Phase 2 Results'
+  | 'AI Automation'
+  | 'Phase 1 Results'
+  | 'Team Dashboard'
+  | 'Analytics';
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabType>('Dashboard');
@@ -37,6 +48,10 @@ export default function DashboardPage() {
         return <AIAutomationPage />;
       case 'Phase 1 Results':
         return <ScanlinePhase1Report />;
+      case 'Team Dashboard':
+        return <TeamDashboardPage />;
+      case 'Analytics':
+        return <AnalyticsPage />;
 
       default:
         return (

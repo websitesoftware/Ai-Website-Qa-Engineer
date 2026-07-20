@@ -1,4 +1,5 @@
 const testsRepo = require("../repositories/tests.repository");
+const usersRepo = require("../repositories/users.repository");
 const { createTest } = require("../models/test.model");
 const { enqueueScan } = require("../services/queue.service");
 
@@ -32,10 +33,14 @@ async function create(req, res) {
     ? modules.filter((m) => VALID_MODULES.includes(m))
     : [];
 
+  const requester = req.user ? usersRepo.getById(req.user.sub) : null;
+
   const test = createTest({
     url,
     name,
     options: { maxPages, maxDepth, device, modules: cleanModules },
+    createdBy: requester ? requester.id : null,
+    createdByName: requester ? requester.name : null,
   });
   await testsRepo.create(test);
   enqueueScan(test.id);

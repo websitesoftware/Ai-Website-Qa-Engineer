@@ -17,12 +17,22 @@ const router = express.Router();
 
 const testsRoutes = require("./tests.routes");
 const authRoutes = require("./authRoutes");
+const teamRoutes = require("./team.routes");
+const policiesRoutes = require("./policies.routes");
+const brandingRoutes = require("./branding.routes");
+const monitorsRoutes = require("./monitors.routes");
+const analyticsRoutes = require("./analytics.routes");
 const statsController = require("../controllers/stats.controller");
 const pipelineController = require("../controllers/pipeline.controller");
 const aiAutomationController = require("../controllers/aiAutomation.controller");
 
 router.use("/auth", authRoutes);
 router.use("/tests", testsRoutes);
+router.use("/team", teamRoutes);
+router.use("/policies", policiesRoutes);
+router.use("/branding", brandingRoutes);
+router.use("/monitors", monitorsRoutes);
+router.use("/analytics", analyticsRoutes);
 router.get("/stats", statsController.getStats);
 router.get("/pipeline", pipelineController.getPipeline);
 

@@ -68,6 +68,7 @@ module.exports = {
     screenshotsDir: "storage/screenshots",
     reportsDir: "storage/reports",
     baselinesDir: "storage/baselines",
+    brandingDir: "storage/branding",
   },
 
   // ---- Phase 3: AI Automation ----

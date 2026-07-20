@@ -24,6 +24,10 @@ module.exports = {
     return store.getById(id);
   },
 
+  list() {
+    return store.getAll().map(sanitize);
+  },
+
   findByResetTokenHash(hash) {
     if (!hash) return null;
     return store.getAll().find((u) => u.resetTokenHash === hash) || null;
@@ -37,6 +41,8 @@ module.exports = {
       password, // already hashed by the caller
       resetTokenHash: null,
       resetTokenExpire: null,
+      role: "viewer", // owner is derived at read time from earliest createdAt
+      teamStatus: null, // 'active' once added to the team
       createdAt: new Date().toISOString(),
     };
     await store.insert(user);
@@ -45,6 +51,14 @@ module.exports = {
 
   update(id, patch) {
     return store.update(id, patch);
+  },
+
+  setRole(id, role) {
+    return store.update(id, { role });
+  },
+
+  setTeamStatus(id, teamStatus) {
+    return store.update(id, { teamStatus });
   },
 
   sanitize,

@@ -5,6 +5,7 @@ import { NewTestModal } from '../components/test/NewTestModal';
 import { useQAData } from './QADataContext';
 import { useToast } from './ToastContext';
 import { useReportModal } from './ReportModalContext';
+import { useAuth } from './AuthContext';
 
 interface NewTestModalContextValue {
   open: () => void;
@@ -18,11 +19,18 @@ export const NewTestModalProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const { createTest } = useQAData();
   const { showToast } = useToast();
   const { openReport } = useReportModal();
+  const { user } = useAuth();
   // Holds the test to open once NewTestModal's exit animation actually
   // completes (see onExited below) — not a fixed-delay guess.
   const pendingTestIdRef = useRef<string | null>(null);
 
-  const open = useCallback(() => setIsOpen(true), []);
+  const open = useCallback(() => {
+    if (!user) {
+      showToast('Please sign in to run a scan — use the Account menu in the top right.', 'info');
+      return;
+    }
+    setIsOpen(true);
+  }, [user, showToast]);
   const close = useCallback(() => setIsOpen(false), []);
 
   const handleStart = useCallback(
