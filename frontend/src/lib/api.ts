@@ -68,6 +68,18 @@ export const api = {
       body: JSON.stringify({ resolved }),
     }),
 
+  locateIssue: (testId: string, issueId: string) =>
+    request<{
+      grounded: boolean;
+      aiSuggested: boolean;
+      filePath: string | null;
+      fileFullPath: string | null;
+      line: number | null;
+      explanation: string | null;
+      repo: string | null;
+      matchedBy: string | null;
+    }>(`/ai-automation/locate?testId=${encodeURIComponent(testId)}&issueId=${encodeURIComponent(issueId)}`),
+
   getStats: () => request<BackendStats>('/stats'),
 
   getPipeline: () => request<BackendPipeline>('/pipeline'),
