@@ -150,47 +150,64 @@ export const IssuesPage: React.FC = () => {
   const activeRow: Row | null =
     visibleRows.find((r) => rowKey(r) === activeKey) || visibleRows[0] || null;
 
-  // Resolve the real source file/line for whichever issue is open, once,
-  // skipping issues that already have a grounded appliedFix from a real PR.
+  // Resolve the real source file/line for EVERY currently visible issue (not
+  // just the selected one) so each card in the list can show its own
+  // "Go to File" button, not only the detail panel. Bounded to a few
+  // in-flight lookups at once so a big list doesn't fire off dozens of
+  // Gemini-backed locate calls simultaneously; already-cached keys (or ones
+  // with a grounded appliedFix from a real PR) are skipped.
   useEffect(() => {
-    if (!activeRow || activeRow.appliedFix) return;
-    const key = rowKey(activeRow);
-    if (key in locatedByKey) return;
+    const pending = visibleRows.filter((r) => !r.appliedFix && !(rowKey(r) in locatedByKey));
+    if (!pending.length) return;
+
     let cancelled = false;
-    api
-      .locateIssue(activeRow.testId, activeRow.id)
-      .then((result) => {
+    const CONCURRENCY = 3;
+    let nextIndex = 0;
+
+    const resolveOne = async (row: (typeof pending)[number]) => {
+      const key = rowKey(row);
+      try {
+        const result = await api.locateIssue(row.testId, row.id);
         if (cancelled) return;
-        setLocatedByKey((prev) => ({
-          ...prev,
-          [key]: {
-            filePath: result.filePath,
-            fileFullPath: result.fileFullPath,
-            line: result.line,
-            grounded: result.grounded,
-            aiSuggested: result.aiSuggested,
-            explanation: result.explanation,
-          },
-        }));
-      })
-      .catch(() => {
+        setLocatedByKey((prev) =>
+          key in prev
+            ? prev
+            : {
+                ...prev,
+                [key]: {
+                  filePath: result.filePath,
+                  fileFullPath: result.fileFullPath,
+                  line: result.line,
+                  grounded: result.grounded,
+                  aiSuggested: result.aiSuggested,
+                  explanation: result.explanation,
+                },
+              }
+        );
+      } catch {
         if (cancelled) return;
-        setLocatedByKey((prev) => ({
-          ...prev,
-          [key]: {
-            filePath: null,
-            fileFullPath: null,
-            line: null,
-            grounded: false,
-            aiSuggested: false,
-            explanation: null,
-          },
-        }));
-      });
+        setLocatedByKey((prev) =>
+          key in prev
+            ? prev
+            : { ...prev, [key]: { filePath: null, fileFullPath: null, line: null, grounded: false, aiSuggested: false, explanation: null } }
+        );
+      }
+    };
+
+    const worker = async () => {
+      while (!cancelled) {
+        const i = nextIndex++;
+        if (i >= pending.length) return;
+        await resolveOne(pending[i]);
+      }
+    };
+
+    Array.from({ length: Math.min(CONCURRENCY, pending.length) }, () => worker());
+
     return () => {
       cancelled = true;
     };
-  }, [activeRow, locatedByKey]);
+  }, [visibleRows, locatedByKey]);
 
   // ---- handlers ------------------------------------------------------------
   const handleResolveToggle = async (row: Row) => {
@@ -484,6 +501,34 @@ export const IssuesPage: React.FC = () => {
                           <span>•</span>
                           <span className="truncate max-w-[140px] font-mono text-slate-400 dark:text-slate-500">{row.host}</span>
                         </div>
+                        {(() => {
+                          const rowFix = getFixDisplay(row);
+                          const rowEditorUrl = vscodeFileUrl(rowFix.fileFullPath, rowFix.line);
+                          const rowLabel = rowFix.filePath
+                            ? `${rowFix.filePath}${rowFix.line ? `:${rowFix.line}` : ''}`
+                            : null;
+                          const stillLocating = !row.appliedFix && !(key in locatedByKey);
+                          return (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (rowEditorUrl) window.location.href = rowEditorUrl;
+                              }}
+                              disabled={!rowEditorUrl}
+                              title={rowEditorUrl ? `Open ${rowLabel} in VS Code` : 'No local source file matched for this issue yet'}
+                              className={`mt-3 inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-colors max-w-full ${
+                                rowEditorUrl
+                                  ? 'text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 border-indigo-200 dark:border-indigo-900/50 bg-indigo-50 dark:bg-indigo-950/30 cursor-pointer'
+                                  : 'text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30 cursor-not-allowed'
+                              }`}
+                            >
+                              <Folder className="w-3.5 h-3.5 shrink-0" />
+                              <span className="truncate">
+                                {rowEditorUrl ? rowLabel : stillLocating ? 'Locating file…' : 'No matching file found'}
+                              </span>
+                            </button>
+                          );
+                        })()}
                       </motion.div>
                     </React.Fragment>
                   );

@@ -88,6 +88,15 @@ module.exports = {
       // works with OpenAI, Groq, Together, Ollama, LM Studio, etc.
       baseUrl: process.env.OPENAI_BASE_URL || "https://api.openai.com/v1",
     },
+    // Used specifically for AI-assisted source-file location (see
+    // gemini.service.js), independent of `provider` above — Gemini's large
+    // context window lets it look at far more candidate files at once than
+    // the primary fix-writing model, which matters more for "which of these
+    // 40 files is this DOM element in" than for writing a patch.
+    gemini: {
+      apiKey: process.env.GEMINI_API_KEY || "",
+      model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+    },
   },
 
   // GitHub is optional. Needed only for real PR creation + Actions dispatch.

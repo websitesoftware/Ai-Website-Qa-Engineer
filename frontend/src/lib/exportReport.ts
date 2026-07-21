@@ -10,9 +10,10 @@ import {
   TableCell,
   TextRun,
   WidthType,
+  ImageRun,
 } from 'docx';
 import { BackendTest, BackendBranding } from './types';
-import { api } from './api';
+import { api, API_ORIGIN } from './api';
 
 const DEFAULT_BRANDING: BackendBranding = {
   companyName: 'AI QA Engineer',
@@ -24,13 +25,72 @@ const DEFAULT_BRANDING: BackendBranding = {
 
 // Reports are white-labeled with whatever the workspace has configured in
 // Settings → White-label Reports. Falls back to sane defaults if the
-// backend is unreachable so exports never hard-fail on this.
-async function fetchBrandingSafe(): Promise<BackendBranding> {
+// backend is unreachable so exports never hard-fail on this. Exported so
+// every export path in the app (not just this file's own PDF/CSV/DOCX
+// builders) can pull the same branding.
+export async function fetchBrandingSafe(): Promise<BackendBranding> {
   try {
     return await api.branding.get();
   } catch {
     return DEFAULT_BRANDING;
   }
+}
+
+export interface LogoAsset {
+  dataUrl: string;
+  bytes: ArrayBuffer;
+  type: 'png' | 'jpg';
+  width: number;
+  height: number;
+}
+
+/**
+ * Fetches the branding logo and returns it in every shape a document builder
+ * might need: a data URL (jsPDF#addImage), raw bytes (docx ImageRun), and
+ * its natural pixel size (so callers can scale it without distorting the
+ * aspect ratio). Returns null if there's no logo configured, the fetch
+ * fails, or the file isn't a raster format jsPDF/docx can embed directly
+ * (SVG logos are skipped rather than half-rendered) — every caller must
+ * treat null as "just skip the logo," never as an error.
+ */
+export async function fetchLogoAsset(logoUrl: string | null): Promise<LogoAsset | null> {
+  if (!logoUrl) return null;
+  try {
+    const res = await fetch(`${API_ORIGIN}${logoUrl}`);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    if (!/png|jpe?g/i.test(blob.type)) return null;
+    const type: 'png' | 'jpg' = /png/i.test(blob.type) ? 'png' : 'jpg';
+
+    const bytes = await blob.arrayBuffer();
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error('logo read failed'));
+      reader.readAsDataURL(blob);
+    });
+    const { width, height } = await new Promise<{ width: number; height: number }>((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve({ width: img.naturalWidth || 1, height: img.naturalHeight || 1 });
+      img.onerror = () => resolve({ width: 1, height: 1 });
+      img.src = dataUrl;
+    });
+
+    return { dataUrl, bytes, type, width, height };
+  } catch {
+    return null;
+  }
+}
+
+/** Fit `logo` inside a maxW×maxH box (mm, px, whatever unit the caller uses) without distorting its aspect ratio. */
+export function fitLogoBox(logo: LogoAsset, maxW: number, maxH: number): { w: number; h: number } {
+  let w = maxW;
+  let h = (logo.height / logo.width) * w;
+  if (h > maxH) {
+    h = maxH;
+    w = (logo.width / logo.height) * h;
+  }
+  return { w, h };
 }
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -167,13 +227,21 @@ export async function exportReportCSV(test: BackendTest) {
 // ---------------------------------------------------------------------------
 export async function exportReportPDF(test: BackendTest) {
   const branding = await fetchBrandingSafe();
+  const logo = await fetchLogoAsset(branding.logoUrl);
   const brandRgb = hexToRgb(branding.primaryColor);
   const doc = new jsPDF();
   let y = 16;
+  let titleX = 14;
+
+  if (logo) {
+    const { w, h } = fitLogoBox(logo, 22, 14);
+    doc.addImage(logo.dataUrl, logo.type.toUpperCase(), 14, 8, w, h);
+    titleX = 14 + w + 5;
+  }
 
   doc.setFontSize(16);
   doc.setTextColor(brandRgb[0], brandRgb[1], brandRgb[2]);
-  doc.text(`${branding.companyName} - Report`, 14, y);
+  doc.text(`${branding.companyName} - Report`, titleX, y);
   y += 8;
   doc.setFontSize(10);
   doc.setTextColor(100);
@@ -340,9 +408,18 @@ function makeTable(headers: string[], rows: string[][]) {
 
 export async function exportReportDocx(test: BackendTest) {
   const branding = await fetchBrandingSafe();
+  const logo = await fetchLogoAsset(branding.logoUrl);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const children: any[] = [];
 
+  if (logo) {
+    const { w, h } = fitLogoBox(logo, 140, 60);
+    children.push(
+      new Paragraph({
+        children: [new ImageRun({ type: logo.type, data: logo.bytes, transformation: { width: w, height: h } })],
+      })
+    );
+  }
   children.push(new Paragraph({ text: `${branding.companyName} - Report`, heading: HeadingLevel.HEADING_1 }));
   children.push(new Paragraph({ text: test.url }));
   children.push(new Paragraph({ text: `Generated: ${new Date().toLocaleString()}` }));

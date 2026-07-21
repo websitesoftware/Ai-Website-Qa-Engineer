@@ -8,7 +8,7 @@ import { SuggestedFixes } from '../components/ai-automation/SuggestedFixes';
 import { PullRequestGeneration } from '../components/ai-automation/PullRequestGeneration';
 import { CicdIntegration } from '../components/ai-automation/CicdIntegration';
 import { PasteIssueAnalyzer } from '../components/ai-automation/PasteIssueAnalyzer';
-import { API_BASE_URL } from '../lib/api';
+import { API_BASE_URL, api } from '../lib/api';
 import { usePolling } from '../hooks/usePolling';
 
 // ---------------------------------------------------------------------------
@@ -106,6 +106,15 @@ export const AIAutomationPage: React.FC = () => {
   const [mergeResult, setMergeResult] = useState<MergeResult | null>(null);
   const [mergeLoading, setMergeLoading] = useState(false);
 
+  // Real source file/line for the top-priority issue — same locate call
+  // (and same Gemini-assisted fallback) IssuesPage's "Go to File" uses, so
+  // this panel can offer the identical click-to-VS-Code shortcut.
+  const [located, setLocated] = useState<{
+    filePath: string | null;
+    fileFullPath: string | null;
+    line: number | null;
+  } | null>(null);
+
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const clearTimers = () => {
     timers.current.forEach(clearTimeout);
@@ -189,6 +198,35 @@ export const AIAutomationPage: React.FC = () => {
   }, [fetchAutomation, running]);
 
   usePolling(checkForNewScan, 5000, true);
+
+  const testId = resp?.testId;
+  const issueId = resp?.prioritization?.issueId;
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets the previous issue's location before fetching the new one's; mirrors QADataContext's fetch-on-change pattern
+    setLocated(null);
+    if (!testId || !issueId) return;
+    let cancelled = false;
+    api
+      .locateIssue(testId, issueId)
+      .then((result) => {
+        if (cancelled) return;
+        setLocated({ filePath: result.filePath, fileFullPath: result.fileFullPath, line: result.line });
+      })
+      .catch(() => {
+        if (!cancelled) setLocated({ filePath: null, fileFullPath: null, line: null });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [testId, issueId]);
+
+  /** vscode://file/<absolute-path>:<line> opens VS Code desktop at the exact location, when registered as a URL handler. */
+  const vscodeFileUrl = (fileFullPath: string | null | undefined, line: number | null | undefined) => {
+    if (!fileFullPath) return null;
+    const normalized = fileFullPath.replace(/\\/g, '/');
+    const prefixed = normalized.startsWith('/') ? normalized : `/${normalized}`;
+    return `vscode://file${prefixed}${line ? `:${line}` : ''}`;
+  };
 
   // Deliberately narrow deps (only the fields actually used) so this isn't
   // recreated on every unrelated `resp` change — the compiler's inferred
@@ -366,7 +404,12 @@ export const AIAutomationPage: React.FC = () => {
               <AnimatePresence mode="wait">
                 {showRca && resp.rca && (
                   <motion.div key="rca" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-                    <RootCauseAnalysis data={resp.rca} />
+                    <RootCauseAnalysis
+                      data={resp.rca}
+                      editorUrl={vscodeFileUrl(located?.fileFullPath, located?.line)}
+                      editorLabel={located?.filePath ? `${located.filePath}${located.line ? `:${located.line}` : ''}` : null}
+                      locating={located === null}
+                    />
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -406,8 +449,9 @@ export const AIAutomationPage: React.FC = () => {
                     </p>
                     {pr?.noCodeChange ? (
                       <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
-                        No auto-fixable code change was found for this issue in your repo, so no PR
-                        was opened — opening one with nothing but commentary would be dishonest.
+                        {pr.error ||
+                          'No auto-fixable code change was found in your repo, so no PR was opened — ' +
+                            'opening one with nothing but commentary would be dishonest.'}{' '}
                         Fix it manually, or re-analyse once you have (see Root Cause Analysis for
                         the observed location).
                       </p>

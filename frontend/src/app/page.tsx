@@ -2,29 +2,15 @@
 'use client';
 import React, { useState } from 'react';
 import { Layout } from '../components/Layout';
-import { DashboardView } from '../screens/Dashboard';
 import { TestManagementPage } from '../screens/TestManagementPage';
-// import { ReportsPage } from '../screens/ReportsPage';
 import { useNewTestModal } from '../context/NewTestModalContext';
-import { IssuesPage } from '../screens/IssuesPage';
-import { Phase2ResultsPage } from '../screens/Phase2ResultsPage';
-import { AIAutomationPage } from '../screens/AIAutomationPage';
-import ScanlinePhase1Report from '../screens/phase1page';
-import { TeamDashboardPage } from '../screens/TeamDashboardPage';
-import { AnalyticsPage } from '../screens/AnalyticsPage';
+import { DashboardHub } from '../screens/DashboardHub';
+import { ScanResultsPage } from '../screens/ScanResultsPage';
+import { AutomationPage } from '../screens/AutomationPage';
 
 import { SettingsPage } from '../screens/settingspage';
 
-type TabType =
-  | 'Dashboard'
-  | 'Tests'
-  | 'Issues'
-  | 'Settings'
-  | 'Phase 2 Results'
-  | 'AI Automation'
-  | 'Phase 1 Results'
-  | 'Team Dashboard'
-  | 'Analytics';
+type TabType = 'Dashboard' | 'Tests' | 'Scan Results' | 'Automation' | 'Settings';
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabType>('Dashboard');
@@ -33,25 +19,15 @@ export default function DashboardPage() {
   const renderCanvasContent = () => {
     switch (activeTab) {
       case 'Dashboard':
-        return <DashboardView />;
+        return <DashboardHub />;
       case 'Tests':
         return <TestManagementPage />;
-      case 'Phase 2 Results':
-        return <Phase2ResultsPage />;
-      // case 'Reports':
-      //   return <ReportsPage />;
+      case 'Scan Results':
+        return <ScanResultsPage />;
+      case 'Automation':
+        return <AutomationPage />;
       case 'Settings':
         return <SettingsPage />;
-      case 'Issues':
-        return <IssuesPage />;
-      case 'AI Automation':
-        return <AIAutomationPage />;
-      case 'Phase 1 Results':
-        return <ScanlinePhase1Report />;
-      case 'Team Dashboard':
-        return <TeamDashboardPage />;
-      case 'Analytics':
-        return <AnalyticsPage />;
 
       default:
         return (
