@@ -17,6 +17,7 @@
 
 const testsRepo = require("../repositories/tests.repository");
 const llm = require("./llm.service");
+const gemini = require("./gemini.service");
 const github = require("./github.service");
 const repoRegistry = require("./repoRegistry.service");
 const fileLocator = require("./fileLocator.service");
@@ -501,6 +502,58 @@ function buildCicdSummary(test) {
   return { status: passed ? "Passed" : "Failed", passed, logs };
 }
 
+/**
+ * Try each open issue in priority order and return the fix for the first one
+ * that's actually grounded + auto-fixable — so a single un-patchable
+ * top-priority issue (e.g. a Lighthouse metric, which is never a one-line
+ * code fix) doesn't block PR generation for a lower-ranked issue that IS
+ * safely patchable (e.g. a missing alt attribute).
+ *
+ * Cheaply pre-filters with fileLocator.locate() (local, no LLM call) before
+ * ever calling the full buildFixes() — which may hit the LLM to tailor a
+ * patch — so this doesn't fire off an API call for every ranked issue when
+ * most of them were never going to be groundable in the repo at all.
+ *
+ * Returns `{ prioritization, fixes, groundedChecked, totalRanked }` for the
+ * winning issue, or `{ prioritization: null, fixes: null, groundedChecked,
+ * totalRanked }` if none could be safely grounded + patched — the two counts
+ * let the caller report an honest, specific reason instead of a generic
+ * "nothing found" message.
+ */
+async function findFirstPatchableIssue(test, prioritization, repoMatch) {
+  if (!prioritization) {
+    return { prioritization: null, fixes: null, groundedChecked: 0, totalRanked: 0 };
+  }
+
+  let groundedChecked = 0;
+  for (const candidate of prioritization.ranked) {
+    const issue = (test.issues || []).find((i) => i.id === candidate.id);
+    if (!issue) continue;
+
+    const located = repoMatch?.path ? fileLocator.locate(repoMatch.path, issue) : null;
+    if (!located) continue; // never auto-fixable without a real located snippet
+    groundedChecked += 1;
+
+    const candidatePrioritization =
+      issue.id === prioritization.issueId
+        ? prioritization
+        : buildPrioritizationForIssue(test, issue);
+    // eslint-disable-next-line no-await-in-loop -- must try candidates in
+    // priority order and stop at the first success, so this can't be
+    // parallelized without changing which issue "wins".
+    const fixes = await buildFixes(test, candidatePrioritization, repoMatch);
+    if (fixes?.grounded && fixes?.autoFixable && fixes?.filePath) {
+      return {
+        prioritization: candidatePrioritization,
+        fixes,
+        groundedChecked,
+        totalRanked: prioritization.ranked.length,
+      };
+    }
+  }
+  return { prioritization: null, fixes: null, groundedChecked, totalRanked: prioritization.ranked.length };
+}
+
 // ---------------------------------------------------------------------------
 // PR description (metadata on the PR itself — never a file committed into
 // the repo). Only ever called once we already have a real, grounded,
@@ -821,9 +874,14 @@ function describeRepoMatchFailure(match, url) {
 
 /**
  * Open a real PR on the configured GitHub repo that patches the actual
- * source file for the top-priority issue. Returns { configured:false } if
- * GitHub isn't set up, and refuses to open a PR at all — rather than a
- * hollow "report" one — when no auto-fixable code change was found.
+ * source file for the first issue (in priority order) that's actually
+ * safe to auto-patch — not just the single top-priority one. A high-severity
+ * issue like a Lighthouse metric is often never a one-line code fix, so
+ * stopping there would refuse a PR even when a lower-ranked issue (e.g. a
+ * missing alt attribute) is genuinely patchable. Returns { configured:false }
+ * if GitHub isn't set up, and refuses to open a PR at all — rather than a
+ * hollow "report" one — when NONE of the open issues have an auto-fixable
+ * code change.
  */
 async function createPullRequest(testId) {
   if (!github.isConfigured()) {
@@ -848,29 +906,34 @@ async function createPullRequest(testId) {
     };
   }
 
-  const automation = await runAutomation(test.id);
-  const fixes = automation.fixes;
-  const canPatchRealFile = Boolean(
-    automation.prioritization &&
-    fixes?.grounded &&
-    fixes?.autoFixable &&
-    fixes?.filePath,
+  const topPrioritization = buildPrioritization(test);
+  const { prioritization, fixes, groundedChecked, totalRanked } = await findFirstPatchableIssue(
+    test,
+    topPrioritization,
+    match,
   );
-  if (!canPatchRealFile) {
-    return {
-      configured: true,
-      noCodeChange: true,
-      error:
-        "No auto-fixable code change was found for the top-priority issue in the matched " +
-        "repo — nothing real to open a PR for.",
-      repoMatch,
-    };
+  if (!prioritization || !fixes) {
+    let error;
+    if (totalRanked === 0) {
+      error = "No open issues to check — nothing to open a PR for.";
+    } else if (groundedChecked === 0) {
+      error =
+        `Checked ${totalRanked} open issue${totalRanked === 1 ? "" : "s"} — none could be located in ` +
+        `the matched repo's source (common for issues reported against compiled/rendered markup, e.g. ` +
+        `JSX). Nothing real to open a PR for.`;
+    } else {
+      error =
+        `Checked ${totalRanked} open issue${totalRanked === 1 ? "" : "s"} (${groundedChecked} located ` +
+        `in the matched repo) — none matched a safe, auto-fixable pattern. Nothing real to open a PR for.`;
+    }
+    return { configured: true, noCodeChange: true, error, repoMatch };
   }
 
-  const short = test.id.slice(0, 8);
-  const branchName = `ai-qa/fix-${short}`;
-  const prTitle = `fix(qa): ${automation.prioritization.title} (QA-${short.toUpperCase()})`;
-  const prBody = buildPrBody(automation.prioritization, fixes);
+  const testShort = test.id.slice(0, 8);
+  const issueShort = prioritization.issueId.replace(/[^a-z0-9]/gi, "").slice(0, 8);
+  const branchName = `ai-qa/fix-${testShort}-${issueShort}`;
+  const prTitle = `fix(qa): ${prioritization.title} (QA-${issueShort.toUpperCase()})`;
+  const prBody = buildPrBody(prioritization, fixes);
 
   try {
     const pr = await github.applyRemediation({
@@ -886,9 +949,9 @@ async function createPullRequest(testId) {
     });
     logger.success(
       "aiAutomation",
-      `Opened PR ${pr.prUrl} (repo: ${match.githubRepo}, matched by ${match.matchedBy}, patched ${fixes.filePath})`,
+      `Opened PR ${pr.prUrl} (repo: ${match.githubRepo}, matched by ${match.matchedBy}, patched ${fixes.filePath}, issue ${prioritization.issueId})`,
     );
-    await recordAppliedFix(test, automation.prioritization.issueId, {
+    await recordAppliedFix(test, prioritization.issueId, {
       fixes,
       pr,
       repo: match.githubRepo,
@@ -1054,22 +1117,52 @@ function tagOf(snippet) {
 }
 
 /**
+ * Distinctive tokens straight from a DOM snippet — e.g. "border-slate-300",
+ * "rounded-xl" — far more specific to one component than generic title/
+ * category words. This is what lets a genuinely-relevant file (a JSX
+ * component whose filename shares nothing with the issue text, e.g.
+ * "ThemeToggle.tsx" for a "button missing discernible text" issue) rank
+ * highly by CONTENT even when it scores zero on filename overlap.
+ */
+function snippetTokens(text) {
+  return Array.from(
+    new Set(
+      String(text || "")
+        .toLowerCase()
+        .split(/[^a-z0-9-]+/)
+        .filter((w) => w.length >= 5 && !STOPWORDS.has(w)),
+    ),
+  );
+}
+
+/**
  * Rank candidate source files by how likely they are to contain the DOM
- * element an issue refers to, using only cheap signals (filename/dirname
- * keyword overlap, then a bounded content grep for the element's tag) —
- * never the whole repo's content, so this stays fast even in large repos.
+ * element an issue refers to, combining two signals:
+ *  - filename/dirname keyword overlap (cheap, catches well-named files)
+ *  - CONTENT overlap with distinctive tokens pulled from the issue's real
+ *    snippet/selector (catches the common React/JSX case above, where the
+ *    filename tells you nothing but the source literally contains the same
+ *    utility classes the browser rendered)
+ * Both stay bounded to the repo's already-capped candidate file list (see
+ * fileLocator.MAX_FILES), so this stays boundedly fast even in large repos.
  */
 function rankCandidateFiles(repoPath, issue, limit) {
+  const path = require("path");
   const files = fileLocator.listCandidateFiles(repoPath);
-  const terms = [
+  const nameTerms = [
     ...keywordsOf(issue.title),
     ...keywordsOf(issue.category),
     ...keywordsOf(issue.selector),
   ];
+  const contentTerms = [...snippetTokens(issue.snippet), ...snippetTokens(issue.selector)];
 
   const scored = files.map((absPath) => {
-    const rel = require("path").relative(repoPath, absPath).toLowerCase();
-    const score = terms.reduce((s, t) => (rel.includes(t) ? s + 1 : s), 0);
+    const rel = path.relative(repoPath, absPath).toLowerCase();
+    let score = nameTerms.reduce((s, t) => (rel.includes(t) ? s + 2 : s), 0);
+    if (contentTerms.length) {
+      const content = (fileLocator.readFileSafe(absPath) || "").toLowerCase();
+      score += contentTerms.reduce((s, t) => (content.includes(t) ? s + 1 : s), 0);
+    }
     return { absPath, score };
   });
   scored.sort((a, b) => b.score - a.score);
@@ -1094,20 +1187,29 @@ function rankCandidateFiles(repoPath, issue, limit) {
   return top.map((f) => f.absPath);
 }
 
-const MAX_AI_LOCATE_CANDIDATES = 12;
+// Gemini's large context window is why this can afford a much wider
+// shortlist than a typical chat-completion call — the whole point of using
+// it here is "let the model see more real candidates," not just "use a
+// different vendor."
+const MAX_AI_LOCATE_CANDIDATES = 40;
 const MAX_AI_LOCATE_PREVIEW_CHARS = 2000;
 
 /**
  * AI-assisted fallback for when fileLocator's exact/attribute matching can't
  * find the file (the common case for React/JSX, where the rendered DOM axe
  * or Lighthouse captured rarely appears verbatim in the source). Shows the
- * model only a short, ranked shortlist of real files from THIS repo and asks
- * it to pick one — never lets it invent a path outside that list. Returns
- * null (never a low-confidence guess dressed up as certain) if the model
- * isn't confident or the LLM is disabled.
+ * model only a ranked shortlist of real files from THIS repo and asks it to
+ * pick one — never lets it invent a path outside that list. Prefers Gemini
+ * (configured independently via GEMINI_API_KEY, see gemini.service.js) for
+ * its larger context window over a wide candidate list, falling back to
+ * whichever provider llm.service.js is configured with. Returns null (never
+ * a low-confidence guess dressed up as certain) if nothing is confident or
+ * no LLM is available at all.
  */
 async function aiLocate(repoPath, issue) {
-  if (!llm.isEnabled()) return null;
+  const useGemini = gemini.isEnabled();
+  if (!useGemini && !llm.isEnabled()) return null;
+
   const path = require("path");
   const candidates = rankCandidateFiles(repoPath, issue, MAX_AI_LOCATE_CANDIDATES);
   if (!candidates.length) return null;
@@ -1117,7 +1219,7 @@ async function aiLocate(repoPath, issue) {
     preview: (fileLocator.readFileSafe(absPath) || "").slice(0, MAX_AI_LOCATE_PREVIEW_CHARS),
   }));
 
-  const json = await llm.completeJSON({
+  const callArgs = {
     system:
       "You are a senior web engineer locating a QA-reported issue inside a " +
       "real codebase. You are given a shortlist of real files (path + a " +
@@ -1130,9 +1232,12 @@ async function aiLocate(repoPath, issue) {
       'with keys "found" (boolean), "filePath", "line" (number), and ' +
       '"explanation".',
     prompt: JSON.stringify({ issue: { category: issue.category, title: issue.title, description: issue.description, selector: issue.selector, snippet: issue.snippet }, files }),
-    maxTokens: 500,
+    maxTokens: 700,
     temperature: 0.1,
-  });
+  };
+
+  let json = useGemini ? await gemini.completeJSON(callArgs) : null;
+  if (!json && llm.isEnabled()) json = await llm.completeJSON(callArgs);
 
   if (!json || json.found !== true) return null;
   const match = files.find((f) => f.filePath === json.filePath);
@@ -1146,7 +1251,25 @@ async function aiLocate(repoPath, issue) {
   };
 }
 
+// The Issues page now requests a location for every visible issue (not just
+// the one open in the detail panel), so the same issue can legitimately be
+// looked up again soon after (re-render, revisit, another browser tab).
+// Caching avoids re-running the Gemini-backed aiLocate() fallback — the
+// expensive part — for a result that won't have changed.
+const LOCATE_CACHE_TTL_MS = 10 * 60 * 1000;
+const locateCache = new Map(); // `${testId}:${issueId}` -> { result, expiresAt }
+
 async function locateIssue(testId, issueId) {
+  const cacheKey = `${testId}:${issueId}`;
+  const cached = locateCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.result;
+
+  const result = await locateIssueUncached(testId, issueId);
+  locateCache.set(cacheKey, { result, expiresAt: Date.now() + LOCATE_CACHE_TTL_MS });
+  return result;
+}
+
+async function locateIssueUncached(testId, issueId) {
   const test = testsRepo.get(testId);
   if (!test) return { grounded: false };
   const issue = (test.issues || []).find((i) => i.id === issueId);

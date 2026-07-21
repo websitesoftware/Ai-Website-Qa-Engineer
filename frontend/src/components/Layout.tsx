@@ -10,16 +10,7 @@ import { useTheme } from '../context/ThemeContext';
 import { User, SignOut, Key, Envelope, LockOpen, ArrowLeft, CheckSquare, Square, Eye, EyeSlash } from '@phosphor-icons/react';
 import { AnimatePresence, motion } from 'framer-motion';
 
-export type TabType =
-  | 'Dashboard'
-  | 'Tests'
-  | 'Issues'
-  | 'Settings'
-  | 'Phase 2 Results'
-  | 'AI Automation'
-  | 'Phase 1 Results'
-  | 'Team Dashboard'
-  | 'Analytics';
+export type TabType = 'Dashboard' | 'Tests' | 'Scan Results' | 'Automation' | 'Settings';
 type AuthView = 'LOGIN' | 'FORGOT_PASSWORD' | 'REGISTER';
 
 interface LayoutProps {
@@ -137,16 +128,8 @@ export const Layout: React.FC<LayoutProps> = ({
   const navItems = [
     { label: 'Dashboard' as TabType, icon: 'ph-squares-four' },
     { label: 'Tests' as TabType, icon: 'ph-check-circle' },
-    // { label: 'Reports' as TabType, icon: 'ph-chart-bar' },
-    { label: 'Phase 1 Results' as TabType, icon: 'ph-sparkle' },
-
-
-    { label: 'Phase 2 Results' as TabType, icon: 'ph-sparkle' },
-    { label: 'AI Automation' as TabType, icon: 'ph-robot' },
-    { label: 'Issues' as TabType, icon: 'ph-flag' },
-    { label: 'Team Dashboard' as TabType, icon: 'ph-users-three' },
-    { label: 'Analytics' as TabType, icon: 'ph-chart-line-up' },
-
+    { label: 'Scan Results' as TabType, icon: 'ph-sparkle' },
+    { label: 'Automation' as TabType, icon: 'ph-robot' },
     { label: 'Settings' as TabType, icon: 'ph-gear' },
   ];
 

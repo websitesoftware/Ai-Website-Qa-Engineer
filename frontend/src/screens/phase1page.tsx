@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { api } from '../lib/api';
+import { fetchLogoAsset, fitLogoBox } from '../lib/exportReport';
 
 // --- Types ---
 interface StatCardProps {
@@ -68,10 +70,12 @@ export default function ScanlinePhase1Report() {
     setIsExporting(true);
 
     try {
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+      const [{ default: html2canvas }, { jsPDF }, branding] = await Promise.all([
         import('html2canvas-pro'),
         import('jspdf'),
+        api.branding.get().catch(() => null),
       ]);
+      const logo = branding ? await fetchLogoAsset(branding.logoUrl) : null;
 
       const pdf = new jsPDF('p', 'mm', 'a4');
       const PAGE_W = pdf.internal.pageSize.getWidth();   // 210mm
@@ -89,7 +93,26 @@ export default function ScanlinePhase1Report() {
         throw new Error('No [data-pdf-block] elements found.');
       }
 
-      let cursorY = MARGIN;     // vertical position on the current page (mm)
+      // White-label header — logo + company name reserved at the top of
+      // page 1 only, above the captured report blocks.
+      const HEADER_H = branding ? 16 : 0;
+      if (branding) {
+        let textX = MARGIN;
+        if (logo) {
+          const { w, h } = fitLogoBox(logo, 20, 12);
+          pdf.addImage(logo.dataUrl, logo.type.toUpperCase(), MARGIN, MARGIN, w, h);
+          textX = MARGIN + w + 4;
+        }
+        pdf.setFontSize(13);
+        const [r, g, b] = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i
+          .exec(branding.primaryColor)
+          ?.slice(1)
+          .map((c) => parseInt(c, 16)) ?? [79, 70, 229];
+        pdf.setTextColor(r, g, b);
+        pdf.text(branding.companyName, textX, MARGIN + 7);
+      }
+
+      let cursorY = MARGIN + HEADER_H; // vertical position on the current page (mm)
       let pageIsEmpty = true;
 
       for (const block of blocks) {
@@ -142,6 +165,18 @@ export default function ScanlinePhase1Report() {
       const totalPages = pdf.getNumberOfPages();
       if (pageIsEmpty && totalPages > 1) {
         pdf.deletePage(totalPages);
+      }
+
+      // White-label stamp — same footer text every export in the tool uses
+      // (see Settings → White-label Reports), applied on every page.
+      if (branding?.footerText) {
+        const pageCount = pdf.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+          pdf.setPage(i);
+          pdf.setFontSize(8);
+          pdf.setTextColor(150);
+          pdf.text(branding.footerText, MARGIN, PAGE_H - 5);
+        }
       }
 
       pdf.save('Scanline_Report_0891.pdf');

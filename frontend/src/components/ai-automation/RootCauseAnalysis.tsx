@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Folder } from '@phosphor-icons/react';
 
 interface RcaProps {
   data: {
@@ -9,9 +10,14 @@ interface RcaProps {
     explanation: string;
     confidence: number;
   } | null;
+  /** vscode://file/... link for the real repo file this issue was located in, or null while still locating / if nothing was found. */
+  editorUrl?: string | null;
+  editorLabel?: string | null;
+  /** True while the locate call is still in flight (distinct from "checked, found nothing"). */
+  locating?: boolean;
 }
 
-export const RootCauseAnalysis: React.FC<RcaProps> = ({ data }) => {
+export const RootCauseAnalysis: React.FC<RcaProps> = ({ data, editorUrl, editorLabel, locating }) => {
   if (!data) {
     return (
       <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm animate-pulse h-40 mb-6"></div>
@@ -42,6 +48,21 @@ export const RootCauseAnalysis: React.FC<RcaProps> = ({ data }) => {
           <code className="text-xs font-mono bg-amber-50 text-amber-700 px-2 py-1 rounded border border-amber-100 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/50 block truncate">
             {locationLabel}
           </code>
+          <button
+            onClick={() => {
+              if (editorUrl) window.location.href = editorUrl;
+            }}
+            disabled={!editorUrl}
+            title={editorUrl ? `Open ${editorLabel} in VS Code` : 'No local source file matched for this issue yet'}
+            className={`mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-colors ${
+              editorUrl
+                ? 'text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 border-indigo-200 dark:border-indigo-900/50 bg-indigo-50 dark:bg-indigo-950/30 cursor-pointer'
+                : 'text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30 cursor-not-allowed'
+            }`}
+          >
+            <Folder className="w-3.5 h-3.5" />
+            {editorUrl ? 'Go to File' : locating ? 'Locating file…' : 'No matching file found'}
+          </button>
         </div>
         <div>
           <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 block mb-1">AI Confidence</span>

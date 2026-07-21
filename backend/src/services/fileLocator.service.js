@@ -44,8 +44,19 @@ const CANDIDATE_EXT = new Set([
 const MAX_FILES = 4000;
 const MAX_FILE_BYTES = 1_000_000;
 
-/** Depth-first walk of `repoPath`, returning candidate source file paths (capped). */
+// A single "locate this issue" or "find first patchable issue" call can walk
+// the same repo many times in a row (once per candidate issue) — caching the
+// file list for a short window avoids re-walking a potentially large repo
+// tree from scratch on every one of those, without risking a stale list
+// across genuinely separate requests.
+const CANDIDATE_CACHE_TTL_MS = 30_000;
+const candidateCache = new Map(); // repoPath -> { files, expiresAt }
+
+/** Depth-first walk of `repoPath`, returning candidate source file paths (capped, cached briefly). */
 function listCandidateFiles(repoPath) {
+  const cached = candidateCache.get(repoPath);
+  if (cached && cached.expiresAt > Date.now()) return cached.files;
+
   const results = [];
   const stack = [repoPath];
   while (stack.length && results.length < MAX_FILES) {
@@ -69,6 +80,7 @@ function listCandidateFiles(repoPath) {
       }
     }
   }
+  candidateCache.set(repoPath, { files: results, expiresAt: Date.now() + CANDIDATE_CACHE_TTL_MS });
   return results;
 }
 
