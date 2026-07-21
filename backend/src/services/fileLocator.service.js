@@ -148,6 +148,50 @@ function searchExact(files, needle) {
   return null;
 }
 
+/** Pull the value out of a `class="..."` (or `className="..."`) attribute in a rendered/JSX snippet. */
+function classListOf(snippet) {
+  if (!snippet) return null;
+  const m = snippet.match(/\bclass(?:Name)?\s*=\s*["'`]([^"'`]+)["'`]/);
+  return m ? m[1] : null;
+}
+
+/**
+ * Search for the literal class-LIST VALUE (not the surrounding tag), matched
+ * independent of attribute name and of the whitespace between classes. The
+ * browser DOM axe/Lighthouse capture always renders `class="..."`, but in
+ * JSX/TSX/Vue/Svelte source the same value sits behind `className="..."`
+ * (or a bound `:class`) — so a plain `searchExact` on the full
+ * `<tag class="...">` snippet can never match there even though the class
+ * string itself appears in the file verbatim. Classes are also commonly
+ * written one-per-line (as Prettier does for long Tailwind lists), so the
+ * gap between tokens is matched as `\s+` rather than requiring identical
+ * whitespace. Requires several classes so a short/generic value (e.g. a
+ * single "flex") can't false-match an unrelated element.
+ */
+function searchByClassList(files, rawClassList) {
+  if (!rawClassList) return null;
+  const classes = rawClassList.trim().split(/\s+/).filter(Boolean);
+  if (classes.length < 3 || classes.join(" ").length < 20) return null;
+
+  const pattern = classes
+    .map((c) => c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("\\s+");
+  const re = new RegExp(pattern);
+
+  for (const absPath of files) {
+    const content = readFileSafe(absPath);
+    if (!content) continue;
+    const m = re.exec(content);
+    if (!m) continue;
+    return {
+      absPath,
+      line: lineOf(content, m.index),
+      original: contextAround(content, m.index, m[0].length),
+    };
+  }
+  return null;
+}
+
 /** Attribute-anchored search: find a tag containing `attr="value"`, return that whole tag. */
 function searchByAttribute(files, attrName, attrValue) {
   if (!attrValue) return null;
@@ -238,6 +282,9 @@ function locate(repoPath, issue) {
   if (issue.snippet) {
     const exact = searchExact(files, issue.snippet);
     if (exact) return toResult(repoPath, exact);
+
+    const byClassList = searchByClassList(files, classListOf(issue.snippet));
+    if (byClassList) return toResult(repoPath, byClassList);
   }
 
   if (issue.category === "accessibility" && issue.snippet) {
