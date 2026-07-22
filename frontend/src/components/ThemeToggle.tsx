@@ -41,7 +41,7 @@ export const ThemeToggle: React.FC = () => {
       className="relative"
       ref={menuRef}
     >
-      <button
+      <button aria-label="Describe this button's action"
         onClick={toggleTheme}
         onContextMenu={(e) => {
           e.preventDefault();
