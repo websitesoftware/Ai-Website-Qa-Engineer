@@ -23,11 +23,12 @@ const VISIBLE_MS = 5000;
 export const ResultLaunchAnimation: React.FC<ResultLaunchAnimationProps> = ({ passed, label }) => {
   const [visible, setVisible] = useState(true);
 
+  // Remounted via `key={label}` at the call site whenever the result changes,
+  // so this effect only needs to run once per mount to schedule the hide.
   useEffect(() => {
-    setVisible(true);
     const t = setTimeout(() => setVisible(false), VISIBLE_MS);
     return () => clearTimeout(t);
-  }, [passed, label]);
+  }, []);
 
   return (
     <AnimatePresence>

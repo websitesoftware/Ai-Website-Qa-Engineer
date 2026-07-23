@@ -173,10 +173,17 @@ export const Layout: React.FC<LayoutProps> = ({
             <p className={`text-xs mt-0.5 font-medium ${resolvedTheme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
               {user ? `Authorized Account Session • ${user.email}` : 'Manage operational engine tests and view system analysis diagnostic logs.'}
             </p>
+            {error && (
+              <p className="text-xs mt-1 font-semibold text-red-600 dark:text-red-400">{error}</p>
+            )}
           </div>
 
           {/* Action Utilities Controls */}
           <div className="flex items-center gap-3.5">
+            <button onClick={onNewTestClick} className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm cursor-pointer">
+              + New Test
+            </button>
+
             {onSearchChange && (
               <div className="relative hidden lg:block">
                 <i className="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>

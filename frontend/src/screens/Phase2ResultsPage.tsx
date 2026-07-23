@@ -200,6 +200,7 @@ export const Phase2ResultsPage: React.FC = () => {
                 <div key={activeTest.id} className="animate-fade-in-up">
                   {(activeTest.status === 'passed' || activeTest.status === 'failed') && (
                     <ResultLaunchAnimation
+                      key={activeTest.status}
                       passed={activeTest.status === 'passed'}
                       label={activeTest.status === 'passed' ? 'Pass' : 'Fail'}
                     />

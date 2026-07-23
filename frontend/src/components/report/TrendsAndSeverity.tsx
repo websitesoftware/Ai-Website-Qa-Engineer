@@ -74,13 +74,14 @@ export const TrendsAndSeverity: React.FC = () => {
   const sev = stats?.issuesBySeverity ?? { critical: 0, high: 0, medium: 0, low: 0 };
 
   const rows = [
-    { key: 'critical', label: 'Critical', icon: <WarningCircle />, color: 'text-red-600 dark:text-red-400', bar: 'bg-red-500', count: 12 },
-    { key: 'high', label: 'Major', icon: <Warning />, color: 'text-orange-600 dark:text-orange-400', bar: 'bg-orange-500', count: 34 },
-    { key: 'medium', label: 'Minor', icon: <Info />, color: 'text-blue-600 dark:text-blue-400', bar: 'bg-blue-500', count: 70 },
-    { key: 'low', label: 'Cosmetic', icon: <CircleDashed />, color: 'text-slate-500 dark:text-slate-400', bar: 'bg-slate-400', count: 39 },
+    { key: 'critical', label: 'Critical', icon: <WarningCircle />, color: 'text-red-600 dark:text-red-400', bar: 'bg-red-500', count: sev.critical },
+    { key: 'high', label: 'Major', icon: <Warning />, color: 'text-orange-600 dark:text-orange-400', bar: 'bg-orange-500', count: sev.high },
+    { key: 'medium', label: 'Minor', icon: <Info />, color: 'text-blue-600 dark:text-blue-400', bar: 'bg-blue-500', count: sev.medium },
+    { key: 'low', label: 'Cosmetic', icon: <CircleDashed />, color: 'text-slate-500 dark:text-slate-400', bar: 'bg-slate-400', count: sev.low },
   ];
 
   const metricLabel = activeMetric === 'quality' ? 'Quality' : 'Coverage';
+  const totalIssues = rows.reduce((sum, row) => sum + row.count, 0);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -161,7 +162,7 @@ export const TrendsAndSeverity: React.FC = () => {
 
         <div className="space-y-4 my-6">
           {rows.map((row) => {
-            const pct = Math.round((row.count / 155) * 100);
+            const pct = totalIssues === 0 ? 0 : Math.round((row.count / totalIssues) * 100);
             return (
               <div key={row.key}>
                 <div className="flex justify-between text-xs font-semibold mb-1">

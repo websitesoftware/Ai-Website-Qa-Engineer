@@ -144,7 +144,7 @@ export const ReportDetailModal: React.FC<{ testId: string | null; onClose: () =>
 
               {test && (test.status === 'passed' || test.status === 'failed') && (
                 <ResultLaunchAnimation
-                  key={test.id}
+                  key={`${test.id}-${test.status}`}
                   passed={test.status === 'passed'}
                   label={test.status === 'passed' ? 'Pass' : 'Fail'}
                 />
