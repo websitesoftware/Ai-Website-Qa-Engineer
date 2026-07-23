@@ -185,12 +185,10 @@ function buildIssuesAndScore({
     ...fromCrossBrowser(crossBrowserResults, pageUrl),
   ];
 
-  const weights = { critical: 10, high: 6, medium: 3, low: 1 };
-  const penalty = issues.reduce(
-    (sum, i) => sum + (weights[i.severity] || 0),
-    0,
-  );
-
+  // Overall score is the average of the four Lighthouse-style category
+  // scores — the same number the combined-score policy grading (see
+  // scanEngine.service.js#gradeCombinedScore) is built from, so this and
+  // the policy grade never contradict each other on the same report.
   const lhScores = Object.values(lighthouseScores).filter(
     (s) => typeof s === "number",
   );
@@ -198,7 +196,7 @@ function buildIssuesAndScore({
     ? lhScores.reduce((a, b) => a + b, 0) / lhScores.length
     : 100;
 
-  const score = Math.max(0, Math.round(lhAvg - penalty));
+  const score = Math.round(lhAvg);
 
   return { issues, score };
 }

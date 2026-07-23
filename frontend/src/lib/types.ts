@@ -159,7 +159,7 @@ export interface BackendTest {
   visualRegression?: BackendVisualRegressionResult[];
   crossBrowser?: BackendCrossBrowserResult[];
   performanceBenchmark?: BackendPerformanceBenchmark | null;
-  options: { maxPages?: number; maxDepth?: number; device?: string; modules?: string[] };
+  options: { maxPages?: number; maxDepth?: number; device?: string; modules?: string[]; policyId?: string | null };
   createdBy?: string | null;
   createdByName?: string | null;
   monitorId?: string | null;
@@ -199,21 +199,25 @@ export interface BackendPipeline {
 
 // ---- Phase 4 types ----
 
-export interface PolicyThresholds {
-  overallScore: number | null;
-  performance: number | null;
-  accessibility: number | null;
-  seo: number | null;
-  bestPractices: number | null;
+export interface PolicyScoreRange {
+  min: number;
+  max: number;
 }
 
-export type PolicyFailSeverity = 'critical' | 'high' | 'medium' | 'none';
+// A test passes a policy only when every one of these five scores falls
+// inside its configured min-max range.
+export interface PolicyScoreRanges {
+  overallScore: PolicyScoreRange;
+  performance: PolicyScoreRange;
+  accessibility: PolicyScoreRange;
+  seo: PolicyScoreRange;
+  bestPractices: PolicyScoreRange;
+}
 
 export interface BackendPolicy {
   id: string;
   name: string;
-  thresholds: PolicyThresholds;
-  failSeverity: PolicyFailSeverity;
+  scoreRanges: PolicyScoreRanges;
   active: boolean;
   createdBy: string | null;
   createdAt: string;
@@ -224,13 +228,18 @@ export interface BackendPolicyResult {
   policyId: string;
   policyName: string;
   passed: boolean;
+  grade: 'Pass' | 'Fail';
   violations: string[];
 }
 
 export interface BackendBranding {
-  companyName: string;
   primaryColor: string;
   footerText: string;
+  headerText: string;
+  headerFontSize: number;
+  footerFontSize: number;
+  logoWidth: number;
+  logoHeight: number;
   logoUrl: string | null;
   updatedAt: string | null;
 }
@@ -239,10 +248,10 @@ export type TeamRole = 'owner' | 'admin' | 'editor' | 'viewer';
 
 export interface BackendTeamMember {
   id: string;
-  name: string;
+  name: string | null;
   email: string;
   role: TeamRole;
-  teamStatus: 'active' | null;
+  teamStatus: 'active' | 'invited' | null;
   createdAt: string;
   testCount: number;
   lastActive: string | null;

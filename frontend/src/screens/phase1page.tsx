@@ -93,7 +93,7 @@ export default function ScanlinePhase1Report() {
         throw new Error('No [data-pdf-block] elements found.');
       }
 
-      // White-label header — logo + company name reserved at the top of
+      // White-label header — logo + header text reserved at the top of
       // page 1 only, above the captured report blocks.
       const HEADER_H = branding ? 16 : 0;
       if (branding) {
@@ -103,13 +103,13 @@ export default function ScanlinePhase1Report() {
           pdf.addImage(logo.dataUrl, logo.type.toUpperCase(), MARGIN, MARGIN, w, h);
           textX = MARGIN + w + 4;
         }
-        pdf.setFontSize(13);
+        pdf.setFontSize(branding.headerFontSize);
         const [r, g, b] = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i
           .exec(branding.primaryColor)
           ?.slice(1)
           .map((c) => parseInt(c, 16)) ?? [79, 70, 229];
         pdf.setTextColor(r, g, b);
-        pdf.text(branding.companyName, textX, MARGIN + 7);
+        pdf.text(branding.headerText, textX, MARGIN + 7);
       }
 
       let cursorY = MARGIN + HEADER_H; // vertical position on the current page (mm)

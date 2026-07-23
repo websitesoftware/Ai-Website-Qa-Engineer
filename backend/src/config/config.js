@@ -99,6 +99,14 @@ module.exports = {
     },
   },
 
+  // Email invites are optional. Without RESEND_API_KEY, invites still work —
+  // the API response includes the raw invite link instead of sending it.
+  email: {
+    resendApiKey: process.env.RESEND_API_KEY || "",
+    fromAddress: process.env.EMAIL_FROM || "onboarding@resend.dev",
+    frontendUrl: process.env.FRONTEND_URL || "http://localhost:3000",
+  },
+
   // GitHub is optional. Needed only for real PR creation + Actions dispatch.
   github: {
     token: process.env.GITHUB_TOKEN || "",

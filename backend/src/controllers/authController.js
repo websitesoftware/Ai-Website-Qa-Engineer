@@ -111,4 +111,36 @@ function me(req, res) {
   res.json({ user: toPublicUser(user) });
 }
 
-module.exports = { registerUser, loginUser, forgotPassword, resetPassword, me };
+// Completes a pending team invite (see team.controller.js#invite): the
+// invitee sets their name + password, which activates the stub account
+// created at invite time and signs them straight in.
+async function acceptInvite(req, res) {
+  const { token: rawToken, name, password: plain } = req.body || {};
+  if (!rawToken || !name || !plain) {
+    return res.status(400).json({ message: "Invite token, name, and password are required." });
+  }
+  if (plain.length < 8) {
+    return res.status(400).json({ message: "Password must be at least 8 characters." });
+  }
+
+  const hash = crypto.createHash("sha256").update(rawToken).digest("hex");
+  const user = usersRepo.findByInviteTokenHash(hash);
+  if (!user || !user.inviteTokenExpire || Date.now() > user.inviteTokenExpire) {
+    return res.status(400).json({ message: "This invite link is invalid or has expired." });
+  }
+
+  await usersRepo.update(user.id, {
+    name,
+    password: password.hash(plain),
+    teamStatus: "active",
+    inviteTokenHash: null,
+    inviteTokenExpire: null,
+  });
+
+  const updated = usersRepo.getById(user.id);
+  const tok = token.sign({ sub: updated.id });
+  logger.success("auth", `Invite accepted for ${updated.email}`);
+  res.status(201).json({ token: tok, user: toPublicUser(updated) });
+}
+
+module.exports = { registerUser, loginUser, forgotPassword, resetPassword, me, acceptInvite };

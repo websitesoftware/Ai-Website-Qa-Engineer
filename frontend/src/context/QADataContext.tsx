@@ -14,7 +14,7 @@ interface QADataContextValue {
   refetch: () => Promise<void>;
   createTest: (
     url: string,
-    options?: { name?: string; maxPages?: number; maxDepth?: number; modules?: string[] }
+    options?: { name?: string; maxPages?: number; maxDepth?: number; modules?: string[]; policyId?: string }
   ) => Promise<BackendTest>;
   rerunTest: (id: string) => Promise<void>;
   deleteTest: (id: string) => Promise<void>;
@@ -59,7 +59,7 @@ export const QADataProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const createTest = useCallback(
     async (
       url: string,
-      options?: { name?: string; maxPages?: number; maxDepth?: number; modules?: string[] }
+      options?: { name?: string; maxPages?: number; maxDepth?: number; modules?: string[]; policyId?: string }
     ) => {
       const test = await api.createTest({ url, ...options });
       await fetchAll();

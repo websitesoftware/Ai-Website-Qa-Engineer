@@ -53,6 +53,7 @@ function createTest({ url, name, options = {}, createdBy = null, createdByName =
       device: options.device || "all",
       // e.g. ["accessibility","seo","visual-regression","cross-browser","performance-benchmark"]
       modules: options.modules || [],
+      policyId: options.policyId || null,
     },
     createdAt: now,
     startedAt: null,

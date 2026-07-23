@@ -1,5 +1,6 @@
 const testsRepo = require("../repositories/tests.repository");
 const usersRepo = require("../repositories/users.repository");
+const policiesRepo = require("../repositories/policies.repository");
 const { createTest } = require("../models/test.model");
 const { enqueueScan } = require("../services/queue.service");
 
@@ -21,7 +22,7 @@ function isValidUrl(str) {
 }
 
 async function create(req, res) {
-  const { url, name, maxPages, maxDepth, device, modules } = req.body || {};
+  const { url, name, maxPages, maxDepth, device, modules, policyId } = req.body || {};
 
   if (!url || !isValidUrl(url)) {
     return res
@@ -32,13 +33,14 @@ async function create(req, res) {
   const cleanModules = Array.isArray(modules)
     ? modules.filter((m) => VALID_MODULES.includes(m))
     : [];
+  const cleanPolicyId = policyId && policiesRepo.get(policyId) ? policyId : null;
 
   const requester = req.user ? usersRepo.getById(req.user.sub) : null;
 
   const test = createTest({
     url,
     name,
-    options: { maxPages, maxDepth, device, modules: cleanModules },
+    options: { maxPages, maxDepth, device, modules: cleanModules, policyId: cleanPolicyId },
     createdBy: requester ? requester.id : null,
     createdByName: requester ? requester.name : null,
   });

@@ -181,19 +181,28 @@ async function applyRemediation({
     `/repos/${owner}/${repo}/contents/${encodeURIComponent(filePatch.path)}?ref=${branchName}`,
   );
   const currentContent = Buffer.from(existing.content, "base64").toString("utf-8");
-  if (!currentContent.includes(filePatch.original)) {
+  const alreadyApplied = currentContent.includes(filePatch.patched);
+  if (!alreadyApplied && !currentContent.includes(filePatch.original)) {
     throw new FileDriftedError(filePatch.path);
   }
-  const updatedContent = currentContent.replace(filePatch.original, filePatch.patched);
-  await gh(`/repos/${owner}/${repo}/contents/${encodeURIComponent(filePatch.path)}`, {
-    method: "PUT",
-    body: JSON.stringify({
-      message: prTitle,
-      content: toBase64(updatedContent),
-      branch: branchName,
-      sha: existing.sha,
-    }),
-  });
+  // A previous run against this same branch may have already committed this
+  // exact patch (e.g. the button UI was re-triggered after already opening
+  // the PR) — re-diffing original->original would be a no-op commit, and
+  // the "original" text is gone from the branch precisely because the fix
+  // already landed there. Skip straight to (re)finding the PR instead of
+  // treating that as drift.
+  if (!alreadyApplied) {
+    const updatedContent = currentContent.replace(filePatch.original, filePatch.patched);
+    await gh(`/repos/${owner}/${repo}/contents/${encodeURIComponent(filePatch.path)}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        message: prTitle,
+        content: toBase64(updatedContent),
+        branch: branchName,
+        sha: existing.sha,
+      }),
+    });
+  }
 
   const { prUrl, prNumber } = await openOrFindPR(owner, repo, {
     branchName,
@@ -278,6 +287,13 @@ async function getReviewDecision(prNumber, repoOverride) {
   };
 }
 
+/** Real merge state of a PR, straight from GitHub — used to self-heal issues whose PR was merged outside this app (e.g. merged directly on GitHub instead of via the app's own Merge button). */
+async function getPullRequestState(prNumber, repoOverride) {
+  const { owner, repo } = repoParts(repoOverride);
+  const pr = await gh(`/repos/${owner}/${repo}/pulls/${prNumber}`);
+  return { merged: Boolean(pr.merged), state: pr.state };
+}
+
 /** Merge a PR — callers MUST have already checked getReviewDecision(). */
 async function mergePullRequest(prNumber, repoOverride) {
   const { owner, repo } = repoParts(repoOverride);
@@ -294,5 +310,6 @@ module.exports = {
   dispatchWorkflow,
   getRun,
   getReviewDecision,
+  getPullRequestState,
   mergePullRequest,
 };

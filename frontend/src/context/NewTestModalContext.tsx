@@ -34,8 +34,8 @@ export const NewTestModalProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const close = useCallback(() => setIsOpen(false), []);
 
   const handleStart = useCallback(
-    async (url: string, modules: string[]) => {
-      const test = await createTest(url, { modules });
+    async (url: string, modules: string[], policyId?: string) => {
+      const test = await createTest(url, { modules, policyId });
       showToast(`AI QA scan started for ${test.url}`, 'success');
       pendingTestIdRef.current = test.id;
       setIsOpen(false);

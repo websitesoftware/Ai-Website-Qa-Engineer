@@ -88,7 +88,12 @@ function readFileSafe(absPath) {
   try {
     const stat = fs.statSync(absPath);
     if (stat.size > MAX_FILE_BYTES) return null;
-    return fs.readFileSync(absPath, "utf-8");
+    // Normalize CRLF -> LF: on Windows checkouts (core.autocrlf), the local
+    // file has \r\n even though git/GitHub store \n-only blobs. Without this,
+    // any multi-line snippet captured here would never match the file
+    // content fetched from the GitHub API, and applyRemediation's drift
+    // check (an exact substring match) would always false-positive.
+    return fs.readFileSync(absPath, "utf-8").replace(/\r\n/g, "\n");
   } catch {
     return null;
   }
@@ -113,6 +118,57 @@ function contextAround(content, index, matchLength) {
 
 function normalizeWhitespace(str) {
   return String(str || "").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Finds the full opening-tag boundaries `[start, end)` containing `index` —
+ * needed because a match can land inside a multi-line JSX tag (e.g. a
+ * `className` several attribute-lines below the tag name), where a plain
+ * "widen by one line" context grab never reaches the actual `<tagname`.
+ * Tracks `{}` depth and quote state while scanning forward so a stray `>`
+ * inside a JSX expression (e.g. an arrow function `(e) => {...}` in an event
+ * handler prop) isn't mistaken for the tag's closing `>`. Tries progressively
+ * earlier `<` candidates if a closer one turns out not to actually enclose
+ * `index`. Returns null if no enclosing tag can be found nearby.
+ */
+function findEnclosingTag(content, index) {
+  let searchFrom = index;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const start = content.lastIndexOf("<", searchFrom);
+    if (start === -1) return null;
+    if (!/[A-Za-z]/.test(content[start + 1] || "")) {
+      searchFrom = start - 1;
+      continue;
+    }
+
+    let depth = 0;
+    let quote = null;
+    for (let i = start; i < content.length; i++) {
+      const ch = content[i];
+      if (quote) {
+        if (ch === quote) quote = null;
+        continue;
+      }
+      if (ch === '"' || ch === "'" || ch === "`") {
+        quote = ch;
+        continue;
+      }
+      if (ch === "{") {
+        depth++;
+        continue;
+      }
+      if (ch === "}") {
+        depth--;
+        continue;
+      }
+      if (ch === ">" && depth === 0) {
+        if (i >= index) return { start, end: i + 1 };
+        break; // this tag closed before reaching index — not the right one
+      }
+    }
+    searchFrom = start - 1;
+  }
+  return null;
 }
 
 /** Exact literal substring search across candidate files. */
@@ -168,13 +224,33 @@ function classListOf(snippet) {
  * whitespace. Requires several classes so a short/generic value (e.g. a
  * single "flex") can't false-match an unrelated element.
  */
+// Lighthouse (and some other reporters) truncate long node snippets with a
+// trailing ellipsis mid-class-name (e.g. "...border-slat…"). Matches either
+// a real "…" or the mojibake 3-byte sequence it sometimes turns into after
+// passing through a codepage that isn't UTF-8.
+const TRAILING_ELLIPSIS_RE = /(…|â€¦|\.\.\.)+$/;
+
 function searchByClassList(files, rawClassList) {
   if (!rawClassList) return null;
   const classes = rawClassList.trim().split(/\s+/).filter(Boolean);
   if (classes.length < 3 || classes.join(" ").length < 20) return null;
 
+  // If the reporter truncated mid last-class, treat that class as a prefix
+  // match instead of requiring the (unknown) rest of its name too.
+  const lastIdx = classes.length - 1;
+  const truncatedLast = TRAILING_ELLIPSIS_RE.test(classes[lastIdx]);
+  if (truncatedLast) {
+    const cleaned = classes[lastIdx].replace(TRAILING_ELLIPSIS_RE, "");
+    if (cleaned.length < 2) classes.pop();
+    else classes[lastIdx] = cleaned;
+  }
+  if (classes.length < 3) return null;
+
   const pattern = classes
-    .map((c) => c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .map((c, i) => {
+      const escaped = c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return truncatedLast && i === classes.length - 1 ? `${escaped}\\S*` : escaped;
+    })
     .join("\\s+");
   const re = new RegExp(pattern);
 
@@ -183,6 +259,18 @@ function searchByClassList(files, rawClassList) {
     if (!content) continue;
     const m = re.exec(content);
     if (!m) continue;
+
+    // Prefer the full enclosing opening tag (needed for patches like adding
+    // an aria-label to the <button ...> itself) — fall back to a plain
+    // line-window if no clean tag boundary is found.
+    const tag = findEnclosingTag(content, m.index);
+    if (tag) {
+      return {
+        absPath,
+        line: lineOf(content, tag.start),
+        original: content.slice(tag.start, tag.end),
+      };
+    }
     return {
       absPath,
       line: lineOf(content, m.index),

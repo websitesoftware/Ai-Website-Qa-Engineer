@@ -6,11 +6,11 @@ const store = new JsonStore("users.json");
 
 const normEmail = (email) => String(email || "").toLowerCase().trim();
 
-// Never expose password hash or reset fields to the client.
+// Never expose password hash or reset/invite token fields to the client.
 function sanitize(user) {
   if (!user) return null;
   // eslint-disable-next-line no-unused-vars
-  const { password, resetTokenHash, resetTokenExpire, ...safe } = user;
+  const { password, resetTokenHash, resetTokenExpire, inviteTokenHash, inviteTokenExpire, ...safe } = user;
   return safe;
 }
 
@@ -33,6 +33,11 @@ module.exports = {
     return store.getAll().find((u) => u.resetTokenHash === hash) || null;
   },
 
+  findByInviteTokenHash(hash) {
+    if (!hash) return null;
+    return store.getAll().find((u) => u.inviteTokenHash === hash) || null;
+  },
+
   async create({ name, email, password }) {
     const user = {
       id: uuidv4(),
@@ -49,8 +54,34 @@ module.exports = {
     return user;
   },
 
+  // A pending team invite: a stub account with no password yet — the
+  // invitee sets one (and their name) via POST /api/auth/accept-invite,
+  // which flips teamStatus to "active".
+  async createInvite({ email, role, invitedBy, inviteTokenHash, inviteTokenExpire }) {
+    const user = {
+      id: uuidv4(),
+      name: null,
+      email: normEmail(email),
+      password: null,
+      resetTokenHash: null,
+      resetTokenExpire: null,
+      role,
+      teamStatus: "invited",
+      inviteTokenHash,
+      inviteTokenExpire,
+      invitedBy: invitedBy || null,
+      createdAt: new Date().toISOString(),
+    };
+    await store.insert(user);
+    return user;
+  },
+
   update(id, patch) {
     return store.update(id, patch);
+  },
+
+  remove(id) {
+    return store.remove(id);
   },
 
   setRole(id, role) {

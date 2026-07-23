@@ -25,11 +25,24 @@ function update(req, res) {
     return res.status(403).json({ error: "Only the owner or an admin can update branding." });
   }
 
-  const { companyName, primaryColor, footerText, logoBase64 } = req.body || {};
+  const {
+    primaryColor,
+    footerText,
+    headerText,
+    headerFontSize,
+    footerFontSize,
+    logoWidth,
+    logoHeight,
+    logoBase64,
+  } = req.body || {};
   const patch = {};
-  if (companyName) patch.companyName = companyName;
   if (primaryColor) patch.primaryColor = primaryColor;
   if (typeof footerText === "string") patch.footerText = footerText;
+  if (typeof headerText === "string") patch.headerText = headerText;
+  if (Number.isFinite(headerFontSize) && headerFontSize > 0) patch.headerFontSize = headerFontSize;
+  if (Number.isFinite(footerFontSize) && footerFontSize > 0) patch.footerFontSize = footerFontSize;
+  if (Number.isFinite(logoWidth) && logoWidth > 0) patch.logoWidth = logoWidth;
+  if (Number.isFinite(logoHeight) && logoHeight > 0) patch.logoHeight = logoHeight;
 
   if (logoBase64) {
     const match = /^data:image\/(png|jpeg|jpg|svg\+xml);base64,(.+)$/.exec(logoBase64);
