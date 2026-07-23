@@ -196,7 +196,7 @@ export const Layout: React.FC<LayoutProps> = ({
             <ThemeToggle />
 
             {/* Profile Context Active Dropdown Trigger */}
-            <button onClick={() => setIsLoginOpen(!isLoginOpen)} className={`px-3.5 py-2 rounded-xl border transition-all shadow-sm flex items-center gap-1.5 cursor-pointer text-xs font-bold ${isLoginOpen ? 'bg-indigo-600 border-indigo-600 text-white' : user ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400' : resolvedTheme === 'dark' ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700'}`}>
+            <button aria-label="Describe this button's action" onClick={() => setIsLoginOpen(!isLoginOpen)} className={`px-3.5 py-2 rounded-xl border transition-all shadow-sm flex items-center gap-1.5 cursor-pointer text-xs font-bold ${isLoginOpen ? 'bg-indigo-600 border-indigo-600 text-white' : user ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400' : resolvedTheme === 'dark' ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700'}`}>
               <User className="w-4 h-4" weight={user || isLoginOpen ? "fill" : "bold"} />
               <span className="hidden sm:inline">{user ? user.name : 'Account'}</span>
             </button>
