@@ -119,10 +119,10 @@ export const TeamDashboardPage: React.FC = () => {
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-sm shrink-0">
-                      {m.name.slice(0, 2).toUpperCase()}
+                      {(m.name || m.email).slice(0, 2).toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                      <span className="font-bold text-slate-950 dark:text-slate-100 text-sm block truncate">{m.name}</span>
+                      <span className="font-bold text-slate-950 dark:text-slate-100 text-sm block truncate">{m.name || m.email}</span>
                       <span className="text-xs text-slate-500 dark:text-slate-400">
                         {m.role} · {m.lastActive ? `active ${timeAgo(m.lastActive)}` : 'no scans yet'}
                       </span>

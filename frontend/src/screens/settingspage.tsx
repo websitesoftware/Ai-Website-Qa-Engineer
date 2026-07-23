@@ -11,11 +11,26 @@ import {
   BackendBranding,
   BackendMonitor,
   BackendTeamMember,
-  PolicyThresholds,
-  PolicyFailSeverity,
+  PolicyScoreRanges,
   MonitorFrequency,
   TeamRole,
 } from '../lib/types';
+
+const SCORE_RANGE_KEYS: { key: keyof PolicyScoreRanges; label: string }[] = [
+  { key: 'overallScore', label: 'Overall' },
+  { key: 'performance', label: 'Performance' },
+  { key: 'accessibility', label: 'Accessibility' },
+  { key: 'seo', label: 'SEO' },
+  { key: 'bestPractices', label: 'Best Practices' },
+];
+
+const DEFAULT_SCORE_RANGES: PolicyScoreRanges = {
+  overallScore: { min: 0, max: 100 },
+  performance: { min: 0, max: 100 },
+  accessibility: { min: 0, max: 100 },
+  seo: { min: 0, max: 100 },
+  bestPractices: { min: 0, max: 100 },
+};
 
 type SettingsTab = 'general' | 'domains' | 'automation' | 'policies' | 'branding' | 'team' | 'integrations';
 
@@ -23,14 +38,6 @@ interface TrackedDomain {
   id: string;
   url: string;
 }
-
-const EMPTY_THRESHOLDS: PolicyThresholds = {
-  overallScore: 70,
-  performance: null,
-  accessibility: null,
-  seo: null,
-  bestPractices: null,
-};
 
 const SignInNotice: React.FC<{ what: string }> = ({ what }) => (
   <div className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">
@@ -152,8 +159,7 @@ export const SettingsPage: React.FC = () => {
   const [policies, setPolicies] = useState<BackendPolicy[]>([]);
   const [policiesLoading, setPoliciesLoading] = useState(false);
   const [newPolicyName, setNewPolicyName] = useState('');
-  const [newPolicyThresholds, setNewPolicyThresholds] = useState<PolicyThresholds>(EMPTY_THRESHOLDS);
-  const [newPolicyFailSeverity, setNewPolicyFailSeverity] = useState<PolicyFailSeverity>('critical');
+  const [newPolicyRanges, setNewPolicyRanges] = useState<PolicyScoreRanges>(DEFAULT_SCORE_RANGES);
   const [policySaving, setPolicySaving] = useState(false);
 
   const fetchPolicies = useCallback(async () => {
@@ -178,9 +184,9 @@ export const SettingsPage: React.FC = () => {
     if (!newPolicyName) return;
     setPolicySaving(true);
     try {
-      await api.policies.create({ name: newPolicyName, thresholds: newPolicyThresholds, failSeverity: newPolicyFailSeverity });
+      await api.policies.create({ name: newPolicyName, scoreRanges: newPolicyRanges });
       setNewPolicyName('');
-      setNewPolicyThresholds(EMPTY_THRESHOLDS);
+      setNewPolicyRanges(DEFAULT_SCORE_RANGES);
       showToast('Policy created', 'success');
       await fetchPolicies();
     } catch (err) {
@@ -214,7 +220,15 @@ export const SettingsPage: React.FC = () => {
   // White-label Branding (real backend, /api/branding)
   // ---------------------------------------------------------------------
   const [branding, setBranding] = useState<BackendBranding | null>(null);
-  const [brandingForm, setBrandingForm] = useState({ companyName: '', primaryColor: '#4f46e5', footerText: '' });
+  const [brandingForm, setBrandingForm] = useState({
+    primaryColor: '#4f46e5',
+    footerText: '',
+    headerText: '',
+    headerFontSize: 16,
+    footerFontSize: 8,
+    logoWidth: 84,
+    logoHeight: 54,
+  });
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [brandingSaving, setBrandingSaving] = useState(false);
 
@@ -222,7 +236,15 @@ export const SettingsPage: React.FC = () => {
     try {
       const b = await api.branding.get();
       setBranding(b);
-      setBrandingForm({ companyName: b.companyName, primaryColor: b.primaryColor, footerText: b.footerText });
+      setBrandingForm({
+        primaryColor: b.primaryColor,
+        footerText: b.footerText,
+        headerText: b.headerText,
+        headerFontSize: b.headerFontSize,
+        footerFontSize: b.footerFontSize,
+        logoWidth: b.logoWidth,
+        logoHeight: b.logoHeight,
+      });
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Could not load branding', 'error');
     }
@@ -291,9 +313,18 @@ export const SettingsPage: React.FC = () => {
     if (!inviteEmail) return;
     setInviteSaving(true);
     try {
-      await api.team.invite(inviteEmail, inviteRole);
+      const result = await api.team.invite(inviteEmail, inviteRole);
       setInviteEmail('');
-      showToast('Member added to the team', 'success');
+      if (result.teamStatus === 'invited') {
+        showToast(
+          result.emailSent
+            ? `Invite emailed to ${result.email}`
+            : `Invite created, but the email couldn't be sent — share this link: ${result.devInviteLink ?? '(none)'}`,
+          result.emailSent ? 'success' : 'info'
+        );
+      } else {
+        showToast('Member added to the team', 'success');
+      }
       await fetchTeam();
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Could not add member', 'error');
@@ -642,8 +673,12 @@ export const SettingsPage: React.FC = () => {
                     <div className="p-6 border-b border-slate-100 dark:border-slate-800">
                       <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">Custom Testing Policies</h3>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        The active policy is checked after every scan. If scores fall below its thresholds, or an issue at/above
-                        the chosen severity is found, the test is marked failed.
+                        Set a min–max passing range for each score. A scan graded against this policy only{' '}
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">Passes</span> when every
+                        one of Overall, Performance, Accessibility, SEO, and Best Practices falls inside its range —
+                        otherwise it&apos;s a <span className="font-semibold text-red-500 dark:text-red-400">Fail</span>.
+                        Create named policies here, then pick one when starting a new test (or leave the active one as
+                        the default).
                       </p>
                     </div>
 
@@ -656,20 +691,39 @@ export const SettingsPage: React.FC = () => {
                         onChange={(e) => setNewPolicyName(e.target.value)}
                         className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-lg text-sm bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-white"
                       />
-                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                        {(['overallScore', 'performance', 'accessibility', 'seo', 'bestPractices'] as const).map((key) => (
-                          <div key={key}>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">{key}</label>
+                      <div className="space-y-2.5">
+                        {SCORE_RANGE_KEYS.map(({ key, label }) => (
+                          <div key={key} className="flex items-center gap-3">
+                            <label className="w-28 shrink-0 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                              {label}
+                            </label>
                             <input
                               type="number"
                               min={0}
                               max={100}
-                              placeholder="—"
-                              value={newPolicyThresholds[key] ?? ''}
+                              required
+                              placeholder="Min"
+                              value={newPolicyRanges[key].min}
                               onChange={(e) =>
-                                setNewPolicyThresholds((prev) => ({
+                                setNewPolicyRanges((prev) => ({
                                   ...prev,
-                                  [key]: e.target.value === '' ? null : Number(e.target.value),
+                                  [key]: { ...prev[key], min: Number(e.target.value) },
+                                }))
+                              }
+                              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg text-sm bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-white"
+                            />
+                            <span className="text-slate-400 text-xs shrink-0">to</span>
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              required
+                              placeholder="Max"
+                              value={newPolicyRanges[key].max}
+                              onChange={(e) =>
+                                setNewPolicyRanges((prev) => ({
+                                  ...prev,
+                                  [key]: { ...prev[key], max: Number(e.target.value) },
                                 }))
                               }
                               className="w-full px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg text-sm bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-white"
@@ -677,22 +731,11 @@ export const SettingsPage: React.FC = () => {
                           </div>
                         ))}
                       </div>
-                      <div className="flex items-center gap-3">
-                        <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 shrink-0">Fail on issues at/above:</label>
-                        <select
-                          value={newPolicyFailSeverity}
-                          onChange={(e) => setNewPolicyFailSeverity(e.target.value as PolicyFailSeverity)}
-                          className="px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg text-sm bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-white"
-                        >
-                          <option value="critical">Critical</option>
-                          <option value="high">High</option>
-                          <option value="medium">Medium</option>
-                          <option value="none">Don&apos;t check severity</option>
-                        </select>
+                      <div className="flex justify-end">
                         <button
                           type="submit"
                           disabled={policySaving}
-                          className="ml-auto bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 text-white px-5 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm"
+                          className="bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm shrink-0"
                         >
                           {policySaving ? 'Creating...' : 'Create Policy'}
                         </button>
@@ -703,7 +746,7 @@ export const SettingsPage: React.FC = () => {
                       {policiesLoading && <p className="text-sm text-slate-400 text-center py-4">Loading policies...</p>}
                       {!policiesLoading && policies.length === 0 && (
                         <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-6">
-                          No policies yet — every scan uses the default severity-based pass/fail rule until you create one.
+                          No policies yet — create one to select it when starting a test, or leave tests ungraded.
                         </p>
                       )}
                       {policies.map((p) => (
@@ -719,11 +762,10 @@ export const SettingsPage: React.FC = () => {
                                 )}
                               </div>
                               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                {Object.entries(p.thresholds)
-                                  .filter(([, v]) => v !== null)
-                                  .map(([k, v]) => `${k} ≥ ${v}`)
-                                  .join(' · ') || 'No score thresholds'}
-                                {p.failSeverity !== 'none' && ` · fails on ${p.failSeverity}+ issues`}
+                                {SCORE_RANGE_KEYS.map(
+                                  ({ key, label }) => `${label} ${p.scoreRanges[key].min}-${p.scoreRanges[key].max}`
+                                ).join(' · ')}
+                                {p.active && ' · default for tests that don’t explicitly pick one'}
                               </p>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
@@ -764,36 +806,66 @@ export const SettingsPage: React.FC = () => {
                     <div className="p-6 border-b border-slate-100 dark:border-slate-800">
                       <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">White-label Reports</h3>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        Your logo, brand color, and footer text are stamped onto exported PDF/DOCX reports.
+                        Your logo and header text form a banner (divided by a rule) at the top of exported PDF/DOCX
+                        reports, with your footer text (divided by a rule) at the bottom.
                       </p>
                     </div>
                     <form onSubmit={handleSaveBranding} className="p-6 space-y-5">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Company Name</label>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Primary Color</label>
+                        <div className="flex items-center gap-2 max-w-xs">
+                          <input
+                            type="color"
+                            value={brandingForm.primaryColor}
+                            onChange={(e) => setBrandingForm((f) => ({ ...f, primaryColor: e.target.value }))}
+                            className="w-11 h-10 rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer bg-transparent"
+                          />
                           <input
                             type="text"
-                            value={brandingForm.companyName}
-                            onChange={(e) => setBrandingForm((f) => ({ ...f, companyName: e.target.value }))}
+                            value={brandingForm.primaryColor}
+                            onChange={(e) => setBrandingForm((f) => ({ ...f, primaryColor: e.target.value }))}
+                            className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-lg text-sm bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-white"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                          Header Text
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Shown on the right of the logo, in exported reports"
+                          value={brandingForm.headerText}
+                          onChange={(e) => setBrandingForm((f) => ({ ...f, headerText: e.target.value }))}
+                          className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-lg text-sm bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-white"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                            Header Font Size (pt)
+                          </label>
+                          <input
+                            type="number"
+                            min={6}
+                            max={32}
+                            value={brandingForm.headerFontSize}
+                            onChange={(e) => setBrandingForm((f) => ({ ...f, headerFontSize: Number(e.target.value) }))}
                             className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-lg text-sm bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-white"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Primary Color</label>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="color"
-                              value={brandingForm.primaryColor}
-                              onChange={(e) => setBrandingForm((f) => ({ ...f, primaryColor: e.target.value }))}
-                              className="w-11 h-10 rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer bg-transparent"
-                            />
-                            <input
-                              type="text"
-                              value={brandingForm.primaryColor}
-                              onChange={(e) => setBrandingForm((f) => ({ ...f, primaryColor: e.target.value }))}
-                              className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-lg text-sm bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-white"
-                            />
-                          </div>
+                          <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                            Footer Font Size (pt)
+                          </label>
+                          <input
+                            type="number"
+                            min={6}
+                            max={32}
+                            value={brandingForm.footerFontSize}
+                            onChange={(e) => setBrandingForm((f) => ({ ...f, footerFontSize: Number(e.target.value) }))}
+                            className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-lg text-sm bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-white"
+                          />
                         </div>
                       </div>
                       <div>
@@ -827,6 +899,34 @@ export const SettingsPage: React.FC = () => {
                             className="text-sm text-slate-600 dark:text-slate-300"
                           />
                         </div>
+                        <div className="grid grid-cols-2 gap-4 mt-3 max-w-xs">
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                              Logo Width (px)
+                            </label>
+                            <input
+                              type="number"
+                              min={16}
+                              max={400}
+                              value={brandingForm.logoWidth}
+                              onChange={(e) => setBrandingForm((f) => ({ ...f, logoWidth: Number(e.target.value) }))}
+                              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg text-sm bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                              Logo Height (px)
+                            </label>
+                            <input
+                              type="number"
+                              min={16}
+                              max={400}
+                              value={brandingForm.logoHeight}
+                              onChange={(e) => setBrandingForm((f) => ({ ...f, logoHeight: Number(e.target.value) }))}
+                              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg text-sm bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-white"
+                            />
+                          </div>
+                        </div>
                       </div>
                       <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-slate-800">
                         <button
@@ -859,7 +959,8 @@ export const SettingsPage: React.FC = () => {
                     <div className="p-6 border-b border-slate-100 dark:border-slate-800">
                       <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">Team Members</h3>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        Add an existing registered user by email. The earliest registered account is the workspace owner.
+                        Invite anyone by email. Existing accounts are added immediately; new addresses get an email
+                        invite to join. The earliest registered account is the workspace owner.
                       </p>
                     </div>
 
@@ -899,15 +1000,19 @@ export const SettingsPage: React.FC = () => {
                           <div key={m.id} className="flex items-center justify-between gap-3 p-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 flex-wrap">
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
-                                <span className="font-bold text-slate-950 dark:text-slate-100 text-sm truncate">{m.name}</span>
+                                <span className="font-bold text-slate-950 dark:text-slate-100 text-sm truncate">{m.name || m.email}</span>
                                 {m.id === user.id && (
                                   <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400">You</span>
+                                )}
+                                {m.teamStatus === 'invited' && (
+                                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">Pending</span>
                                 )}
                               </div>
                               <p className="text-xs text-slate-500 dark:text-slate-400">{m.email}</p>
                               <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-                                {m.testCount} test{m.testCount === 1 ? '' : 's'} run · joined {formatDate(m.createdAt)}
-                                {m.lastActive ? ` · last active ${timeAgo(m.lastActive)}` : ''}
+                                {m.teamStatus === 'invited'
+                                  ? `Invited ${timeAgo(m.createdAt)} · awaiting signup`
+                                  : `${m.testCount} test${m.testCount === 1 ? '' : 's'} run · joined ${formatDate(m.createdAt)}${m.lastActive ? ` · last active ${timeAgo(m.lastActive)}` : ''}`}
                               </p>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">

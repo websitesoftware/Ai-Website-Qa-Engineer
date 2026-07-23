@@ -9,8 +9,7 @@ import {
   BackendTeamMember,
   BackendMonitor,
   BackendAnalytics,
-  PolicyThresholds,
-  PolicyFailSeverity,
+  PolicyScoreRanges,
   MonitorFrequency,
   TeamRole,
 } from './types';
@@ -78,6 +77,7 @@ export const api = {
     maxPages?: number;
     maxDepth?: number;
     modules?: string[];
+    policyId?: string;
   }) => request<BackendTest>('/tests', { method: 'POST', body: JSON.stringify(payload) }, true),
 
   listTests: (params?: { status?: string; search?: string }) => {
@@ -126,9 +126,9 @@ export const api = {
 
   policies: {
     list: () => request<BackendPolicy[]>('/policies', undefined, true),
-    create: (payload: { name: string; thresholds?: Partial<PolicyThresholds>; failSeverity?: PolicyFailSeverity }) =>
+    create: (payload: { name: string; scoreRanges?: Partial<PolicyScoreRanges> }) =>
       request<BackendPolicy>('/policies', { method: 'POST', body: JSON.stringify(payload) }, true),
-    update: (id: string, payload: { name?: string; thresholds?: Partial<PolicyThresholds>; failSeverity?: PolicyFailSeverity }) =>
+    update: (id: string, payload: { name?: string; scoreRanges?: Partial<PolicyScoreRanges> }) =>
       request<BackendPolicy>(`/policies/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }, true),
     remove: (id: string) => request<void>(`/policies/${id}`, { method: 'DELETE' }, true),
     setActive: (id: string) => request<BackendPolicy>(`/policies/${id}/activate`, { method: 'POST' }, true),
@@ -136,14 +136,26 @@ export const api = {
 
   branding: {
     get: () => request<BackendBranding>('/branding'),
-    update: (payload: { companyName?: string; primaryColor?: string; footerText?: string; logoBase64?: string }) =>
-      request<BackendBranding>('/branding', { method: 'PUT', body: JSON.stringify(payload) }, true),
+    update: (payload: {
+      primaryColor?: string;
+      footerText?: string;
+      headerText?: string;
+      headerFontSize?: number;
+      footerFontSize?: number;
+      logoWidth?: number;
+      logoHeight?: number;
+      logoBase64?: string;
+    }) => request<BackendBranding>('/branding', { method: 'PUT', body: JSON.stringify(payload) }, true),
   },
 
   team: {
     listMembers: () => request<BackendTeamMember[]>('/team/members', undefined, true),
     invite: (email: string, role?: TeamRole) =>
-      request<BackendTeamMember>('/team/invite', { method: 'POST', body: JSON.stringify({ email, role }) }, true),
+      request<BackendTeamMember & { emailSent: boolean; devInviteLink?: string }>(
+        '/team/invite',
+        { method: 'POST', body: JSON.stringify({ email, role }) },
+        true
+      ),
     updateRole: (id: string, role: TeamRole) =>
       request<BackendTeamMember>(`/team/members/${id}`, { method: 'PATCH', body: JSON.stringify({ role }) }, true),
     remove: (id: string) => request<void>(`/team/members/${id}`, { method: 'DELETE' }, true),

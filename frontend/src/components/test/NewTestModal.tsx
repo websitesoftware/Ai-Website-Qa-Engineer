@@ -1,13 +1,14 @@
 
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { PHASE2_MODULES } from '../../lib/types';
+import { PHASE2_MODULES, BackendPolicy } from '../../lib/types';
+import { api } from '../../lib/api';
 
 interface NewTestModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onStartTest: (url: string, modules: string[]) => Promise<void>;
+  onStartTest: (url: string, modules: string[], policyId?: string) => Promise<void>;
   // Fires once the exit animation has actually finished (not a guessed
   // delay) — callers can safely mount another "fixed inset-0" overlay only
   // after this, avoiding two backdrop-blur layers stacking at once.
@@ -19,6 +20,13 @@ export const NewTestModal: React.FC<NewTestModalProps> = ({ isOpen, onClose, onS
   const [url, setUrl] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [selectedModules, setSelectedModules] = useState<string[]>([]);
+  const [policies, setPolicies] = useState<BackendPolicy[]>([]);
+  const [selectedPolicyId, setSelectedPolicyId] = useState<string>('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    api.policies.list().then(setPolicies).catch(() => setPolicies([]));
+  }, [isOpen]);
 
   const toggleModule = (id: string) => {
     setSelectedModules((prev) => (prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]));
@@ -31,9 +39,10 @@ export const NewTestModal: React.FC<NewTestModalProps> = ({ isOpen, onClose, onS
     setIsInitializing(true);
     setError(null);
     try {
-      await onStartTest(url, selectedModules);
+      await onStartTest(url, selectedModules, selectedPolicyId || undefined);
       setUrl('');
       setSelectedModules([]);
+      setSelectedPolicyId('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not start the test. Is the backend running?');
     } finally {
@@ -151,6 +160,30 @@ export const NewTestModal: React.FC<NewTestModalProps> = ({ isOpen, onClose, onS
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Testing Policy */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Testing Policy (optional)
+                  </label>
+                  <select
+                    value={selectedPolicyId}
+                    onChange={(e) => setSelectedPolicyId(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-sm bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500"
+                  >
+                    <option value="">No policy — default grading</option>
+                    {policies.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                        {p.active ? ' (Active)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+                    Passes only if Overall, Performance, Accessibility, SEO, and Best Practices each fall inside the
+                    policy&apos;s configured range.
+                  </p>
                 </div>
               </div>
 

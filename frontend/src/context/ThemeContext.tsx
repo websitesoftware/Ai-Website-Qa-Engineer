@@ -2,6 +2,7 @@
 
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -63,14 +64,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => media.removeEventListener('change', applyTheme);
   }, [theme]);
 
-  const setTheme = (value: Theme) => {
+  const setTheme = useCallback((value: Theme) => {
     localStorage.setItem(STORAGE_KEY, value);
     setThemeState(value);
-  };
+  }, []);
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     setTheme(resolvedTheme === 'light' ? 'dark' : 'light');
-  };
+  }, [resolvedTheme, setTheme]);
 
   const value = useMemo(
     () => ({
@@ -79,7 +80,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
       setTheme,
       toggleTheme,
     }),
-    [theme, resolvedTheme]
+    [theme, resolvedTheme, setTheme, toggleTheme]
   );
 
   return (

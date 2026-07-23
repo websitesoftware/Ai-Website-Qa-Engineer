@@ -5,6 +5,7 @@ import { useQAData } from '../context/QADataContext';
 import { PHASE2_MODULES, BackendTest } from '../lib/types';
 import { timeAgo } from '../lib/format';
 import { Phase2ResultsPanel } from '../components/report/Phase2ResultsPanel';
+import { ResultLaunchAnimation } from '../components/report/ResultLaunchAnimation';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Skeleton } from '../components/ui/Skeleton';
 import { exportReportCSV, exportReportPDF, exportReportDocx } from '../lib/exportReport';
@@ -197,6 +198,13 @@ export const Phase2ResultsPage: React.FC = () => {
                 </div>
               ) : (
                 <div key={activeTest.id} className="animate-fade-in-up">
+                  {(activeTest.status === 'passed' || activeTest.status === 'failed') && (
+                    <ResultLaunchAnimation
+                      key={activeTest.status}
+                      passed={activeTest.status === 'passed'}
+                      label={activeTest.status === 'passed' ? 'Pass' : 'Fail'}
+                    />
+                  )}
                   <Phase2ResultsPanel test={activeTest} />
                 </div>
               )

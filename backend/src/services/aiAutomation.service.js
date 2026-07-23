@@ -296,6 +296,25 @@ function deterministicFix(issue) {
 function buildGroundedPatch(issue, located) {
   const original = located.original;
 
+  // Buttons/links with no accessible name (icon-only controls, empty
+  // anchors) — same safe transform regardless of whether axe reported it as
+  // "accessibility" or Lighthouse reported it as a "lighthouse" audit: add
+  // an aria-label rather than guess at visible text content.
+  if (
+    /discernible (text|name)|accessible name/i.test(issue.title) &&
+    !/\baria-label\s*=/i.test(original) &&
+    !/\baria-labelledby\s*=/i.test(original)
+  ) {
+    if (/<button\b/i.test(original)) {
+      const patched = original.replace(/<button\b/i, `<button aria-label="Describe this button's action"`);
+      if (patched !== original) return { patched, autoFixable: true };
+    }
+    if (/<a\b/i.test(original)) {
+      const patched = original.replace(/<a\b/i, `<a aria-label="Describe this link's destination"`);
+      if (patched !== original) return { patched, autoFixable: true };
+    }
+  }
+
   if (issue.category === "accessibility" || /image-alt/i.test(issue.title)) {
     if (/<img\b/i.test(original) && !/\balt\s*=/i.test(original)) {
       const patched = original.replace(
@@ -890,6 +909,8 @@ async function createPullRequest(testId) {
   const test = testId ? testsRepo.get(testId) : latestCompletedTest();
   if (!test) return { configured: true, error: "no_completed_test" };
 
+  await reconcileMergedFixes(test);
+
   // Figure out which local repo the scanned URL actually belongs to — not
   // always this QA engine's own repo — so the PR lands in the right project.
   const match = repoRegistry.matchRepoForUrl(test.url);
@@ -958,6 +979,29 @@ async function createPullRequest(testId) {
     });
     return { configured: true, ...pr, repo: match.githubRepo, repoMatch };
   } catch (err) {
+    // A branch with no diff from base almost always means this exact fix
+    // already landed on base (typically merged directly on GitHub, missed
+    // by reconcileMergedFixes above because this issue predates
+    // recordAppliedFix or its appliedFix data was lost) — treat that as
+    // "already fixed," not a failure.
+    if (/No commits between/i.test(err.message)) {
+      const issue = (test.issues || []).find((i) => i.id === prioritization.issueId);
+      if (issue) {
+        issue.resolved = true;
+        await testsRepo.update(test.id, { issues: test.issues });
+      }
+      logger.success(
+        "aiAutomation",
+        `Issue ${prioritization.issueId} already fixed on ${require("../config/config").github.baseBranch} — marking resolved instead of erroring`,
+      );
+      return {
+        configured: true,
+        noCodeChange: true,
+        alreadyFixed: true,
+        error: `This fix is already on ${require("../config/config").github.baseBranch} (branch "${branchName}" has no changes to open a PR for) — marked resolved.`,
+        repoMatch,
+      };
+    }
     logger.error("aiAutomation", `PR creation failed: ${err.message}`);
     return { configured: true, error: err.message, repoMatch };
   }
@@ -1084,6 +1128,46 @@ async function markIssueResolvedByMerge(prNumber, repo) {
     );
     return;
   }
+}
+
+/**
+ * Self-heals issues whose PR was merged outside this app's own Merge button
+ * (e.g. merged directly on GitHub) — markIssueResolvedByMerge() only runs
+ * when mergePullRequest() itself performs the merge, so a manually-merged
+ * PR leaves the issue looking unresolved forever otherwise. Without this,
+ * re-running "Generate Pull Request" would pick that same issue again, reuse
+ * its now-merged (no-diff-from-base) branch, and hit a raw GitHub 422 ("No
+ * commits between base and branch") instead of recognizing it's done.
+ * Called before ranking issues so a just-discovered merge takes it out of
+ * the running immediately.
+ */
+async function reconcileMergedFixes(test) {
+  const pending = (test.issues || []).filter(
+    (i) => !i.resolved && i.appliedFix?.prNumber && i.appliedFix?.repo,
+  );
+  if (!pending.length) return;
+
+  let changed = false;
+  for (const issue of pending) {
+    try {
+      const state = await github.getPullRequestState(issue.appliedFix.prNumber, issue.appliedFix.repo);
+      if (state.merged) {
+        issue.resolved = true;
+        issue.appliedFix.mergedAt = new Date().toISOString();
+        changed = true;
+        logger.success(
+          "aiAutomation",
+          `Auto-resolved issue ${issue.id} — PR #${issue.appliedFix.prNumber} was merged (${issue.appliedFix.repo})`,
+        );
+      }
+    } catch (err) {
+      logger.warn(
+        "aiAutomation",
+        `Could not check merge state of PR #${issue.appliedFix.prNumber}: ${err.message}`,
+      );
+    }
+  }
+  if (changed) await testsRepo.update(test.id, { issues: test.issues });
 }
 
 /**

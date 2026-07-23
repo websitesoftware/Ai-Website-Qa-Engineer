@@ -18,6 +18,7 @@ interface AuthContextValue {
   login: (email: string, password: string, remember: boolean) => Promise<void>;
   register: (email: string, password: string, remember: boolean) => Promise<void>;
   forgotPassword: (email: string) => Promise<string>;
+  acceptInvite: (inviteToken: string, name: string, password: string, remember: boolean) => Promise<void>;
   logout: () => void;
 }
 
@@ -113,6 +114,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return data.message as string;
   }, []);
 
+  const acceptInvite = useCallback(
+    async (inviteToken: string, name: string, password: string, remember: boolean) => {
+      const res = await fetch(`${AUTH_BASE}/accept-invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: inviteToken, name, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Could not accept invite');
+      setUser(data.user);
+      setToken(data.token);
+      persistSession(data.token, data.user, remember);
+    },
+    []
+  );
+
   const logout = useCallback(() => {
     setUser(null);
     setToken(null);
@@ -120,7 +137,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, ready, login, register, forgotPassword, logout }}>
+    <AuthContext.Provider value={{ user, token, ready, login, register, forgotPassword, acceptInvite, logout }}>
       {children}
     </AuthContext.Provider>
   );

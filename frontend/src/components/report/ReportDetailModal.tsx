@@ -9,6 +9,7 @@ import { formatDate, timeAgo } from '../../lib/format';
 import { useQAData } from '../../context/QADataContext';
 import { useToast } from '../../context/ToastContext';
 import { Phase2ResultsPanel } from './Phase2ResultsPanel';
+import { ResultLaunchAnimation } from './ResultLaunchAnimation';
 
 const severityStyles: Record<string, { dot: string; badge: string }> = {
   critical: { dot: 'bg-red-500', badge: 'bg-red-50 text-red-600 border-red-100 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900' },
@@ -141,19 +142,50 @@ export const ReportDetailModal: React.FC<{ testId: string | null; onClose: () =>
                 </motion.div>
               )}
 
+              {test && (test.status === 'passed' || test.status === 'failed') && (
+                <ResultLaunchAnimation
+                  key={`${test.id}-${test.status}`}
+                  passed={test.status === 'passed'}
+                  label={test.status === 'passed' ? 'Pass' : 'Fail'}
+                />
+              )}
+
               {test && test.score !== null && (
-                <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-6 items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6">
-                  <ScoreGauge score={test.score} size={110} label="Overall" />
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full">
-                    {(['performance', 'accessibility', 'seo', 'bestPractices'] as const).map((key) => (
-                      <div key={key} className="text-center">
-                        <ScoreGauge score={test.scores[key]} size={64} strokeWidth={6} />
-                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-1 capitalize">
-                          {key === 'bestPractices' ? 'Best Practices' : key}
-                        </p>
-                      </div>
-                    ))}
+                <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-6 items-center">
+                    <ScoreGauge score={test.score} size={110} label="Overall" />
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full">
+                      {(['performance', 'accessibility', 'seo', 'bestPractices'] as const).map((key) => (
+                        <div key={key} className="text-center">
+                          <ScoreGauge score={test.scores[key]} size={64} strokeWidth={6} />
+                          <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-1 capitalize">
+                            {key === 'bestPractices' ? 'Best Practices' : key}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
+                  {test.policyResult && (
+                    <div
+                      className={`px-4 py-2.5 rounded-lg border text-sm ${
+                        test.policyResult.passed
+                          ? 'bg-emerald-50 border-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-900 dark:text-emerald-400'
+                          : 'bg-red-50 border-red-100 text-red-700 dark:bg-red-950/40 dark:border-red-900 dark:text-red-400'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="font-bold">{test.policyResult.grade}</span>
+                        <span className="opacity-70">graded against &quot;{test.policyResult.policyName}&quot;</span>
+                      </div>
+                      {!test.policyResult.passed && test.policyResult.violations.length > 0 && (
+                        <ul className="mt-1.5 space-y-0.5 text-xs opacity-90 list-disc list-inside">
+                          {test.policyResult.violations.map((v, i) => (
+                            <li key={i}>{v}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
