@@ -271,6 +271,7 @@ export interface BackendMonitor {
   lastRunAt: string | null;
   lastTestId: string | null;
   lastRunHadCriticalIssues: boolean;
+  lastRunReconciled: boolean;
   createdBy: string | null;
   createdAt: string;
 }

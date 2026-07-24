@@ -175,4 +175,34 @@ export const api = {
   analytics: {
     get: (days = 30) => request<BackendAnalytics>(`/analytics?days=${days}`, undefined, true),
   },
+
+  deviceLab: {
+    listDevices: () => request<{ devices: DeviceLabDevice[] }>('/device-lab/devices'),
+    render: (payload: { url: string; deviceId: string; orientation?: 'portrait' | 'landscape'; browserEngine?: 'chromium' | 'firefox' | 'webkit' }) =>
+      request<DeviceLabRenderResult>('/device-lab/render', { method: 'POST', body: JSON.stringify(payload) }),
+  },
 };
+
+export interface DeviceLabDevice {
+  id: string;
+  deviceKey: string;
+  name: string;
+  category: string;
+  os: string;
+  width: number;
+  height: number;
+  deviceScaleFactor: number;
+  isMobile: boolean;
+  hasTouch: boolean;
+  defaultBrowserType: 'chromium' | 'firefox' | 'webkit';
+  userAgent: string;
+}
+
+export interface DeviceLabRenderResult {
+  screenshotUrl: string;
+  device: DeviceLabDevice;
+  orientation: 'portrait' | 'landscape';
+  browserEngine: string;
+  statusCode: number | null;
+  loadTimeMs: number;
+}

@@ -1,22 +1,6 @@
-// const app = require("./src/app");
-// const config = require("./src/config/config");
-// const logger = require("./src/utils/logger");
-// const { closeBrowser } = require("./src/services/browser.service");
 
-// const server = app.listen(config.port, () => {
-//   logger.success("server", `AI QA Engineer backend running on http://localhost:${config.port}`);
-// });
-
-// async function shutdown(signal) {
-//   logger.warn("server", `${signal} received. Shutting down gracefully...`);
-//   server.close(async () => {
-//     await closeBrowser();
-//     process.exit(0);
-//   });
-// }
-
-// process.on("SIGINT", () => shutdown("SIGINT"));
-// process.on("SIGTERM", () => shutdown("SIGTERM"));
+const http = require("http");
+const { Server: SocketIOServer } = require("socket.io");
 const app = require("./src/app");
 const config = require("./src/config/config");
 const logger = require("./src/utils/logger");
@@ -24,6 +8,7 @@ const { closeBrowser } = require("./src/services/browser.service");
 const { chromium } = require("@playwright/test");
 const { autoDiscoverAndGenerateSteps } = require("./src/utils/testGenerator");
 const { startScheduler } = require("./src/services/monitorScheduler.service");
+const registerDeviceLabSocket = require("./src/sockets/deviceLab.socket");
 
 // =========================================================================
 // 🚀 INJECTING STUDIO API DIRECTLY ON APP INSTANCE TO FIX 404
@@ -103,7 +88,11 @@ test('Automated AI Studio Flow for ${url}', async ({ page }) => {
 // =========================================================================
 
 // Server Setup Listening
-const server = app.listen(config.port, () => {
+const server = http.createServer(app);
+const io = new SocketIOServer(server, { cors: { origin: "*" } });
+registerDeviceLabSocket(io);
+
+server.listen(config.port, () => {
   logger.success(
     "server",
     `AI QA Engineer backend running on http://localhost:${config.port}`,

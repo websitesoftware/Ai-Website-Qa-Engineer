@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { Layout } from '../components/Layout';
 import { TestManagementPage } from '../screens/TestManagementPage';
-import { useNewTestModal } from '../context/NewTestModalContext';
 import { DashboardHub } from '../screens/DashboardHub';
 import { ScanResultsPage } from '../screens/ScanResultsPage';
 import { AutomationPage } from '../screens/AutomationPage';
@@ -14,7 +13,6 @@ type TabType = 'Dashboard' | 'Tests' | 'Scan Results' | 'Automation' | 'Settings
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabType>('Dashboard');
-  const { open } = useNewTestModal();
 
   const renderCanvasContent = () => {
     switch (activeTab) {
@@ -45,7 +43,6 @@ export default function DashboardPage() {
         currentUser="Rajat"
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        onNewTestClick={open}
       >
         {renderCanvasContent()}
       </Layout>
