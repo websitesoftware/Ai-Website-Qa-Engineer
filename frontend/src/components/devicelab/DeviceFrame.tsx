@@ -54,6 +54,13 @@ export interface DeviceFrameHandlers {
   onKey: (key: string, text: string | null) => void;
 }
 
+export interface HighlightRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 interface DeviceFrameProps {
   device: DeviceLabDevice | null;
   frameWidth: number;
@@ -63,6 +70,13 @@ interface DeviceFrameProps {
   starting: boolean;
   connected: boolean;
   handlers?: DeviceFrameHandlers;
+  // Chrome-style "inspect element" picker: while active, clicks are routed
+  // to onInspectClick (which resolves the element under the point) instead
+  // of tapping the live page, and highlightRect draws the selected
+  // element's box outline over the screenshot.
+  inspectMode?: boolean;
+  onInspectClick?: (xCss: number, yCss: number) => void;
+  highlightRect?: HighlightRect | null;
 }
 
 export const DeviceFrame: React.FC<DeviceFrameProps> = ({
@@ -74,6 +88,9 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({
   starting,
   connected,
   handlers,
+  inspectMode,
+  onInspectClick,
+  highlightRect,
 }) => {
   const time = useClock();
   const screenRef = useRef<HTMLDivElement>(null);
@@ -105,11 +122,15 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({
   const isLive = connected && !!frameImage;
 
   const handleTap = (e: React.MouseEvent) => {
-    if (!handlers || !screenRef.current) return;
+    if (!screenRef.current) return;
     const rect = screenRef.current.getBoundingClientRect();
     const xCss = ((e.clientX - rect.left) / rect.width) * frameWidth;
     const yCss = ((e.clientY - rect.top) / rect.height) * frameHeight;
-    handlers.onTap(xCss, yCss);
+    if (inspectMode && onInspectClick) {
+      onInspectClick(xCss, yCss);
+      return;
+    }
+    handlers?.onTap(xCss, yCss);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -129,7 +150,9 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({
       tabIndex={handlers ? 0 : -1}
       onClick={handleTap}
       onKeyDown={handleKeyDown}
-      className={`relative w-full h-full bg-white overflow-hidden ${handlers ? 'cursor-pointer outline-none' : ''}`}
+      className={`relative w-full h-full bg-white overflow-hidden ${
+        inspectMode ? 'cursor-crosshair outline-none' : handlers ? 'cursor-pointer outline-none' : ''
+      }`}
     >
       {frameImage ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -147,6 +170,20 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({
           <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
           <span className="text-[9px] font-bold text-white tracking-wide">LIVE</span>
         </div>
+      )}
+      {highlightRect && frameWidth > 0 && frameHeight > 0 && (
+        // Chrome DevTools-style content-box highlight: cyan fill, solid
+        // outline, positioned as a % of the device viewport so it stays
+        // aligned with the screenshot at any zoom level.
+        <div
+          className="absolute pointer-events-none z-40 bg-sky-400/30 outline-2 outline-sky-500"
+          style={{
+            left: `${(highlightRect.x / frameWidth) * 100}%`,
+            top: `${(highlightRect.y / frameHeight) * 100}%`,
+            width: `${(highlightRect.width / frameWidth) * 100}%`,
+            height: `${(highlightRect.height / frameHeight) * 100}%`,
+          }}
+        />
       )}
     </div>
   );

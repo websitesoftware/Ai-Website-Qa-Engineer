@@ -1,6 +1,7 @@
 'use client';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { MagnifyingGlass, ArrowsClockwise, ArrowClockwise, Plus, Minus, Globe, SidebarSimple, Devices, Code } from '@phosphor-icons/react';
+import { createPortal } from 'react-dom';
+import { MagnifyingGlass, ArrowsClockwise, ArrowClockwise, Plus, Minus, Globe, SidebarSimple, Devices, Code, ArrowsOut, X } from '@phosphor-icons/react';
 import { api, DeviceLabDevice } from '../lib/api';
 import { DeviceFrame, DEVICE_FRAME_CHROME_HEIGHT, DeviceFrameHandlers } from '../components/devicelab/DeviceFrame';
 import { DevToolsPanel } from '../components/devicelab/DevToolsPanel';
@@ -36,6 +37,7 @@ export const DeviceLabPage: React.FC = () => {
 
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [fullscreen, setFullscreen] = useState(false);
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const [browserEngine, setBrowserEngine] = useState<'chromium' | 'firefox' | 'webkit' | ''>('');
   const [zoom, setZoom] = useState(1);
@@ -43,6 +45,7 @@ export const DeviceLabPage: React.FC = () => {
   const [url, setUrl] = useState('https://example.com');
   const [hasStarted, setHasStarted] = useState(false);
   const [devToolsOpen, setDevToolsOpen] = useState(false);
+  const [inspectMode, setInspectMode] = useState(false);
   const {
     connected,
     frame,
@@ -55,6 +58,18 @@ export const DeviceLabPage: React.FC = () => {
     networkRequests,
     domHtml,
     inspectDom,
+    inspected,
+    inspectAt,
+    clearInspected,
+    storage,
+    inspectStorage,
+    performanceMetrics,
+    inspectPerformance,
+    memory,
+    inspectMemory,
+    source,
+    sourceLoading,
+    fetchSource,
   } = useDeviceLabSession();
 
   useEffect(() => {
@@ -75,9 +90,11 @@ export const DeviceLabPage: React.FC = () => {
   const selectDevice = (id: string) => {
     setSelectedDeviceId(id);
     // A deliberate pick from the list is the moment to get out of the way —
-    // the device view expands to the full panel instead of staying squeezed
-    // next to the browsable list.
+    // the device view takes over the whole browser window so the content
+    // inside the device renders as large and clear as possible, instead of
+    // staying squeezed inside the app's normal panel layout.
     setSidebarOpen(false);
+    setFullscreen(true);
   };
 
   const selectedDevice = useMemo(
@@ -150,10 +167,14 @@ export const DeviceLabPage: React.FC = () => {
     const totalHeight = frameHeight + chromeHeight + extra;
 
     const { width: panelWidth, height: panelHeight } = framePanelRef.current.getBoundingClientRect();
+    // Uncapped at 100% on purpose — full screen opens up a lot more room
+    // than the device's native pixel size, and leaving that space unused
+    // just makes the page's text look small. Scale up to fill it (capped
+    // at 1.8x so it doesn't get soft from over-upscaling a raster shot).
     const scale = Math.min(
       (panelWidth - FRAME_PANEL_PADDING) / totalWidth,
       (panelHeight - FRAME_PANEL_PADDING) / totalHeight,
-      1
+      1.8
     );
     setZoom(Math.max(0.2, scale));
   }, [selectedDevice, frameWidth, frameHeight]);
@@ -170,8 +191,14 @@ export const DeviceLabPage: React.FC = () => {
     return () => observer.disconnect();
   }, [fitZoom]);
 
-  return (
-    <div className="flex h-full gap-6 animate-fade-in">
+  // A plain `position: fixed` wrapper wouldn't actually cover the whole
+  // browser window here — the tab content above this component is animated
+  // with framer-motion, and any ancestor with a `transform` style creates a
+  // new containing block that traps `fixed` children inside its own box
+  // instead of the viewport. Rendering through a portal into document.body
+  // sidesteps that entirely, so "full screen" really means the full screen.
+  const viewerBody = (
+    <>
       {/* Device picker sidebar — collapses so the live device can use the
           full panel; toggled back open via the button in the toolbar. */}
       {sidebarOpen && (
@@ -311,6 +338,14 @@ export const DeviceLabPage: React.FC = () => {
           >
             <Code className="w-4 h-4" />
           </button>
+
+          <button
+            onClick={() => setFullscreen((v) => !v)}
+            title={fullscreen ? 'Exit full screen' : 'Full screen'}
+            className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer"
+          >
+            {fullscreen ? <X className="w-4 h-4" /> : <ArrowsOut className="w-4 h-4" />}
+          </button>
         </div>
 
         {/* Device frame */}
@@ -325,6 +360,9 @@ export const DeviceLabPage: React.FC = () => {
               starting={starting}
               connected={connected}
               handlers={hasStarted ? frameHandlers : undefined}
+              inspectMode={inspectMode}
+              onInspectClick={(x, y) => inspectAt(x, y)}
+              highlightRect={inspectMode ? inspected?.rect ?? null : null}
             />
           </div>
         </div>
@@ -335,7 +373,25 @@ export const DeviceLabPage: React.FC = () => {
             networkRequests={networkRequests}
             domHtml={domHtml}
             onInspectDom={inspectDom}
-            onClose={() => setDevToolsOpen(false)}
+            onClose={() => {
+              setDevToolsOpen(false);
+              setInspectMode(false);
+            }}
+            inspectMode={inspectMode}
+            onToggleInspect={() => {
+              setInspectMode((v) => !v);
+              clearInspected();
+            }}
+            inspected={inspected}
+            storage={storage}
+            onInspectStorage={inspectStorage}
+            performanceMetrics={performanceMetrics}
+            onInspectPerformance={inspectPerformance}
+            memory={memory}
+            onInspectMemory={inspectMemory}
+            source={source}
+            sourceLoading={sourceLoading}
+            onFetchSource={fetchSource}
           />
         )}
 
@@ -353,8 +409,19 @@ export const DeviceLabPage: React.FC = () => {
           {sessionError && <span className="text-red-500 font-semibold">{sessionError}</span>}
         </div>
       </div>
-    </div>
+    </>
   );
+
+  if (fullscreen && typeof document !== 'undefined') {
+    return createPortal(
+      <div className="fixed inset-0 z-999 flex h-screen gap-6 bg-slate-50 dark:bg-slate-950 p-4 animate-fade-in">
+        {viewerBody}
+      </div>,
+      document.body
+    );
+  }
+
+  return <div className="flex h-full gap-6 animate-fade-in">{viewerBody}</div>;
 };
 
 const DeviceRow: React.FC<{ device: DeviceLabDevice; selected: boolean; onSelect: () => void }> = ({ device, selected, onSelect }) => (

@@ -41,6 +41,85 @@ export interface NetworkRequestEntry {
   ts: number;
 }
 
+export interface ElementCrumb {
+  tag: string;
+  id: string | null;
+  classes: string[];
+}
+
+export interface MatchedCssRule {
+  selector: string;
+  declarations: { prop: string; value: string }[];
+  source: string;
+}
+
+export interface InspectedElement {
+  tag: string;
+  id: string | null;
+  classes: string[];
+  rect: { x: number; y: number; width: number; height: number };
+  ancestors: ElementCrumb[];
+  matchedRules: MatchedCssRule[];
+  margin: { top: string; right: string; bottom: string; left: string };
+  padding: { top: string; right: string; bottom: string; left: string };
+  border: { top: string; right: string; bottom: string; left: string };
+  style: {
+    display: string;
+    position: string;
+    color: string;
+    backgroundColor: string;
+    fontFamily: string;
+    fontSize: string;
+    fontWeight: string;
+    lineHeight: string;
+    textAlign: string;
+    zIndex: string;
+  };
+  outerHTMLPreview: string;
+}
+
+export interface StorageCookie {
+  name: string;
+  value: string;
+  domain: string;
+  path: string;
+  expires: number;
+  httpOnly: boolean;
+  secure: boolean;
+  sameSite?: string;
+}
+
+export interface StorageSnapshot {
+  localStorage: [string, string][];
+  sessionStorage: [string, string][];
+  cookies: StorageCookie[];
+}
+
+export interface PerformanceMetrics {
+  domContentLoaded: number | null;
+  loadEvent: number | null;
+  ttfb: number | null;
+  firstPaint: number | null;
+  firstContentfulPaint: number | null;
+  resourceCount: number;
+  totalTransferBytes: number;
+  byType: Record<string, number>;
+}
+
+export interface MemoryInfo {
+  available: boolean;
+  usedJSHeapSize?: number;
+  totalJSHeapSize?: number;
+  jsHeapSizeLimit?: number;
+}
+
+export interface SourceFile {
+  url: string;
+  status: number;
+  contentType: string;
+  text: string;
+}
+
 const MAX_LOG_ENTRIES = 300;
 
 /**
@@ -60,6 +139,12 @@ export function useDeviceLabSession() {
   const [consoleLogs, setConsoleLogs] = useState<ConsoleLogEntry[]>([]);
   const [networkRequests, setNetworkRequests] = useState<NetworkRequestEntry[]>([]);
   const [domHtml, setDomHtml] = useState('');
+  const [inspected, setInspected] = useState<InspectedElement | null>(null);
+  const [storage, setStorage] = useState<StorageSnapshot | null>(null);
+  const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics | null>(null);
+  const [memory, setMemory] = useState<MemoryInfo | null>(null);
+  const [source, setSource] = useState<SourceFile | null>(null);
+  const [sourceLoading, setSourceLoading] = useState(false);
 
   const runStart = useCallback((socket: Socket, params: StartParams) => {
     return new Promise<StartAck>((resolve) => {
@@ -143,6 +228,22 @@ export function useDeviceLabSession() {
     socket.on('device-lab:dom', (payload: { html: string }) => {
       setDomHtml(payload.html);
     });
+    socket.on('device-lab:inspect', (payload: InspectedElement | null) => {
+      setInspected(payload);
+    });
+    socket.on('device-lab:storage', (payload: StorageSnapshot) => {
+      setStorage(payload);
+    });
+    socket.on('device-lab:performance', (payload: PerformanceMetrics) => {
+      setPerformanceMetrics(payload);
+    });
+    socket.on('device-lab:memory', (payload: MemoryInfo) => {
+      setMemory(payload);
+    });
+    socket.on('device-lab:source', (payload: SourceFile) => {
+      setSource(payload);
+      setSourceLoading(false);
+    });
 
     return () => {
       socket.emit('stop');
@@ -160,6 +261,11 @@ export function useDeviceLabSession() {
       setConsoleLogs([]);
       setNetworkRequests([]);
       setDomHtml('');
+      setInspected(null);
+      setStorage(null);
+      setPerformanceMetrics(null);
+      setMemory(null);
+      setSource(null);
       return runStart(socket, params);
     },
     [runStart]
@@ -171,6 +277,30 @@ export function useDeviceLabSession() {
 
   const inspectDom = useCallback(() => {
     socketRef.current?.emit('inspect-dom');
+  }, []);
+
+  const inspectAt = useCallback((x: number, y: number) => {
+    socketRef.current?.emit('inspect-at', { x, y });
+  }, []);
+
+  const clearInspected = useCallback(() => setInspected(null), []);
+
+  const inspectStorage = useCallback(() => {
+    socketRef.current?.emit('inspect-storage');
+  }, []);
+
+  const inspectPerformance = useCallback(() => {
+    socketRef.current?.emit('inspect-performance');
+  }, []);
+
+  const inspectMemory = useCallback(() => {
+    socketRef.current?.emit('inspect-memory');
+  }, []);
+
+  const fetchSource = useCallback((url: string) => {
+    setSourceLoading(true);
+    setSource(null);
+    socketRef.current?.emit('fetch-source', { url });
   }, []);
 
   return {
@@ -185,5 +315,17 @@ export function useDeviceLabSession() {
     networkRequests,
     domHtml,
     inspectDom,
+    inspected,
+    inspectAt,
+    clearInspected,
+    storage,
+    inspectStorage,
+    performanceMetrics,
+    inspectPerformance,
+    memory,
+    inspectMemory,
+    source,
+    sourceLoading,
+    fetchSource,
   };
 }
