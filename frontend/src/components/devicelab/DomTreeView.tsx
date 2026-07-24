@@ -1,5 +1,5 @@
 'use client';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { CaretRight } from '@phosphor-icons/react';
 
 const VOID_ELEMENTS = new Set([
@@ -67,11 +67,12 @@ const NodeRow: React.FC<{
   if (isVoid || (children.length === 0 && textOnly !== null)) {
     return (
       <div
+        id={isSelected ? 'dom-tree-selected-row' : undefined}
         onClick={(e) => {
           e.stopPropagation();
           onSelect(path);
         }}
-        className={`pl-4 py-0.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60 ${isSelected ? 'bg-indigo-50 dark:bg-indigo-950/40 outline outline-1 outline-indigo-300 dark:outline-indigo-700' : ''}`}
+        className={`pl-4 py-0.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60 ${isSelected ? 'bg-sky-100 dark:bg-sky-950/50 outline-1 outline-sky-400 dark:outline-sky-700' : ''}`}
         style={{ paddingLeft: depth * 14 + 16 }}
       >
         <Tag name={name} attrs={attrs} />
@@ -83,6 +84,7 @@ const NodeRow: React.FC<{
             <span className="text-slate-400">&gt;</span>
           </>
         )}
+        {isSelected && <span className="text-slate-400 font-sans"> == $0</span>}
       </div>
     );
   }
@@ -90,12 +92,13 @@ const NodeRow: React.FC<{
   return (
     <div>
       <div
+        id={isSelected ? 'dom-tree-selected-row' : undefined}
         onClick={(e) => {
           e.stopPropagation();
           onSelect(path);
           toggle(path);
         }}
-        className={`flex items-start gap-0.5 py-0.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60 ${isSelected ? 'bg-indigo-50 dark:bg-indigo-950/40 outline outline-1 outline-indigo-300 dark:outline-indigo-700' : ''}`}
+        className={`flex items-start gap-0.5 py-0.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60 ${isSelected ? 'bg-sky-100 dark:bg-sky-950/50 outline-1 outline-sky-400 dark:outline-sky-700' : ''}`}
         style={{ paddingLeft: depth * 14 }}
       >
         <CaretRight className={`w-3 h-3 mt-0.5 shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
@@ -135,7 +138,7 @@ const NodeRow: React.FC<{
   );
 };
 
-export const DomTreeView: React.FC<{ html: string }> = ({ html }) => {
+export const DomTreeView: React.FC<{ html: string; selector?: string | null }> = ({ html, selector }) => {
   const root = useMemo(() => {
     if (!html) return null;
     try {
@@ -157,6 +160,56 @@ export const DomTreeView: React.FC<{ html: string }> = ({ html }) => {
       return next;
     });
   };
+
+  // Selecting an element on the live device (the crosshair picker) should
+  // reveal and highlight the matching node in this tree too, the same way
+  // real DevTools syncs its on-page selection with the Elements panel.
+  // Adjusting selected/expanded here (during render, guarded by a
+  // root/selector change check) follows React's documented pattern for
+  // reacting to prop changes, instead of setState inside an effect.
+  const [prevRoot, setPrevRoot] = useState(root);
+  const [prevSelector, setPrevSelector] = useState(selector);
+  if (root !== prevRoot || selector !== prevSelector) {
+    setPrevRoot(root);
+    setPrevSelector(selector);
+    if (root && selector) {
+      let target: Element | null = null;
+      try {
+        target = root.querySelector(selector);
+      } catch {
+        target = null;
+      }
+      if (target) {
+        const indices: number[] = [];
+        for (let node: Element | null = target; node && node !== root; node = node.parentElement) {
+          const parent: Element | null = node.parentElement;
+          if (!parent) break;
+          indices.unshift(Array.from(parent.children).indexOf(node));
+        }
+        const path = indices.length ? `0-${indices.join('-')}` : '0';
+        setSelected(path);
+        setExpanded((prev) => {
+          const next = new Set(prev);
+          let p = '0';
+          next.add(p);
+          for (const idx of indices) {
+            p = `${p}-${idx}`;
+            next.add(p);
+          }
+          return next;
+        });
+      }
+    }
+  }
+
+  // The scroll-into-view is a genuine DOM side effect (not derived state),
+  // so it stays in an effect, triggered once the selected row actually exists.
+  useEffect(() => {
+    if (!selected) return;
+    requestAnimationFrame(() => {
+      document.getElementById('dom-tree-selected-row')?.scrollIntoView({ block: 'center' });
+    });
+  }, [selected]);
 
   if (!html) return <p className="text-slate-400 font-sans p-3">Loading DOM…</p>;
   if (!root) return <p className="text-slate-400 font-sans p-3">Could not parse this page&apos;s HTML.</p>;

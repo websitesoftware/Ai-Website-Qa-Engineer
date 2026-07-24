@@ -23,6 +23,26 @@ module.exports = function registerDeviceLabSocket(io) {
       deviceLabSession.inspectDom(socket);
     });
 
+    socket.on("inspect-at", (payload) => {
+      deviceLabSession.inspectAt(socket, payload || {});
+    });
+
+    socket.on("inspect-storage", () => {
+      deviceLabSession.inspectStorage(socket);
+    });
+
+    socket.on("inspect-performance", () => {
+      deviceLabSession.inspectPerformance(socket);
+    });
+
+    socket.on("inspect-memory", () => {
+      deviceLabSession.inspectMemory(socket);
+    });
+
+    socket.on("fetch-source", (payload) => {
+      deviceLabSession.fetchSource(socket, payload || {});
+    });
+
     socket.on("stop", () => {
       deviceLabSession.stopSession(socket);
     });
