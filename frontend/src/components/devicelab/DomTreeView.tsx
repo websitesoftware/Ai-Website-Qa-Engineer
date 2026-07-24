@@ -164,39 +164,52 @@ export const DomTreeView: React.FC<{ html: string; selector?: string | null }> =
   // Selecting an element on the live device (the crosshair picker) should
   // reveal and highlight the matching node in this tree too, the same way
   // real DevTools syncs its on-page selection with the Elements panel.
-  useEffect(() => {
-    if (!root || !selector) return;
-    let target: Element | null = null;
-    try {
-      target = root.querySelector(selector);
-    } catch {
-      target = null;
-    }
-    if (!target) return;
-
-    const indices: number[] = [];
-    for (let node: Element | null = target; node && node !== root; node = node.parentElement) {
-      const parent: Element | null = node.parentElement;
-      if (!parent) break;
-      indices.unshift(Array.from(parent.children).indexOf(node));
-    }
-    const path = indices.length ? `0-${indices.join('-')}` : '0';
-
-    setSelected(path);
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      let p = '0';
-      next.add(p);
-      for (const idx of indices) {
-        p = `${p}-${idx}`;
-        next.add(p);
+  // Adjusting selected/expanded here (during render, guarded by a
+  // root/selector change check) follows React's documented pattern for
+  // reacting to prop changes, instead of setState inside an effect.
+  const [prevRoot, setPrevRoot] = useState(root);
+  const [prevSelector, setPrevSelector] = useState(selector);
+  if (root !== prevRoot || selector !== prevSelector) {
+    setPrevRoot(root);
+    setPrevSelector(selector);
+    if (root && selector) {
+      let target: Element | null = null;
+      try {
+        target = root.querySelector(selector);
+      } catch {
+        target = null;
       }
-      return next;
-    });
+      if (target) {
+        const indices: number[] = [];
+        for (let node: Element | null = target; node && node !== root; node = node.parentElement) {
+          const parent: Element | null = node.parentElement;
+          if (!parent) break;
+          indices.unshift(Array.from(parent.children).indexOf(node));
+        }
+        const path = indices.length ? `0-${indices.join('-')}` : '0';
+        setSelected(path);
+        setExpanded((prev) => {
+          const next = new Set(prev);
+          let p = '0';
+          next.add(p);
+          for (const idx of indices) {
+            p = `${p}-${idx}`;
+            next.add(p);
+          }
+          return next;
+        });
+      }
+    }
+  }
+
+  // The scroll-into-view is a genuine DOM side effect (not derived state),
+  // so it stays in an effect, triggered once the selected row actually exists.
+  useEffect(() => {
+    if (!selected) return;
     requestAnimationFrame(() => {
       document.getElementById('dom-tree-selected-row')?.scrollIntoView({ block: 'center' });
     });
-  }, [root, selector]);
+  }, [selected]);
 
   if (!html) return <p className="text-slate-400 font-sans p-3">Loading DOM…</p>;
   if (!root) return <p className="text-slate-400 font-sans p-3">Could not parse this page&apos;s HTML.</p>;

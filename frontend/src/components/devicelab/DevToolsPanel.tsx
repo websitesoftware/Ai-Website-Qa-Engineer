@@ -89,10 +89,15 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
   }, [tab]);
 
   // Picking an element on the device (the crosshair tool) is the same
-  // "jump to Elements and show it" behavior real DevTools has.
-  useEffect(() => {
+  // "jump to Elements and show it" behavior real DevTools has. Adjusting
+  // state during render (React's documented pattern for "reset/react to a
+  // prop change") instead of inside an effect avoids the extra render pass
+  // an effect-triggered setState would cause.
+  const [prevInspected, setPrevInspected] = useState(inspected);
+  if (inspected !== prevInspected) {
+    setPrevInspected(inspected);
     if (inspected) setTab('elements');
-  }, [inspected]);
+  }
 
   const errorCount = consoleLogs.filter((l) => l.level === 'error').length;
   const warnCount = consoleLogs.filter((l) => l.level === 'warning' || l.level === 'warn').length;
