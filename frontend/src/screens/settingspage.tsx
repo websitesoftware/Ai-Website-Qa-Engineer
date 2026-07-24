@@ -87,38 +87,82 @@ export const SettingsPage: React.FC = () => {
   // ---------------------------------------------------------------------
   const [monitors, setMonitors] = useState<BackendMonitor[]>([]);
   const [monitorsLoading, setMonitorsLoading] = useState(false);
-  const [newMonitorUrl, setNewMonitorUrl] = useState('');
+  const [newMonitorUrls, setNewMonitorUrls] = useState('');
   const [newMonitorFrequency, setNewMonitorFrequency] = useState<MonitorFrequency>('daily');
   const [monitorSaving, setMonitorSaving] = useState(false);
 
   const fetchMonitors = useCallback(async () => {
     if (!user) return;
-    setMonitorsLoading(true);
     try {
       setMonitors(await api.monitors.list());
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Could not load monitors', 'error');
-    } finally {
-      setMonitorsLoading(false);
     }
   }, [user, showToast]);
 
   useEffect(() => {
+    if (activeTab !== 'automation') return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- tab-triggered fetch, mirrors QADataContext's fetch-on-mount pattern
-    if (activeTab === 'automation') fetchMonitors();
+    setMonitorsLoading(true);
+    fetchMonitors().finally(() => setMonitorsLoading(false));
+
+    // A monitor's scan can be triggered by the backend scheduler at any
+    // moment, not just from this screen — poll while the tab is open so the
+    // "scanning now" indicator and last-run timestamps reflect reality
+    // instead of going stale until the user manually reopens the tab.
+    const interval = setInterval(fetchMonitors, 8000);
+    return () => clearInterval(interval);
   }, [activeTab, fetchMonitors]);
+
+  // One monitor per line (or comma-separated) so a whole list of sites can
+  // be dropped in at once and each starts its own independent schedule.
+  const parseMonitorUrls = (raw: string): string[] => {
+    const candidates = raw
+      .split(/[\n,]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const seen = new Set<string>();
+    const valid: string[] = [];
+    for (const candidate of candidates) {
+      try {
+        const u = new URL(candidate);
+        if ((u.protocol === 'http:' || u.protocol === 'https:') && !seen.has(candidate)) {
+          seen.add(candidate);
+          valid.push(candidate);
+        }
+      } catch {
+        // not a valid absolute URL — skip it
+      }
+    }
+    return valid;
+  };
 
   const handleCreateMonitor = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMonitorUrl) return;
+    const urls = parseMonitorUrls(newMonitorUrls);
+    if (urls.length === 0) {
+      showToast('Enter at least one valid URL (e.g. https://example.com or http://localhost:3000)', 'error');
+      return;
+    }
     setMonitorSaving(true);
     try {
-      await api.monitors.create({ url: newMonitorUrl, frequency: newMonitorFrequency });
-      setNewMonitorUrl('');
-      showToast('Continuous monitor created', 'success');
+      const results = await Promise.allSettled(
+        urls.map((url) => api.monitors.create({ url, frequency: newMonitorFrequency }))
+      );
+      const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+      const failed = results.length - succeeded;
+      if (succeeded > 0) {
+        setNewMonitorUrls('');
+        showToast(
+          failed === 0
+            ? `${succeeded} monitor${succeeded > 1 ? 's' : ''} created — Phase 1 + Phase 2 scans on schedule`
+            : `${succeeded} monitor${succeeded > 1 ? 's' : ''} created, ${failed} failed`,
+          failed === 0 ? 'success' : 'error'
+        );
+      } else {
+        showToast('Could not create any monitors', 'error');
+      }
       await fetchMonitors();
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Could not create monitor', 'error');
     } finally {
       setMonitorSaving(false);
     }
@@ -559,41 +603,39 @@ export const SettingsPage: React.FC = () => {
                       <div className="p-6 border-b border-slate-100 dark:border-slate-800">
                         <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">Continuous Monitoring</h3>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                          Scans a domain automatically on a schedule. Runs are real — a scheduler on the backend checks every
-                          minute and queues a scan when a monitor is due.
+                          Automatically runs Phase 1 (crawl, links, Lighthouse) + Phase 2 (accessibility, SEO, visual
+                          regression, cross-browser, performance) on a schedule. Runs are real — a scheduler on the
+                          backend checks every minute and queues a scan when a monitor is due. Works with live URLs or
+                          http://localhost addresses.
                         </p>
                       </div>
                       <form onSubmit={handleCreateMonitor} className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-3">
-                        <input
-                          type="url"
+                        <textarea
                           required
-                          placeholder="https://example.com"
-                          value={newMonitorUrl}
-                          onChange={(e) => setNewMonitorUrl(e.target.value)}
-                          list="scanned-domains-list"
-                          className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:outline-none focus:border-indigo-500 text-sm bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-white"
+                          rows={2}
+                          placeholder={'https://example.com\nhttp://localhost:3000\n(one URL per line — add as many as you like)'}
+                          value={newMonitorUrls}
+                          onChange={(e) => setNewMonitorUrls(e.target.value)}
+                          className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:outline-none focus:border-indigo-500 text-sm bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-white resize-y"
                         />
-                        <datalist id="scanned-domains-list">
-                          {scannedDomains.map((d) => (
-                            <option key={d.url} value={d.url} />
-                          ))}
-                        </datalist>
-                        <select
-                          value={newMonitorFrequency}
-                          onChange={(e) => setNewMonitorFrequency(e.target.value as MonitorFrequency)}
-                          className="px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-lg text-sm bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-white"
-                        >
-                          <option value="hourly">Every hour</option>
-                          <option value="daily">Every day</option>
-                          <option value="weekly">Every week</option>
-                        </select>
-                        <button
-                          type="submit"
-                          disabled={monitorSaving}
-                          className="bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm shrink-0"
-                        >
-                          {monitorSaving ? 'Creating...' : 'Create Monitor'}
-                        </button>
+                        <div className="flex sm:flex-col gap-3 shrink-0">
+                          <select
+                            value={newMonitorFrequency}
+                            onChange={(e) => setNewMonitorFrequency(e.target.value as MonitorFrequency)}
+                            className="px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-lg text-sm bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-white"
+                          >
+                            <option value="hourly">Every hour</option>
+                            <option value="daily">Every day</option>
+                            <option value="weekly">Every week</option>
+                          </select>
+                          <button
+                            type="submit"
+                            disabled={monitorSaving}
+                            className="bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm whitespace-nowrap"
+                          >
+                            {monitorSaving ? 'Creating...' : 'Create Monitor'}
+                          </button>
+                        </div>
                       </form>
 
                       <div className="p-6 space-y-3">
@@ -612,6 +654,12 @@ export const SettingsPage: React.FC = () => {
                                   <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
                                     {m.frequency}
                                   </span>
+                                  {m.lastTestId && !m.lastRunReconciled && (
+                                    <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                                      Scanning now
+                                    </span>
+                                  )}
                                   {m.lastRunHadCriticalIssues && (
                                     <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400">
                                       Critical issues found

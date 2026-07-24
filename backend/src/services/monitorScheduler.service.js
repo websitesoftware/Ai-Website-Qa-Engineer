@@ -8,7 +8,7 @@ const { enqueueScan } = require("./queue.service");
 const CHECK_INTERVAL_MS = 60 * 1000;
 let timer = null;
 
-function triggerRun(monitor) {
+async function triggerRun(monitor) {
   const test = createTest({
     url: monitor.url,
     name: `[Monitor] ${monitor.name}`,
@@ -16,11 +16,11 @@ function triggerRun(monitor) {
     createdBy: monitor.createdBy,
     createdByName: null,
   });
-  testsRepo.create(test);
+  await testsRepo.create(test);
   enqueueScan(test.id);
 
   const intervalMs = FREQUENCY_MS[monitor.frequency] || FREQUENCY_MS.daily;
-  monitorsRepo.update(monitor.id, {
+  await monitorsRepo.update(monitor.id, {
     lastRunAt: new Date().toISOString(),
     lastTestId: test.id,
     nextRunAt: Date.now() + intervalMs,
@@ -29,27 +29,27 @@ function triggerRun(monitor) {
   logger.info("monitorScheduler", `Triggered scan for monitor "${monitor.name}" (${monitor.url})`);
 }
 
-function reconcileFinishedRuns() {
+async function reconcileFinishedRuns() {
   const monitors = monitorsRepo.list().filter((m) => m.lastTestId && !m.lastRunReconciled);
-  monitors.forEach((m) => {
-    const test = testsRepo.get(m.lastTestId);
-    if (!test || test.status === "queued" || test.status === "running") return;
+  await Promise.all(
+    monitors.map(async (m) => {
+      const test = testsRepo.get(m.lastTestId);
+      if (!test || test.status === "queued" || test.status === "running") return;
 
-    const hadCritical = (test.issues || []).some((i) => i.severity === "critical");
-    monitorsRepo.update(m.id, {
-      lastRunHadCriticalIssues: hadCritical && m.alertOnCritical,
-      lastRunReconciled: true,
-    });
-  });
+      const hadCritical = (test.issues || []).some((i) => i.severity === "critical");
+      await monitorsRepo.update(m.id, {
+        lastRunHadCriticalIssues: hadCritical && m.alertOnCritical,
+        lastRunReconciled: true,
+      });
+    })
+  );
 }
 
-function tick() {
+async function tick() {
   const now = Date.now();
-  monitorsRepo
-    .list()
-    .filter((m) => m.enabled && m.nextRunAt <= now)
-    .forEach(triggerRun);
-  reconcileFinishedRuns();
+  const due = monitorsRepo.list().filter((m) => m.enabled && m.nextRunAt <= now);
+  await Promise.all(due.map(triggerRun));
+  await reconcileFinishedRuns();
 }
 
 function startScheduler() {

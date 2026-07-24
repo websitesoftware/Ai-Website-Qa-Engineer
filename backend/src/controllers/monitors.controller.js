@@ -58,10 +58,10 @@ async function remove(req, res) {
   res.status(204).send();
 }
 
-function runNow(req, res) {
+async function runNow(req, res) {
   const monitor = monitorsRepo.get(req.params.id);
   if (!monitor) return res.status(404).json({ error: "Monitor not found" });
-  triggerRun(monitor);
+  await triggerRun(monitor);
   res.json({ message: "Scan triggered", monitor: monitorsRepo.get(req.params.id) });
 }
 

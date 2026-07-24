@@ -3,12 +3,14 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ScanlinePhase1Report from './phase1page';
 import { Phase2ResultsPage } from './Phase2ResultsPage';
+import { DeviceLabPage } from './DeviceLabPage';
 
-type ResultsTab = 'phase1' | 'phase2';
+type ResultsTab = 'phase1' | 'phase2' | 'device-lab';
 
 const TABS: { id: ResultsTab; label: string; icon: string }[] = [
   { id: 'phase1', label: 'Phase 1 · Foundation', icon: 'ph-sparkle' },
   { id: 'phase2', label: 'Phase 2 · Intelligent QA', icon: 'ph-sparkle' },
+  { id: 'device-lab', label: 'Device Lab', icon: 'ph-device-mobile' },
 ];
 
 export const ScanResultsPage: React.FC = () => {
@@ -48,9 +50,11 @@ export const ScanResultsPage: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.18 }}
+          className={activeTab === 'device-lab' ? 'h-[75vh] min-h-140' : undefined}
         >
           {activeTab === 'phase1' && <ScanlinePhase1Report />}
           {activeTab === 'phase2' && <Phase2ResultsPage />}
+          {activeTab === 'device-lab' && <DeviceLabPage />}
         </motion.div>
       </AnimatePresence>
     </div>

@@ -1,17 +1,4 @@
-// const express = require("express");
-// const router = express.Router();
 
-// const testsRoutes = require("./tests.routes");
-// const statsController = require("../controllers/stats.controller");
-// const pipelineController = require("../controllers/pipeline.controller");
-
-// router.use("/tests", testsRoutes);
-// router.get("/stats", statsController.getStats);
-// router.get("/pipeline", pipelineController.getPipeline);
-
-// router.get("/health", (req, res) => res.json({ status: "ok", uptime: process.uptime() }));
-
-// module.exports = router;
 const express = require("express");
 const router = express.Router();
 
@@ -22,6 +9,7 @@ const policiesRoutes = require("./policies.routes");
 const brandingRoutes = require("./branding.routes");
 const monitorsRoutes = require("./monitors.routes");
 const analyticsRoutes = require("./analytics.routes");
+const deviceLabRoutes = require("./deviceLab.routes");
 const statsController = require("../controllers/stats.controller");
 const pipelineController = require("../controllers/pipeline.controller");
 const aiAutomationController = require("../controllers/aiAutomation.controller");
@@ -33,6 +21,7 @@ router.use("/policies", policiesRoutes);
 router.use("/branding", brandingRoutes);
 router.use("/monitors", monitorsRoutes);
 router.use("/analytics", analyticsRoutes);
+router.use("/device-lab", deviceLabRoutes);
 router.get("/stats", statsController.getStats);
 router.get("/pipeline", pipelineController.getPipeline);
 

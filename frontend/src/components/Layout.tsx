@@ -18,7 +18,6 @@ interface LayoutProps {
   currentUser?: string;
   activeTab: TabType;
   setActiveTab: (tab: TabType) => void;
-  onNewTestClick: () => void;
   search?: string;
   onSearchChange?: (value: string) => void;
 }
@@ -27,7 +26,6 @@ export const Layout: React.FC<LayoutProps> = ({
   children,
   activeTab,
   setActiveTab,
-  onNewTestClick,
   search = '',
   onSearchChange,
 }) => {
@@ -180,10 +178,6 @@ export const Layout: React.FC<LayoutProps> = ({
 
           {/* Action Utilities Controls */}
           <div className="flex items-center gap-3.5">
-            <button onClick={onNewTestClick} className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm cursor-pointer">
-              + New Test
-            </button>
-
             {onSearchChange && (
               <div className="relative hidden lg:block">
                 <i className="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
