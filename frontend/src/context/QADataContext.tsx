@@ -19,6 +19,8 @@ interface QADataContextValue {
   rerunTest: (id: string) => Promise<void>;
   deleteTest: (id: string) => Promise<void>;
   updateIssue: (testId: string, issueId: string, resolved: boolean) => Promise<void>;
+  assignIssue: (testId: string, issueId: string, assigneeIds: string[]) => Promise<void>;
+  addIssueComment: (testId: string, issueId: string, text: string) => Promise<void>;
 }
 
 const QADataContext = createContext<QADataContextValue | undefined>(undefined);
@@ -92,9 +94,38 @@ export const QADataProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     [fetchAll]
   );
 
+  const assignIssue = useCallback(
+    async (testId: string, issueId: string, assigneeIds: string[]) => {
+      await api.assignIssue(testId, issueId, assigneeIds);
+      await fetchAll();
+    },
+    [fetchAll]
+  );
+
+  const addIssueComment = useCallback(
+    async (testId: string, issueId: string, text: string) => {
+      await api.addIssueComment(testId, issueId, text);
+      await fetchAll();
+    },
+    [fetchAll]
+  );
+
   return (
     <QADataContext.Provider
-      value={{ tests, stats, pipeline, loading, error, refetch: fetchAll, createTest, rerunTest, deleteTest, updateIssue }}
+      value={{
+        tests,
+        stats,
+        pipeline,
+        loading,
+        error,
+        refetch: fetchAll,
+        createTest,
+        rerunTest,
+        deleteTest,
+        updateIssue,
+        assignIssue,
+        addIssueComment,
+      }}
     >
       {children}
     </QADataContext.Provider>

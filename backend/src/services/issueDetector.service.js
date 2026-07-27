@@ -28,6 +28,10 @@ function makeIssue({
     selector: selector || null,
     snippet: snippet || null,
     sourceLocation: sourceLocation || null,
+    // Ticketing: who it's assigned to (team member ids) and its comment
+    // thread — both empty until someone acts on the ticket page.
+    assigneeIds: [],
+    comments: [],
   };
 }
 

@@ -597,3 +597,161 @@ export async function exportReportDocx(test: BackendTest) {
   const blob = await Packer.toBlob(doc);
   downloadBlobObject(blob, `qa-report-${slug(test.url)}.docx`);
 }
+
+// ---------------------------------------------------------------------------
+// Ticket list (Issue Tracker) — a scoped list of tickets (e.g. everything for
+// one selected site), not a full scan report. Kept deliberately decoupled
+// from team-member types: callers pre-resolve `assignees` into a display
+// string so this module doesn't need to know about BackendTeamMember.
+// ---------------------------------------------------------------------------
+export interface TicketExportRow {
+  repId: string;
+  title: string;
+  severity: string;
+  category: string;
+  status: string; // 'Open' | 'Resolved'
+  assignees: string; // pre-joined names, or 'Unassigned'
+  url: string;
+}
+
+export async function exportTicketListCSV(rows: TicketExportRow[], scopeLabel: string) {
+  const branding = await fetchBrandingSafe();
+  const esc = (v: unknown) => `"${String(v ?? '-').replace(/"/g, '""')}"`;
+  const lines: string[] = [];
+
+  lines.push(`${branding.headerText} - Tickets (${scopeLabel})`);
+  lines.push(`Generated,${new Date().toLocaleString()}`);
+  lines.push(`Total Tickets,${rows.length}`);
+  lines.push('');
+  lines.push('Ticket #,Title,Severity,Category,Status,Assigned To,URL');
+  rows.forEach((r) => {
+    lines.push([esc(r.repId), esc(r.title), esc(r.severity), esc(r.category), esc(r.status), esc(r.assignees), esc(r.url)].join(','));
+  });
+  lines.push('');
+  lines.push(branding.footerText);
+
+  downloadText(lines.join('\n'), `tickets-${slug(scopeLabel)}.csv`, 'text/csv');
+}
+
+export async function exportTicketListPDF(rows: TicketExportRow[], scopeLabel: string) {
+  const branding = await fetchBrandingSafe();
+  const logo = await fetchLogoAsset(branding.logoUrl);
+  const brandRgb = hexToRgb(branding.primaryColor);
+  const doc = new jsPDF();
+  const marginX = 14;
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  let logoHmm = 0;
+  if (logo) {
+    const wMm = branding.logoWidth * PX_TO_MM;
+    const hMm = branding.logoHeight * PX_TO_MM;
+    doc.addImage(logo.dataUrl, logo.type.toUpperCase(), marginX, 8, wMm, hMm);
+    logoHmm = hMm;
+  }
+
+  const headerFontMm = branding.headerFontSize * 0.3528;
+  doc.setFontSize(branding.headerFontSize);
+  doc.setTextColor(brandRgb[0], brandRgb[1], brandRgb[2]);
+  doc.text(branding.headerText, pageWidth - marginX, 8 + Math.max(logoHmm, headerFontMm) / 2 + headerFontMm / 3, {
+    align: 'right',
+  });
+
+  const dividerY = 8 + Math.max(logoHmm, headerFontMm) + 5;
+  doc.setDrawColor(brandRgb[0], brandRgb[1], brandRgb[2]);
+  doc.setLineWidth(0.4);
+  doc.line(marginX, dividerY, pageWidth - marginX, dividerY);
+
+  let y = dividerY + 8;
+  doc.setFontSize(10);
+  doc.setTextColor(100);
+  doc.text(`Tickets — ${scopeLabel}`, marginX, y);
+  y += 5;
+  doc.text(`Generated: ${new Date().toLocaleString()}  |  Total: ${rows.length}`, marginX, y);
+  y += 6;
+
+  autoTable(doc, {
+    startY: y,
+    head: [['Ticket #', 'Title', 'Severity', 'Category', 'Status', 'Assigned To']],
+    body: rows.map((r) => [r.repId, r.title, r.severity, r.category, r.status, r.assignees]),
+    theme: 'striped',
+    headStyles: { fillColor: brandRgb },
+    styles: { fontSize: 8 },
+  });
+
+  const pageCount = doc.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setDrawColor(brandRgb[0], brandRgb[1], brandRgb[2]);
+    doc.setLineWidth(0.3);
+    doc.line(marginX, 284, pageWidth - marginX, 284);
+    doc.setFontSize(branding.footerFontSize);
+    doc.setTextColor(150);
+    doc.text(branding.footerText, marginX, 290);
+  }
+
+  doc.save(`tickets-${slug(scopeLabel)}.pdf`);
+}
+
+export async function exportTicketListDocx(rows: TicketExportRow[], scopeLabel: string) {
+  const branding = await fetchBrandingSafe();
+  const logo = await fetchLogoAsset(branding.logoUrl);
+  const brandColorHex = branding.primaryColor.replace(/^#/, '');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const children: any[] = [];
+
+  const NO_BORDER = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+  children.push(
+    new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: { top: NO_BORDER, bottom: NO_BORDER, left: NO_BORDER, right: NO_BORDER, insideHorizontal: NO_BORDER, insideVertical: NO_BORDER },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 50, type: WidthType.PERCENTAGE },
+              verticalAlign: VerticalAlign.CENTER,
+              children: logo
+                ? [new Paragraph({ children: [new ImageRun({ type: logo.type, data: logo.bytes, transformation: { width: branding.logoWidth, height: branding.logoHeight } })] })]
+                : [new Paragraph({ text: '' })],
+            }),
+            new TableCell({
+              width: { size: 50, type: WidthType.PERCENTAGE },
+              verticalAlign: VerticalAlign.CENTER,
+              children: [
+                new Paragraph({
+                  alignment: AlignmentType.RIGHT,
+                  children: [new TextRun({ text: branding.headerText, bold: true, size: branding.headerFontSize * 2, color: brandColorHex })],
+                }),
+              ],
+            }),
+          ],
+        }),
+      ],
+    })
+  );
+  children.push(new Paragraph({ text: '', border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: brandColorHex, space: 4 } } }));
+  children.push(new Paragraph({ text: '' }));
+
+  children.push(new Paragraph({ text: `Tickets — ${scopeLabel}`, heading: HeadingLevel.HEADING_1 }));
+  children.push(new Paragraph({ text: `Generated: ${new Date().toLocaleString()}  |  Total: ${rows.length}` }));
+  children.push(new Paragraph({ text: '' }));
+
+  children.push(
+    makeTable(
+      ['Ticket #', 'Title', 'Severity', 'Category', 'Status', 'Assigned To'],
+      rows.map((r) => [r.repId, r.title, r.severity, r.category, r.status, r.assignees])
+    )
+  );
+
+  children.push(new Paragraph({ text: '' }));
+  children.push(
+    new Paragraph({
+      border: { top: { style: BorderStyle.SINGLE, size: 6, color: brandColorHex, space: 4 } },
+      children: [new TextRun({ text: branding.footerText, italics: true, color: '888888', size: branding.footerFontSize * 2 })],
+    })
+  );
+
+  const doc = new Document({ sections: [{ children }] });
+  const blob = await Packer.toBlob(doc);
+  downloadBlobObject(blob, `tickets-${slug(scopeLabel)}.docx`);
+}

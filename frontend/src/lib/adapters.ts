@@ -1,4 +1,4 @@
-import { BackendTest, BackendIssue, BackendAppliedFix } from './types';
+import { BackendTest, BackendIssue, BackendAppliedFix, BackendIssueComment } from './types';
 import { categoryLabel } from './format';
 
 export interface IssueRow {
@@ -15,6 +15,12 @@ export interface IssueRow {
   resolved: boolean;
   detectedAt: string;
   appliedFix?: BackendAppliedFix | null;
+  assigneeIds: string[];
+  comments: BackendIssueComment[];
+  // First available page screenshot from the scan this issue came from — a
+  // real full-page shot, not a cropped element image (that's not captured
+  // today), but the closest honest visual reference for the ticket card.
+  screenshotPath: string | null;
 }
 
 export function buildIssueRows(tests: BackendTest[]): IssueRow[] {
@@ -22,6 +28,7 @@ export function buildIssueRows(tests: BackendTest[]): IssueRow[] {
 
   tests.forEach((test) => {
     const repId = `REP-${new Date(test.createdAt).getFullYear()}-${test.id.slice(0, 4).toUpperCase()}`;
+    const screenshotPath = test.screenshots?.find((s) => s.path)?.path ?? null;
     test.issues.forEach((issue) => {
       rows.push({
         id: issue.id,
@@ -37,6 +44,9 @@ export function buildIssueRows(tests: BackendTest[]): IssueRow[] {
         resolved: issue.resolved,
         detectedAt: issue.detectedAt,
         appliedFix: issue.appliedFix,
+        assigneeIds: issue.assigneeIds || [],
+        comments: issue.comments || [],
+        screenshotPath,
       });
     });
   });
