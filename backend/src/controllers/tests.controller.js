@@ -1,3 +1,4 @@
+const { v4: uuidv4 } = require("uuid");
 const testsRepo = require("../repositories/tests.repository");
 const usersRepo = require("../repositories/users.repository");
 const policiesRepo = require("../repositories/policies.repository");
@@ -88,8 +89,41 @@ async function updateIssue(req, res) {
   if (typeof req.body.resolved === "boolean")
     issue.resolved = req.body.resolved;
 
+  if (Array.isArray(req.body.assigneeIds)) {
+    // Full replace, filtered against real user ids — never let a stale or
+    // made-up id get stuck on an issue as an "assignee".
+    const validIds = new Set(usersRepo.list().map((u) => u.id));
+    issue.assigneeIds = req.body.assigneeIds.filter((id) => validIds.has(id));
+  }
+
   const updated = await testsRepo.update(test.id, { issues: test.issues });
   res.json(updated.issues.find((i) => i.id === req.params.issueId));
+}
+
+async function addIssueComment(req, res) {
+  const test = testsRepo.get(req.params.id);
+  if (!test) return res.status(404).json({ error: "Test not found" });
+
+  const issue = (test.issues || []).find((i) => i.id === req.params.issueId);
+  if (!issue) return res.status(404).json({ error: "Issue not found" });
+
+  const { text } = req.body || {};
+  if (!text || !text.trim()) {
+    return res.status(400).json({ error: "Comment text is required" });
+  }
+
+  const author = req.user ? usersRepo.getById(req.user.sub) : null;
+  if (!Array.isArray(issue.comments)) issue.comments = [];
+  issue.comments.push({
+    id: uuidv4(),
+    authorId: author ? author.id : null,
+    authorName: author ? author.name : "Unknown",
+    text: text.trim(),
+    createdAt: new Date().toISOString(),
+  });
+
+  const updated = await testsRepo.update(test.id, { issues: test.issues });
+  res.status(201).json(updated.issues.find((i) => i.id === req.params.issueId));
 }
 
 async function rerun(req, res) {
@@ -115,5 +149,6 @@ module.exports = {
   remove,
   getIssues,
   updateIssue,
+  addIssueComment,
   rerun,
 };

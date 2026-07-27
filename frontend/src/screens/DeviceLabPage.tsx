@@ -202,44 +202,44 @@ export const DeviceLabPage: React.FC = () => {
       {/* Device picker sidebar — collapses so the live device can use the
           full panel; toggled back open via the button in the toolbar. */}
       {sidebarOpen && (
-      <aside className="w-72 shrink-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl flex flex-col overflow-hidden">
-        <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-          <h2 className="font-bold text-slate-900 dark:text-slate-100 text-sm mb-3">Device Lab</h2>
-          <div className="relative">
-            <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search devices..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border rounded-lg text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500"
-            />
+        <aside className="w-72 shrink-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl flex flex-col overflow-hidden">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-700">
+            <h2 className="font-bold text-slate-900 dark:text-slate-100 text-sm mb-3">Device Lab</h2>
+            <div className="relative">
+              <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search devices..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 border rounded-lg text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500"
+              />
+            </div>
           </div>
-        </div>
 
-        <div className="flex-1 overflow-y-auto p-3 space-y-4">
-          {devicesLoading && <p className="text-xs text-slate-400 px-2">Loading devices…</p>}
-          {devicesError && <p className="text-xs text-red-500 px-2">{devicesError}</p>}
+          <div className="flex-1 overflow-y-auto p-3 space-y-4">
+            {devicesLoading && <p className="text-xs text-slate-400 px-2">Loading devices…</p>}
+            {devicesError && <p className="text-xs text-red-500 px-2">{devicesError}</p>}
 
-          {!devicesLoading && recentDevices.length > 0 && !search && (
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1">Frequently Used</p>
-              {recentDevices.map((d) => (
-                <DeviceRow key={`recent-${d.id}`} device={d} selected={d.id === selectedDeviceId} onSelect={() => selectDevice(d.id)} />
-              ))}
-            </div>
-          )}
+            {!devicesLoading && recentDevices.length > 0 && !search && (
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1">Frequently Used</p>
+                {recentDevices.map((d) => (
+                  <DeviceRow key={`recent-${d.id}`} device={d} selected={d.id === selectedDeviceId} onSelect={() => selectDevice(d.id)} />
+                ))}
+              </div>
+            )}
 
-          {filteredGroups.map(([groupLabel, groupDevices]) => (
-            <div key={groupLabel}>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1">{groupLabel}</p>
-              {groupDevices.map((d) => (
-                <DeviceRow key={d.id} device={d} selected={d.id === selectedDeviceId} onSelect={() => selectDevice(d.id)} />
-              ))}
-            </div>
-          ))}
-        </div>
-      </aside>
+            {filteredGroups.map(([groupLabel, groupDevices]) => (
+              <div key={groupLabel}>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1">{groupLabel}</p>
+                {groupDevices.map((d) => (
+                  <DeviceRow key={d.id} device={d} selected={d.id === selectedDeviceId} onSelect={() => selectDevice(d.id)} />
+                ))}
+              </div>
+            ))}
+          </div>
+        </aside>
       )}
 
       {/* Main viewer */}
@@ -249,11 +249,10 @@ export const DeviceLabPage: React.FC = () => {
           <button
             onClick={() => setSidebarOpen((v) => !v)}
             title={sidebarOpen ? 'Hide device list' : 'Switch device'}
-            className={`p-2 rounded-lg border flex items-center gap-1.5 text-xs font-bold cursor-pointer shrink-0 ${
-              sidebarOpen
+            className={`p-2 rounded-lg border flex items-center gap-1.5 text-xs font-bold cursor-pointer shrink-0 ${sidebarOpen
                 ? 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'
                 : 'border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400'
-            }`}
+              }`}
           >
             {sidebarOpen ? <SidebarSimple className="w-4 h-4" /> : <Devices className="w-4 h-4" />}
             {!sidebarOpen && selectedDevice && <span className="hidden sm:inline max-w-32 truncate">{selectedDevice.name}</span>}
@@ -330,11 +329,10 @@ export const DeviceLabPage: React.FC = () => {
             onClick={() => setDevToolsOpen((v) => !v)}
             disabled={!hasStarted}
             title="DevTools"
-            className={`p-2 rounded-lg border flex items-center gap-1.5 text-xs font-bold cursor-pointer disabled:opacity-40 ${
-              devToolsOpen
+            className={`p-2 rounded-lg border flex items-center gap-1.5 text-xs font-bold cursor-pointer disabled:opacity-40 ${devToolsOpen
                 ? 'border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400'
                 : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'
-            }`}
+              }`}
           >
             <Code className="w-4 h-4" />
           </button>
@@ -427,11 +425,10 @@ export const DeviceLabPage: React.FC = () => {
 const DeviceRow: React.FC<{ device: DeviceLabDevice; selected: boolean; onSelect: () => void }> = ({ device, selected, onSelect }) => (
   <button
     onClick={onSelect}
-    className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg text-left text-xs transition-colors cursor-pointer ${
-      selected
+    className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg text-left text-xs transition-colors cursor-pointer ${selected
         ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold'
         : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 font-medium'
-    }`}
+      }`}
   >
     <span className="truncate">{device.name}</span>
     <span className="text-[10px] text-slate-400 shrink-0">{device.width}×{device.height}</span>

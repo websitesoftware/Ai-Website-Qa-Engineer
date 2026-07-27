@@ -106,6 +106,20 @@ export const api = {
       true
     ),
 
+  assignIssue: (testId: string, issueId: string, assigneeIds: string[]) =>
+    request<BackendIssue>(
+      `/tests/${testId}/issues/${issueId}`,
+      { method: 'PATCH', body: JSON.stringify({ assigneeIds }) },
+      true
+    ),
+
+  addIssueComment: (testId: string, issueId: string, text: string) =>
+    request<BackendIssue>(
+      `/tests/${testId}/issues/${issueId}/comments`,
+      { method: 'POST', body: JSON.stringify({ text }) },
+      true
+    ),
+
   locateIssue: (testId: string, issueId: string) =>
     request<{
       grounded: boolean;

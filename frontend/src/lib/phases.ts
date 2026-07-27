@@ -56,6 +56,22 @@ export const PHASES: Record<PhaseId, PhaseMeta> = {
 
 export const PHASE_ORDER: PhaseId[] = [1, 2, 3, 4];
 
+// Shared severity badge/border styles — used by both the Issue Tracker list
+// and the standalone ticket page so a severity always looks the same.
+export const severityBadge: Record<string, string> = {
+  critical: 'bg-red-50 text-red-600 border-red-100 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900',
+  high: 'bg-orange-50 text-orange-600 border-orange-100 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-900',
+  medium: 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900',
+  low: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700',
+};
+
+export const severityBorder: Record<string, string> = {
+  critical: 'border-red-500',
+  high: 'border-orange-500',
+  medium: 'border-amber-500',
+  low: 'border-slate-400',
+};
+
 // ---------------------------------------------------------------------------
 // Effort model
 // ---------------------------------------------------------------------------

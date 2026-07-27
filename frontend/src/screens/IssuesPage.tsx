@@ -6,39 +6,26 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bug,
   MagnifyingGlass,
-  Globe,
-  Sparkle,
-  Lightbulb,
-  Copy,
-  EyeSlash,
-  ArrowsCounterClockwise,
-  Check,
   Folder,
   ListChecks,
+  ArrowSquareOut,
+  Image as ImageIcon,
+  Ticket,
+  DownloadSimple,
+  FilePdf,
+  FileCsv,
+  FileDoc,
 } from '@phosphor-icons/react';
 import { useQAData } from '../context/QADataContext';
 import { useToast } from '../context/ToastContext';
 import { buildIssueRows, IssueRow } from '../lib/adapters';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Skeleton } from '../components/ui/Skeleton';
-import { getPhase, getEffort, PHASES, PHASE_ORDER, PhaseId } from '../lib/phases';
+import { getPhase, getEffort, PHASES, PHASE_ORDER, PhaseId, severityBadge, severityBorder } from '../lib/phases';
 import { getDynamicFixCode } from '../lib/fixTemplates'; // <- move your 200-line
 import { api } from '../lib/api';
-
-
-const severityBadge: Record<string, string> = {
-  critical: 'bg-red-50 text-red-600 border-red-100 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900',
-  high: 'bg-orange-50 text-orange-600 border-orange-100 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-900',
-  medium: 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900',
-  low: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700',
-};
-
-const severityBorder: Record<string, string> = {
-  critical: 'border-red-500',
-  high: 'border-orange-500',
-  medium: 'border-amber-500',
-  low: 'border-slate-400',
-};
+import { BackendTeamMember } from '../lib/types';
+import { exportTicketListCSV, exportTicketListPDF, exportTicketListDocx, TicketExportRow } from '../lib/exportReport';
 
 /** Parse once, not on every render pass of every filter. */
 const hostOf = (url: string): string => {
@@ -49,11 +36,25 @@ const hostOf = (url: string): string => {
   }
 };
 
+export const initials = (name: string | null | undefined, fallback: string): string => {
+  const source = (name || fallback).trim();
+  const parts = source.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return source.slice(0, 2).toUpperCase();
+};
+
 type PhaseFilter = 'all' | PhaseId;
 
 export const IssuesPage: React.FC = () => {
-  const { tests, loading, rerunTest, updateIssue } = useQAData();
-  const { showToast } = useToast();
+  const { tests, loading } = useQAData();
+
+  // Team members, for showing who an issue is assigned to (assignment
+  // itself only happens on the dedicated ticket page).
+  const [teamMembers, setTeamMembers] = useState<BackendTeamMember[]>([]);
+  useEffect(() => {
+    api.team.listMembers().then(setTeamMembers).catch(() => setTeamMembers([]));
+  }, []);
+  const memberById = useMemo(() => new Map(teamMembers.map((m) => [m.id, m])), [teamMembers]);
 
   const rowKey = (r: IssueRow) => `${r.testId}:${r.id}`;
 
@@ -90,7 +91,6 @@ export const IssuesPage: React.FC = () => {
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState<'Open' | 'Critical' | 'Resolved'>('Open');
   const [searchQuery, setSearchQuery] = useState('');
-  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   // Cheap, read-only file/line lookups (no LLM, no PR) so the detail panel
   // can point at the real source location even before AI Automation runs.
   // `aiSuggested` means the exact-match locator found nothing and an LLM
@@ -121,12 +121,11 @@ export const IssuesPage: React.FC = () => {
   const scopedRows = useMemo(
     () =>
       allRows.filter((row) => {
-        if (dismissed.has(rowKey(row))) return false;
         if (selectedWebsite !== 'all' && row.host !== selectedWebsite) return false;
         if (selectedPhase !== 'all' && row.phase !== selectedPhase) return false;
         return true;
       }),
-    [allRows, dismissed, selectedWebsite, selectedPhase]
+    [allRows, selectedWebsite, selectedPhase]
   );
 
   const openCount = scopedRows.filter((r) => !r.resolved).length;
@@ -210,32 +209,6 @@ export const IssuesPage: React.FC = () => {
   }, [visibleRows, locatedByKey]);
 
   // ---- handlers ------------------------------------------------------------
-  const handleResolveToggle = async (row: Row) => {
-    try {
-      await updateIssue(row.testId, row.id, !row.resolved);
-      showToast(row.resolved ? `Reopened ${row.repId}` : `Marked ${row.repId} as resolved`, 'success');
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Could not update issue', 'error');
-    }
-  };
-
-  const handleRetest = async (row: Row) => {
-    // Toast BEFORE the await. Your version fired "Triggering a fresh scan..."
-    // only after the scan request had already completed.
-    showToast('Triggering a fresh scan for this site...', 'info');
-    try {
-      await rerunTest(row.testId);
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Could not start re-test', 'error');
-    }
-  };
-
-  const handleDismiss = (row: Row) => {
-    setDismissed((prev) => new Set(prev).add(rowKey(row)));
-    setActiveKey(null);
-    showToast('Hidden from this view until the next scan', 'info');
-  };
-
   // The real applied patch when the AI Automation pipeline grounded and
   // (optionally) auto-applied one — falls back to the generic keyword-
   // matched template only when no real fix exists yet for this issue.
@@ -308,41 +281,6 @@ export const IssuesPage: React.FC = () => {
     const normalized = fileFullPath.replace(/\\/g, '/');
     const prefixed = normalized.startsWith('/') ? normalized : `/${normalized}`;
     return `vscode://file${prefixed}${line ? `:${line}` : ''}`;
-  };
-
-  const handleCopy = async (row: Row, explicitCode?: string) => {
-    const text =
-      `[${row.severity.toUpperCase()}] [${PHASES[row.phase].label}] ${row.title}\n` +
-      `URL: ${row.url}\n\nAnalysis: ${row.analysis}` +
-      (explicitCode ? `\n\nCode Fix Snippet:\n${explicitCode}` : '');
-    try {
-      // navigator.clipboard is undefined on non-HTTPS origins. You were not
-      // awaiting this and not catching it, so it failed silently while still
-      // showing a success toast.
-      await navigator.clipboard.writeText(text);
-      showToast('Issue details and fix logic copied!', 'success');
-    } catch {
-      showToast('Clipboard unavailable — copy manually', 'error');
-    }
-  };
-
-  // Copies a reference the AI Automation page's paste box can look up exactly
-  // (testId+issueId), plus a human-readable summary as a fallback if the
-  // marker line ever gets stripped or hand-edited.
-  const handleCopyForAutomation = async (row: Row) => {
-    const text =
-      `QA-ISSUE-REF testId=${row.testId} issueId=${row.id}\n` +
-      `[${row.severity.toUpperCase()}] ${row.title}\n` +
-      `URL: ${row.url}\n` +
-      `Category: ${row.category}\n\n` +
-      `Analysis: ${row.analysis}` +
-      (row.suggestion ? `\n\nSuggestion: ${row.suggestion}` : '');
-    try {
-      await navigator.clipboard.writeText(text);
-      showToast('Issue copied — paste it into AI Automation to auto-generate a PR', 'success');
-    } catch {
-      showToast('Clipboard unavailable — copy manually', 'error');
-    }
   };
 
   return (
@@ -480,26 +418,69 @@ export const IssuesPage: React.FC = () => {
                         className={`p-5 cursor-pointer border-b border-slate-100 dark:border-slate-800 border-l-[5px] ${severityBorder[row.severity] || 'border-slate-400'
                           } transition-all ${isSelected ? 'bg-indigo-50/40 shadow-sm dark:bg-indigo-950/30' : 'hover:bg-slate-50/60 dark:hover:bg-slate-800/40'}`}
                       >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-1.5">
-                            <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border ${severityBadge[row.severity] || severityBadge.low}`}>
-                              {row.severity}
-                            </span>
-                            <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border ${PHASES[row.phase].badge}`}>
-                              P{row.phase}
-                            </span>
+                        <div className="flex gap-3.5">
+                          {/* Ticket thumbnail — the real page screenshot from the
+                              scan this issue came from, when one was captured. */}
+                          <div className="w-16 h-16 shrink-0 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 flex items-center justify-center">
+                            {row.screenshotPath ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={api.screenshotUrl(row.screenshotPath)} alt="" className="w-full h-full object-cover object-top" />
+                            ) : (
+                              <ImageIcon className="w-5 h-5 text-slate-300 dark:text-slate-600" />
+                            )}
                           </div>
-                          <span className="text-xs font-mono text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900/50 px-1.5 py-0.5 rounded border border-slate-100 dark:border-slate-800">{row.repId}</span>
-                        </div>
-                        <h4 className={`font-bold text-slate-900 dark:text-slate-100 mt-2.5 text-sm leading-snug tracking-tight ${row.resolved ? 'line-through text-slate-400 dark:text-slate-500' : ''}`}>
-                          {row.title}
-                        </h4>
-                        <div className="flex items-center gap-2 mt-3.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                          <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-600 dark:text-slate-400">{row.category}</span>
-                          <span>•</span>
-                          <span className="text-slate-400 dark:text-slate-500">{row.effort ? `${row.effort} effort` : 'effort unknown'}</span>
-                          <span>•</span>
-                          <span className="truncate max-w-[140px] font-mono text-slate-400 dark:text-slate-500">{row.host}</span>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-1.5">
+                                <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border ${severityBadge[row.severity] || severityBadge.low}`}>
+                                  {row.severity}
+                                </span>
+                                <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border ${PHASES[row.phase].badge}`}>
+                                  P{row.phase}
+                                </span>
+                              </div>
+                              <span className="text-xs font-mono text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900/50 px-1.5 py-0.5 rounded border border-slate-100 dark:border-slate-800">{row.repId}</span>
+                            </div>
+                            <div className="flex items-start justify-between gap-2 mt-2.5">
+                              <h4 className={`font-bold text-slate-900 dark:text-slate-100 text-sm leading-snug tracking-tight ${row.resolved ? 'line-through text-slate-400 dark:text-slate-500' : ''}`}>
+                                {row.title}
+                              </h4>
+                              <a
+                                href={`/tickets/${row.testId}/${row.id}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                title="Open this ticket in a new tab"
+                                className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50 dark:bg-indigo-950/30 px-2 py-1 rounded-lg cursor-pointer"
+                              >
+                                Open Ticket <ArrowSquareOut className="w-3 h-3" />
+                              </a>
+                            </div>
+                            <div className="flex items-center gap-2 mt-2 text-[11px] font-medium text-slate-500 dark:text-slate-400 flex-wrap">
+                              <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-600 dark:text-slate-400">{row.category}</span>
+                              <span>•</span>
+                              <span className="text-slate-400 dark:text-slate-500">{row.effort ? `${row.effort} effort` : 'effort unknown'}</span>
+                              <span>•</span>
+                              <span className="truncate max-w-35 font-mono text-slate-400 dark:text-slate-500">{row.host}</span>
+                              {row.assigneeIds.length > 0 && (
+                                <span className="flex items-center -space-x-1.5 ml-auto">
+                                  {row.assigneeIds.slice(0, 3).map((id) => {
+                                    const m = memberById.get(id);
+                                    return (
+                                      <span
+                                        key={id}
+                                        title={m?.name || m?.email || id}
+                                        className="w-5 h-5 rounded-full bg-indigo-500 text-white text-[9px] font-bold flex items-center justify-center border-2 border-white dark:border-slate-900"
+                                      >
+                                        {initials(m?.name, m?.email || '?')}
+                                      </span>
+                                    );
+                                  })}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
                         {(() => {
                           const rowFix = getFixDisplay(row);
@@ -543,221 +524,125 @@ export const IssuesPage: React.FC = () => {
             </div>
           </section>
 
-          {/* Right inspector.
-              NOTE: still `hidden lg:flex`. On mobile, tapping a card does nothing.
-              Fix that separately — a bottom sheet or a routed detail view. */}
+          {/* Right panel: a ticket-number + content list scoped to whatever
+              site/phase/tab/search filters are currently active, with a
+              Download menu (PDF / Excel-compatible CSV / Word) — full
+              per-issue detail (fix code, comments, assign) now lives on each
+              ticket's own dedicated page. */}
           <section className="hidden lg:flex lg:w-7/12 flex-col bg-white dark:bg-slate-800 overflow-y-auto">
-            <AnimatePresence mode="wait">
-              {activeRow ? (() => {
-                const fixDisplay = getFixDisplay(activeRow);
-                return (
-                <motion.div
-                  key={rowKey(activeRow)}
-                  initial={{ opacity: 0, scale: 0.99 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.99 }}
-                  transition={{ duration: 0.15 }}
-                  className="p-6 flex-1 flex flex-col justify-between space-y-6"
-                >
-                  <div className="space-y-6">
-                    <div className="space-y-2.5 border-b border-slate-100 dark:border-slate-800 pb-4">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`text-xs font-extrabold uppercase tracking-wider px-2.5 py-1 rounded border ${severityBadge[activeRow.severity] || severityBadge.low}`}>
-                            {activeRow.severity} severity
-                          </span>
-                          <span className={`text-xs font-extrabold uppercase tracking-wider px-2.5 py-1 rounded border ${PHASES[activeRow.phase].badge}`}>
-                            {PHASES[activeRow.phase].label}
-                          </span>
-                          <span className="text-xs font-mono font-bold text-slate-400 dark:text-slate-500">{activeRow.repId}</span>
-                          {activeRow.appliedFix?.mergedAt && (
-                            <a
-                              href={activeRow.appliedFix.prUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded border bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900 hover:underline"
-                            >
-                              ✅ Resolved — merged in PR #{activeRow.appliedFix.prNumber}
-                            </a>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {(() => {
-                            const editorUrl = vscodeFileUrl(fixDisplay.fileFullPath, fixDisplay.line);
-                            const label = fixDisplay.filePath
-                              ? `${fixDisplay.filePath}${fixDisplay.line ? `:${fixDisplay.line}` : ''}`
-                              : null;
-                            return (
-                              <button
-                                onClick={() => {
-                                  if (editorUrl) window.location.href = editorUrl;
-                                }}
-                                disabled={!editorUrl}
-                                title={
-                                  editorUrl
-                                    ? `Open ${label} in VS Code`
-                                    : 'No local source file matched for this issue yet'
-                                }
-                                className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-colors ${
-                                  editorUrl
-                                    ? 'text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 border-indigo-200 dark:border-indigo-900/50 bg-indigo-50 dark:bg-indigo-950/30 cursor-pointer'
-                                    : 'text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30 cursor-not-allowed'
-                                }`}
-                              >
-                                <Folder className="w-3.5 h-3.5" /> {editorUrl ? 'Go to File' : 'Locating file…'}
-                              </button>
-                            );
-                          })()}
-                          <button
-                            onClick={() => handleCopyForAutomation(activeRow)}
-                            title="Copy this issue, then paste it into the AI Automation page to auto-generate a PR"
-                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50 dark:bg-indigo-950/30 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
-                          >
-                            <Copy className="w-3.5 h-3.5" /> Copy for AI Automation
-                          </button>
-                        </div>
-                      </div>
-                      <h3 className="text-xl font-extrabold text-slate-950 dark:text-white tracking-tight leading-snug">{activeRow.title}</h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                        {PHASES[activeRow.phase].blurb}
-                        {activeRow.effort
-                          ? ` · Estimated effort: ${activeRow.effort}.`
-                          : ' · Effort could not be estimated from this issue type.'}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs font-mono bg-slate-50 dark:bg-slate-900/50 text-slate-600 dark:text-slate-400 border border-slate-100 dark:border-slate-800 px-3 py-1.5 rounded-lg w-fit max-w-full truncate">
-                        <Globe className="text-slate-400 dark:text-slate-500 text-base flex-shrink-0" />
-                        <span className="truncate">{activeRow.url}</span>
-                      </div>
-                      {(() => {
-                        const fd = fixDisplay;
-                        if (!fd.filePath) return null;
-                        const editorUrl = vscodeFileUrl(fd.fileFullPath, fd.line);
-                        const label = `${fd.filePath}${fd.line ? `:${fd.line}` : ''}`;
-                        return (
-                          <div className="flex items-center gap-2 text-xs font-mono bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-900 px-3 py-1.5 rounded-lg w-fit max-w-full truncate mt-2">
-                            <Folder className="text-indigo-400 dark:text-indigo-500 text-base flex-shrink-0" />
-                            {editorUrl ? (
-                              <a href={editorUrl} className="truncate hover:underline" title="Open in VS Code">
-                                {label}
-                              </a>
-                            ) : (
-                              <span className="truncate">{label}</span>
-                            )}
-                            {fd.aiSuggested && (
-                              <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-indigo-200/60 dark:bg-indigo-900/50 flex-shrink-0">
-                                AI guess
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })()}
-                    </div>
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-800 z-10 gap-3">
+              <div className="min-w-0">
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm flex items-center gap-2 truncate">
+                  <Ticket className="w-4 h-4 text-indigo-500 shrink-0" />
+                  Tickets — {selectedWebsite === 'all' ? 'All Scanned Sites' : selectedWebsite}
+                </h3>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                  {visibleRows.length} ticket{visibleRows.length === 1 ? '' : 's'} in this view
+                </p>
+              </div>
+              <TicketDownloadMenu
+                rows={visibleRows}
+                scopeLabel={selectedWebsite === 'all' ? 'All Sites' : selectedWebsite}
+                memberById={memberById}
+              />
+            </div>
 
-                    <div className="bg-indigo-50/30 dark:bg-indigo-950/20 p-5 rounded-xl border border-indigo-100/50 dark:border-indigo-900/40">
-                      <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold mb-2.5 text-sm">
-                        <Sparkle className="text-base" />
-                        <h4>Audit Findings &amp; Analysis</h4>
-                      </div>
-                      <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">{activeRow.analysis}</p>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                          <Lightbulb className="text-base text-amber-500" /> Resolution Blueprint &amp; Code Implementation
-                        </h4>
-                        <span
-                          className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border ${fixDisplay.grounded
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900'
-                              : fixDisplay.aiSuggested
-                                ? 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-900'
-                                : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
-                            }`}
-                        >
-                          {fixDisplay.label}
-                        </span>
-                      </div>
-                      {activeRow.appliedFix?.prUrl && (
-                        <a
-                          href={activeRow.appliedFix.prUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="block text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
-                        >
-                          View the pull request that carries this fix →
-                        </a>
-                      )}
-                      <div className="rounded-xl overflow-hidden bg-slate-950 shadow-md border border-slate-900 flex flex-col">
-                        <div className="flex items-center justify-between px-4 py-2 bg-slate-900 text-slate-400 text-xs font-mono border-b border-slate-900">
-                          <span className="flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-full bg-red-500/80 inline-block" />
-                            <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80 inline-block" />
-                            <span className="w-2.5 h-2.5 rounded-full bg-green-500/80 inline-block" />
-                            {(() => {
-                              const label = fixDisplay.filePath
-                                ? `${fixDisplay.filePath}${fixDisplay.line ? `:${fixDisplay.line}` : ''}`
-                                : `${activeRow.category} fix`;
-                              const editorUrl = vscodeFileUrl(fixDisplay.fileFullPath, fixDisplay.line);
-                              return editorUrl ? (
-                                <a
-                                  href={editorUrl}
-                                  className="ml-1 text-slate-500 font-sans font-semibold hover:text-indigo-400 hover:underline"
-                                  title="Open in VS Code"
-                                >
-                                  {label}
-                                </a>
-                              ) : (
-                                <span className="ml-1 text-slate-500 font-sans font-semibold">{label}</span>
-                              );
-                            })()}
-                          </span>
-                          <button
-                            onClick={() => handleCopy(activeRow, fixDisplay.code)}
-                            className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer font-sans font-bold"
-                          >
-                            <Copy className="text-xs" /> Copy Solution Code
-                          </button>
-                        </div>
-                        <div className="p-4 overflow-x-auto font-mono text-xs text-indigo-200/90 leading-relaxed whitespace-pre bg-slate-950/95">
-                          {fixDisplay.code}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-5 mt-auto">
-                    <button
-                      onClick={() => handleDismiss(activeRow)}
-                      className="px-3.5 py-2 text-slate-500 dark:text-slate-400 font-bold hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 rounded-lg transition-colors flex items-center gap-2 text-xs"
-                    >
-                      <EyeSlash className="w-4 h-4" /> Hide From Feed
-                    </button>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleRetest(activeRow)}
-                        className="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-lg transition-colors text-xs flex items-center gap-1.5 shadow-sm"
-                      >
-                        <ArrowsCounterClockwise className="w-3.5 h-3.5" /> Re-test Endpoint
-                      </button>
-                      <button
-                        onClick={() => handleResolveToggle(activeRow)}
-                        className={`px-4 py-2 rounded-lg font-bold transition-all text-xs shadow-sm flex items-center gap-1.5 text-white ${activeRow.resolved ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-indigo-600 hover:bg-indigo-700'
-                          }`}
-                      >
-                        <Check className="w-3.5 h-3.5" /> {activeRow.resolved ? 'Reopen Case' : 'Mark As Fixed'}
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-                );
-              })() : (
-                <div className="h-full w-full flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm font-medium">
-                  Select an issue to inspect it.
+            <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+              {visibleRows.length === 0 && (
+                <div className="p-12 text-center text-sm font-medium text-slate-400 dark:text-slate-500">
+                  No tickets match the current filters.
                 </div>
               )}
-            </AnimatePresence>
+              {visibleRows.map((row) => (
+                <a
+                  key={rowKey(row)}
+                  href={`/tickets/${row.testId}/${row.id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-3 px-6 py-3 hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors"
+                >
+                  <span className="text-xs font-mono text-slate-400 dark:text-slate-500 shrink-0 w-28 truncate">{row.repId}</span>
+                  <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border shrink-0 ${severityBadge[row.severity] || severityBadge.low}`}>
+                    {row.severity}
+                  </span>
+                  <span className={`text-sm font-semibold text-slate-800 dark:text-slate-200 truncate flex-1 ${row.resolved ? 'line-through text-slate-400 dark:text-slate-500' : ''}`}>
+                    {row.title}
+                  </span>
+                  <ArrowSquareOut className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 shrink-0" />
+                </a>
+              ))}
+            </div>
           </section>
         </div>
+      )}
+    </div>
+  );
+};
+
+/** Download the current ticket list as PDF, Excel-compatible CSV, or Word — mirrors the DownloadMenu pattern already used for full scan reports (Phase2ResultsPage). */
+const TicketDownloadMenu: React.FC<{
+  rows: (IssueRow & { host: string })[];
+  scopeLabel: string;
+  memberById: Map<string, BackendTeamMember>;
+}> = ({ rows, scopeLabel, memberById }) => {
+  const [open, setOpen] = useState(false);
+  const { showToast } = useToast();
+  const menuRef = React.useRef<HTMLDivElement>(null);
+
+  const exportRows: TicketExportRow[] = rows.map((r) => ({
+    repId: r.repId,
+    title: r.title,
+    severity: r.severity,
+    category: r.category,
+    status: r.resolved ? 'Resolved' : 'Open',
+    assignees: r.assigneeIds.length
+      ? r.assigneeIds.map((id) => memberById.get(id)?.name || memberById.get(id)?.email || 'Unknown').join(', ')
+      : 'Unassigned',
+    url: r.url,
+  }));
+
+  const handle = async (fn: () => void | Promise<void>, label: string) => {
+    try {
+      await fn();
+      setOpen(false);
+    } catch {
+      showToast(`Could not export ${label}`, 'error');
+    }
+  };
+
+  return (
+    <div className="relative shrink-0" ref={menuRef}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        disabled={rows.length === 0}
+        className="flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 dark:disabled:bg-indigo-900 px-3 py-2 rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed"
+      >
+        <DownloadSimple className="w-4 h-4" /> Download
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-20 overflow-hidden">
+            <button
+              onClick={() => handle(() => exportTicketListPDF(exportRows, scopeLabel), 'PDF')}
+              className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400 transition-colors cursor-pointer"
+            >
+              <FilePdf className="w-4 h-4 text-red-500" /> PDF
+            </button>
+            <button
+              onClick={() => handle(() => exportTicketListCSV(exportRows, scopeLabel), 'Excel')}
+              className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors border-t border-slate-100 dark:border-slate-800 cursor-pointer"
+            >
+              <FileCsv className="w-4 h-4 text-emerald-600" /> Excel (.csv)
+            </button>
+            <button
+              onClick={() => handle(() => exportTicketListDocx(exportRows, scopeLabel), 'Word')}
+              className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:text-blue-600 dark:hover:text-blue-400 transition-colors border-t border-slate-100 dark:border-slate-800 cursor-pointer"
+            >
+              <FileDoc className="w-4 h-4 text-blue-600" /> Word (.docx)
+            </button>
+          </div>
+        </>
       )}
     </div>
   );

@@ -17,6 +17,14 @@ export interface BackendAppliedFix {
   mergedAt: string | null;
 }
 
+export interface BackendIssueComment {
+  id: string;
+  authorId: string | null;
+  authorName: string;
+  text: string;
+  createdAt: string;
+}
+
 export interface BackendIssue {
   id: string;
   category: 'broken-link' | 'console-error' | 'lighthouse' | 'accessibility' | 'seo' | 'visual-regression' | 'cross-browser' | string;
@@ -34,6 +42,9 @@ export interface BackendIssue {
   sourceLocation?: { url: string; lineNumber?: number; columnNumber?: number } | null;
   // The real patch applied (or proposed) by the AI Automation pipeline, if any.
   appliedFix?: BackendAppliedFix | null;
+  // Ticketing: team member ids assigned to this issue, and its comment thread.
+  assigneeIds?: string[];
+  comments?: BackendIssueComment[];
 }
 
 export interface BackendScreenshot {

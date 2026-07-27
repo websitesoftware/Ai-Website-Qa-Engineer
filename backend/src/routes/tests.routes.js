@@ -11,5 +11,6 @@ router.post("/:id/rerun", protect, ctrl.rerun);
 
 router.get("/:id/issues", ctrl.getIssues);
 router.patch("/:id/issues/:issueId", protect, ctrl.updateIssue);
+router.post("/:id/issues/:issueId/comments", protect, ctrl.addIssueComment);
 
 module.exports = router;
