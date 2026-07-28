@@ -119,7 +119,6 @@ export const DeviceLabPage: React.FC = () => {
     // can't be a useState lazy initializer — it must run post-mount.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setRecentIds(loadIds(RECENT_KEY));
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFavoriteIds(loadIds(FAVORITES_KEY));
     api.deviceLab
       .listDevices()
@@ -189,7 +188,11 @@ export const DeviceLabPage: React.FC = () => {
   // user has history, otherwise the first OS group.
   useEffect(() => {
     if (devices.length === 0) return;
-    if (recentIds.length === 0 && osTabs.length > 0) setRailTab(osTabs[0]);
+    if (recentIds.length === 0 && osTabs.length > 0) {
+      // One-time default once the device list arrives — not a per-render sync.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setRailTab(osTabs[0]);
+    }
   }, [devices.length, recentIds.length, osTabs]);
 
   const brandsForTab = useMemo(() => {
@@ -209,6 +212,8 @@ export const DeviceLabPage: React.FC = () => {
   // Keep the selected brand valid whenever the OS tab changes.
   useEffect(() => {
     if (brandsForTab.length === 0) {
+      // Keeps selectedBrand valid whenever the brand *list* changes underneath it.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedBrand(null);
     } else if (!brandsForTab.some((b) => b.brand === selectedBrand)) {
       setSelectedBrand(brandsForTab[0].brand);
@@ -222,7 +227,11 @@ export const DeviceLabPage: React.FC = () => {
     return devices.filter((d) => d.os === railTab && getBrand(d) === selectedBrand);
   }, [devices, railTab, selectedBrand]);
 
-  useEffect(() => setShowAllBrandDevices(false), [selectedBrand]);
+  useEffect(() => {
+    // Resets pagination whenever the selected brand changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setShowAllBrandDevices(false);
+  }, [selectedBrand]);
 
   const BRAND_PAGE_SIZE = 12;
   const visibleBrandDevices = showAllBrandDevices ? brandDevices : brandDevices.slice(0, BRAND_PAGE_SIZE);
