@@ -8,8 +8,9 @@ import { ScanResultsPage } from '../screens/ScanResultsPage';
 import { AutomationPage } from '../screens/AutomationPage';
 
 import { SettingsPage } from '../screens/settingspage';
+import { ContentManagerPage } from '../screens/ContentManagerPage';
 
-type TabType = 'Dashboard' | 'Tests' | 'Scan Results' | 'Automation' | 'Settings';
+type TabType = 'Dashboard' | 'Tests' | 'Scan Results' | 'Automation' | 'Settings' | 'Content';
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabType>('Dashboard');
@@ -26,6 +27,8 @@ export default function DashboardPage() {
         return <AutomationPage />;
       case 'Settings':
         return <SettingsPage />;
+      case 'Content':
+        return <ContentManagerPage />;
 
       default:
         return (
@@ -38,7 +41,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="w-full h-screen overflow-hidden">
+    <div className="w-full h-app-shell overflow-hidden">
       <Layout
         currentUser="Rajat"
         activeTab={activeTab}

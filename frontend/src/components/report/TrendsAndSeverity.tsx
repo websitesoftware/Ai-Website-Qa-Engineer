@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { WarningCircle, Warning, Info, CircleDashed } from '@phosphor-icons/react';
 import { useQAData } from '../../context/QADataContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useContent } from '../../context/ContentContext';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 
 // Function jo present date ke hisab se pichle dino ke dynamic dates generate karega
@@ -67,6 +68,16 @@ export const TrendsAndSeverity: React.FC = () => {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
   const [activeMetric, setActiveMetric] = useState<'quality' | 'coverage'>('quality');
+  const performanceTitle = useContent('scanResults.trends.performanceTitle', { text: 'Stability & Performance Trends' });
+  const performanceSubtitle = useContent('scanResults.trends.performanceSubtitle', {
+    text: 'Average scoring metrics across continuous deployment test pipelines',
+  });
+  const qualityToggle = useContent('scanResults.trends.qualityToggle', { text: 'Quality' });
+  const coverageToggle = useContent('scanResults.trends.coverageToggle', { text: 'Coverage' });
+  const severityTitle = useContent('scanResults.trends.severityTitle', { text: 'Issue Severity distribution' });
+  const severitySubtitle = useContent('scanResults.trends.severitySubtitle', {
+    text: 'Categorized breakdown of existing unresolved bug logs',
+  });
 
   // useMemo use kiya taaki har render par dates change na hon aur present date stable rahe
   const dynamicTrendData = useMemo(() => generateDynamicTrendData(), []);
@@ -80,7 +91,7 @@ export const TrendsAndSeverity: React.FC = () => {
     { key: 'low', label: 'Cosmetic', icon: <CircleDashed />, color: 'text-slate-500 dark:text-slate-400', bar: 'bg-slate-400', count: sev.low },
   ];
 
-  const metricLabel = activeMetric === 'quality' ? 'Quality' : 'Coverage';
+  const metricLabel = activeMetric === 'quality' ? qualityToggle.text : coverageToggle.text;
   const totalIssues = rows.reduce((sum, row) => sum + row.count, 0);
 
   return (
@@ -91,8 +102,8 @@ export const TrendsAndSeverity: React.FC = () => {
         <div>
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">Stability & Performance Trends</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Average scoring metrics across continuous deployment test pipelines</p>
+              <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">{performanceTitle.text}</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{performanceSubtitle.text}</p>
             </div>
 
             {/* Toggle Tabs (Quality / Coverage) */}
@@ -101,13 +112,13 @@ export const TrendsAndSeverity: React.FC = () => {
                 onClick={() => setActiveMetric('quality')}
                 className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${activeMetric === 'quality' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
               >
-                Quality
+                {qualityToggle.text}
               </button>
               <button
                 onClick={() => setActiveMetric('coverage')}
                 className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${activeMetric === 'coverage' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
               >
-                Coverage
+                {coverageToggle.text}
               </button>
             </div>
           </div>
@@ -156,8 +167,8 @@ export const TrendsAndSeverity: React.FC = () => {
       {/* RIGHT PANEL: Issue Severity Distribution */}
       <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
         <div>
-          <h3 className="font-bold text-slate-900 dark:text-slate-100">Issue Severity distribution</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Categorized breakdown of existing unresolved bug logs</p>
+          <h3 className="font-bold text-slate-900 dark:text-slate-100">{severityTitle.text}</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{severitySubtitle.text}</p>
         </div>
 
         <div className="space-y-4 my-6">

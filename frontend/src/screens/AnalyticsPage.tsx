@@ -21,6 +21,7 @@ import { Skeleton } from '../components/ui/Skeleton';
 import { api } from '../lib/api';
 import { BackendAnalytics } from '../lib/types';
 import { formatDate } from '../lib/format';
+import { useContent } from '../context/ContentContext';
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: '#ef4444',
@@ -90,6 +91,17 @@ export const AnalyticsPage: React.FC = () => {
   const [data, setData] = useState<BackendAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const pageTitle = useContent('dashboard.analytics.title', { text: 'Historical QA Analytics' });
+  const pageSubtitle = useContent('dashboard.analytics.subtitle', { text: 'Trends across every scan, computed live from your test history.' });
+  const scoreTrendCard = useContent('dashboard.analytics.scoreTrend.title', { text: 'Score Trend' });
+  const scoreTrendSubtitle = useContent('dashboard.analytics.scoreTrend.subtitle', { text: 'Average overall score per day' });
+  const topDomainsCard = useContent('dashboard.analytics.topDomains.title', { text: 'Top Domains' });
+  const topDomainsSubtitle = useContent('dashboard.analytics.topDomains.subtitle', { text: 'Most-scanned URLs in range' });
+  const passFailCard = useContent('dashboard.analytics.passFail.title', { text: 'Pass vs Fail' });
+  const passFailSubtitle = useContent('dashboard.analytics.passFail.subtitle', { text: 'Daily outcome counts' });
+  const severityCard = useContent('dashboard.analytics.issuesBySeverity.title', { text: 'Issues by Severity' });
+  const severitySubtitle = useContent('dashboard.analytics.issuesBySeverity.subtitle', { text: 'Daily issue counts detected across all scans' });
+
   useEffect(() => {
     // No fetch to make while signed out — the component renders its own
     // "sign in required" state below without ever reading `loading`.
@@ -131,8 +143,8 @@ export const AnalyticsPage: React.FC = () => {
     <div className="space-y-6 animate-fade-in w-full">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Historical QA Analytics</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Trends across every scan, computed live from your test history.</p>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{pageTitle.text}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{pageSubtitle.text}</p>
         </div>
         <div className="flex gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1">
           {RANGE_OPTIONS.map((r) => (
@@ -180,7 +192,7 @@ export const AnalyticsPage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <ChartCard title="Score Trend" subtitle="Average overall score per day" className="lg:col-span-2">
+            <ChartCard title={scoreTrendCard.text} subtitle={scoreTrendSubtitle.text} className="lg:col-span-2">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={scoreTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
@@ -207,7 +219,7 @@ export const AnalyticsPage: React.FC = () => {
               </ResponsiveContainer>
             </ChartCard>
 
-            <ChartCard title="Top Domains" subtitle="Most-scanned URLs in range">
+            <ChartCard title={topDomainsCard.text} subtitle={topDomainsSubtitle.text}>
               <div className="h-full overflow-y-auto space-y-2 pr-1">
                 {data.topDomains.length === 0 && <p className="text-sm text-slate-400 text-center py-6">No domains yet</p>}
                 {data.topDomains.map((d) => (
@@ -222,7 +234,7 @@ export const AnalyticsPage: React.FC = () => {
               </div>
             </ChartCard>
 
-            <ChartCard title="Pass vs Fail" subtitle="Daily outcome counts" className="lg:col-span-2">
+            <ChartCard title={passFailCard.text} subtitle={passFailSubtitle.text} className="lg:col-span-2">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={passFailTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />
@@ -236,7 +248,7 @@ export const AnalyticsPage: React.FC = () => {
               </ResponsiveContainer>
             </ChartCard>
 
-            <ChartCard title="Issues by Severity" subtitle="Daily issue counts detected across all scans">
+            <ChartCard title={severityCard.text} subtitle={severitySubtitle.text}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={severityTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />

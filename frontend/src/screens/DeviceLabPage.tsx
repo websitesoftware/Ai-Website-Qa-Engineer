@@ -1,7 +1,7 @@
 'use client';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { MagnifyingGlass, ArrowsClockwise, ArrowClockwise, Plus, Minus, Globe, SidebarSimple, Devices, Code, ArrowsOut, X } from '@phosphor-icons/react';
+import { MagnifyingGlass, ArrowsClockwise, ArrowClockwise, Plus, Minus, Globe, SidebarSimple, Devices, Code, ArrowsOut, X, Star, AppleLogo, AndroidLogo, Monitor, WindowsLogo, ClockCounterClockwise } from '@phosphor-icons/react';
 import { api, DeviceLabDevice } from '../lib/api';
 import { DeviceFrame, DEVICE_FRAME_CHROME_HEIGHT, DeviceFrameHandlers } from '../components/devicelab/DeviceFrame';
 import { DevToolsPanel } from '../components/devicelab/DevToolsPanel';
@@ -12,10 +12,18 @@ const BEZEL_EXTRA = 24; // phone bezel adds ~12px padding on each side (p-3)
 
 const RECENT_KEY = 'qa-device-lab-recent';
 const MAX_RECENT = 5;
+const FAVORITES_KEY = 'qa-device-lab-favorites';
+const BRAND_ORDER = ['Apple', 'Samsung', 'Google', 'OnePlus', 'Motorola', 'Xiaomi', 'Vivo', 'Oppo', 'Huawei', 'Realme', 'Other'];
+const OS_META: Record<string, { label: string; icon: typeof AppleLogo }> = {
+  iOS: { label: 'iOS', icon: AppleLogo },
+  Android: { label: 'Android', icon: AndroidLogo },
+  Windows: { label: 'Windows', icon: WindowsLogo },
+  Various: { label: 'Desktop', icon: Monitor },
+};
 
-function loadRecent(): string[] {
+function loadIds(key: string): string[] {
   try {
-    const raw = localStorage.getItem(RECENT_KEY);
+    const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -23,9 +31,39 @@ function loadRecent(): string[] {
 }
 
 function saveRecent(deviceId: string) {
-  const current = loadRecent().filter((id) => id !== deviceId);
+  const current = loadIds(RECENT_KEY).filter((id) => id !== deviceId);
   current.unshift(deviceId);
   localStorage.setItem(RECENT_KEY, JSON.stringify(current.slice(0, MAX_RECENT)));
+}
+
+// Devices aren't tagged with a brand server-side (the catalog groups by
+// category/os only) — the flyout menu needs one, so it's inferred here from
+// the device name's leading token.
+function getBrand(device: DeviceLabDevice): string {
+  const n = device.name;
+  if (device.category === 'Desktop') return 'Desktop';
+  if (/^iPhone|^iPad/.test(n)) return 'Apple';
+  if (/^Galaxy|^Samsung/.test(n)) return 'Samsung';
+  if (/^Pixel|^Google/.test(n)) return 'Google';
+  if (/^OnePlus/.test(n)) return 'OnePlus';
+  if (/^Redmi/.test(n)) return 'Xiaomi';
+  if (/^realme/i.test(n)) return 'Realme';
+  if (/^OPPO/i.test(n)) return 'Oppo';
+  if (/^vivo|^iQOO/i.test(n)) return 'Vivo';
+  if (/^Moto/.test(n)) return 'Motorola';
+  if (/^Huawei/.test(n)) return 'Huawei';
+  return 'Other';
+}
+
+// Pulled from the device's real user agent (not fabricated) — Android UAs
+// carry the OS version, iOS UAs carry it as "OS 18_7" (underscore instead
+// of a dot). Returns null for desktop UAs, which don't carry one.
+function getOsVersion(device: DeviceLabDevice): string | null {
+  const iosMatch = device.userAgent.match(/OS (\d+)[_.]?(\d+)?/);
+  if (iosMatch) return iosMatch[2] ? `${iosMatch[1]}.${iosMatch[2]}` : iosMatch[1];
+  const androidMatch = device.userAgent.match(/Android (\d+(?:\.\d+)?)/);
+  if (androidMatch) return androidMatch[1];
+  return null;
 }
 
 export const DeviceLabPage: React.FC = () => {
@@ -34,6 +72,10 @@ export const DeviceLabPage: React.FC = () => {
   const [devicesError, setDevicesError] = useState('');
   const [search, setSearch] = useState('');
   const [recentIds, setRecentIds] = useState<string[]>([]);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [railTab, setRailTab] = useState<'favorites' | 'recent' | string>('recent');
+  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+  const [showAllBrandDevices, setShowAllBrandDevices] = useState(false);
 
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -76,7 +118,9 @@ export const DeviceLabPage: React.FC = () => {
     // Hydration-safe restore: localStorage doesn't exist during SSR, so this
     // can't be a useState lazy initializer — it must run post-mount.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setRecentIds(loadRecent());
+    setRecentIds(loadIds(RECENT_KEY));
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setFavoriteIds(loadIds(FAVORITES_KEY));
     api.deviceLab
       .listDevices()
       .then((res) => {
@@ -119,17 +163,84 @@ export const DeviceLabPage: React.FC = () => {
     return Array.from(groups.entries());
   }, [devices, search]);
 
-  const handleRun = async (overrideOrientation?: 'portrait' | 'landscape') => {
+  const favoriteDevices = useMemo(
+    () => favoriteIds.map((id) => devices.find((d) => d.id === id)).filter((d): d is DeviceLabDevice => !!d),
+    [favoriteIds, devices]
+  );
+
+  const toggleFavorite = (id: string) => {
+    setFavoriteIds((prev) => {
+      const next = prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id];
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  // OS tabs shown in the rail, in the order they appear in OS_META (falls
+  // back to whatever the API actually returned if a new os value shows up).
+  const osTabs = useMemo(() => {
+    const present = Array.from(new Set(devices.map((d) => d.os)));
+    const known = Object.keys(OS_META).filter((os) => present.includes(os));
+    const unknown = present.filter((os) => !OS_META[os]);
+    return [...known, ...unknown];
+  }, [devices]);
+
+  // Set the default rail tab once devices are in: land on Recent if the
+  // user has history, otherwise the first OS group.
+  useEffect(() => {
+    if (devices.length === 0) return;
+    if (recentIds.length === 0 && osTabs.length > 0) setRailTab(osTabs[0]);
+  }, [devices.length, recentIds.length, osTabs]);
+
+  const brandsForTab = useMemo(() => {
+    if (railTab === 'favorites' || railTab === 'recent') return [];
+    const inOs = devices.filter((d) => d.os === railTab);
+    const counts = new Map<string, number>();
+    for (const d of inOs) counts.set(getBrand(d), (counts.get(getBrand(d)) || 0) + 1);
+    const brands = Array.from(counts.keys());
+    brands.sort((a, b) => {
+      const ai = BRAND_ORDER.indexOf(a);
+      const bi = BRAND_ORDER.indexOf(b);
+      return (ai === -1 ? BRAND_ORDER.length : ai) - (bi === -1 ? BRAND_ORDER.length : bi);
+    });
+    return brands.map((brand) => ({ brand, count: counts.get(brand)! }));
+  }, [devices, railTab]);
+
+  // Keep the selected brand valid whenever the OS tab changes.
+  useEffect(() => {
+    if (brandsForTab.length === 0) {
+      setSelectedBrand(null);
+    } else if (!brandsForTab.some((b) => b.brand === selectedBrand)) {
+      setSelectedBrand(brandsForTab[0].brand);
+    }
+    // selectedBrand intentionally excluded — this effect only reacts to the brand *list* changing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brandsForTab]);
+
+  const brandDevices = useMemo(() => {
+    if (!selectedBrand || (railTab === 'favorites' || railTab === 'recent')) return [];
+    return devices.filter((d) => d.os === railTab && getBrand(d) === selectedBrand);
+  }, [devices, railTab, selectedBrand]);
+
+  useEffect(() => setShowAllBrandDevices(false), [selectedBrand]);
+
+  const BRAND_PAGE_SIZE = 12;
+  const visibleBrandDevices = showAllBrandDevices ? brandDevices : brandDevices.slice(0, BRAND_PAGE_SIZE);
+
+  const handleRun = async (
+    overrideOrientation?: 'portrait' | 'landscape',
+    overrideEngine?: 'chromium' | 'firefox' | 'webkit' | ''
+  ) => {
     if (!selectedDevice || !url.trim()) return;
     await start({
       url: url.trim(),
       deviceId: selectedDevice.id,
       orientation: overrideOrientation ?? orientation,
-      browserEngine: browserEngine || undefined,
+      browserEngine: (overrideEngine ?? browserEngine) || undefined,
     });
     setHasStarted(true);
     saveRecent(selectedDevice.id);
-    setRecentIds(loadRecent());
+    setRecentIds(loadIds(RECENT_KEY));
   };
 
   const frameHandlers: DeviceFrameHandlers = {
@@ -202,7 +313,11 @@ export const DeviceLabPage: React.FC = () => {
       {/* Device picker sidebar — collapses so the live device can use the
           full panel; toggled back open via the button in the toolbar. */}
       {sidebarOpen && (
-        <aside className="w-72 shrink-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl flex flex-col overflow-hidden">
+        <aside
+          className={`shrink-0 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl flex flex-col overflow-hidden transition-[width] max-h-80 sm:max-h-none ${
+            search || brandsForTab.length === 0 ? 'sm:w-72' : 'sm:w-120'
+          }`}
+        >
           <div className="p-4 border-b border-slate-100 dark:border-slate-700">
             <h2 className="font-bold text-slate-900 dark:text-slate-100 text-sm mb-3">Device Lab</h2>
             <div className="relative">
@@ -217,28 +332,139 @@ export const DeviceLabPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-3 space-y-4">
-            {devicesLoading && <p className="text-xs text-slate-400 px-2">Loading devices…</p>}
-            {devicesError && <p className="text-xs text-red-500 px-2">{devicesError}</p>}
+          {devicesLoading && <p className="text-xs text-slate-400 px-4 py-3">Loading devices…</p>}
+          {devicesError && <p className="text-xs text-red-500 px-4 py-3">{devicesError}</p>}
 
-            {!devicesLoading && recentDevices.length > 0 && !search && (
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1">Frequently Used</p>
-                {recentDevices.map((d) => (
-                  <DeviceRow key={`recent-${d.id}`} device={d} selected={d.id === selectedDeviceId} onSelect={() => selectDevice(d.id)} />
-                ))}
-              </div>
-            )}
+          {!devicesLoading && search ? (
+            <div className="flex-1 overflow-y-auto p-3 space-y-4">
+              {filteredGroups.length === 0 && <p className="text-xs text-slate-400 px-2">No devices match &ldquo;{search}&rdquo;.</p>}
+              {filteredGroups.map(([groupLabel, groupDevices]) => (
+                <div key={groupLabel}>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1">{groupLabel}</p>
+                  {groupDevices.map((d) => (
+                    <DeviceRow
+                      key={d.id}
+                      device={d}
+                      selected={d.id === selectedDeviceId}
+                      favorite={favoriteIds.includes(d.id)}
+                      onToggleFavorite={() => toggleFavorite(d.id)}
+                      onSelect={() => selectDevice(d.id)}
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : (
+            !devicesLoading && (
+              <div className="flex-1 flex min-h-0">
+                {/* Rail: Favourites / Recent Tests / one entry per OS */}
+                <nav className="w-28 shrink-0 border-r border-slate-100 dark:border-slate-700 overflow-y-auto py-2">
+                  <RailButton
+                    active={railTab === 'favorites'}
+                    icon={<Star weight={railTab === 'favorites' ? 'fill' : 'regular'} className="w-4 h-4" />}
+                    label={`Favourites (${favoriteDevices.length})`}
+                    onClick={() => setRailTab('favorites')}
+                  />
+                  <RailButton
+                    active={railTab === 'recent'}
+                    icon={<ClockCounterClockwise className="w-4 h-4" />}
+                    label="Recent Tests"
+                    onClick={() => setRailTab('recent')}
+                  />
+                  {osTabs.map((os) => {
+                    const meta = OS_META[os];
+                    const Icon = meta?.icon ?? Devices;
+                    return (
+                      <RailButton
+                        key={os}
+                        active={railTab === os}
+                        icon={<Icon className="w-4 h-4" />}
+                        label={meta?.label ?? os}
+                        onClick={() => setRailTab(os)}
+                      />
+                    );
+                  })}
+                </nav>
 
-            {filteredGroups.map(([groupLabel, groupDevices]) => (
-              <div key={groupLabel}>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1">{groupLabel}</p>
-                {groupDevices.map((d) => (
-                  <DeviceRow key={d.id} device={d} selected={d.id === selectedDeviceId} onSelect={() => selectDevice(d.id)} />
-                ))}
+                {/* Brand column — only for OS tabs that have brands to split on */}
+                {brandsForTab.length > 0 && (
+                  <div className="w-32 shrink-0 border-r border-slate-100 dark:border-slate-700 overflow-y-auto py-2">
+                    {brandsForTab.map(({ brand, count }) => (
+                      <button
+                        key={brand}
+                        onClick={() => setSelectedBrand(brand)}
+                        className={`w-full text-left px-3 py-2 text-xs font-semibold cursor-pointer truncate ${
+                          selectedBrand === brand
+                            ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400'
+                            : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'
+                        }`}
+                      >
+                        {brand} <span className="text-slate-400 font-normal">({count})</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Device list for the active rail tab / brand */}
+                <div className="flex-1 overflow-y-auto p-2 min-w-0">
+                  {railTab === 'favorites' &&
+                    (favoriteDevices.length === 0 ? (
+                      <p className="text-xs text-slate-400 px-2 py-3">No favourites yet — tap the star on a device to pin it here.</p>
+                    ) : (
+                      favoriteDevices.map((d) => (
+                        <DeviceRow
+                          key={d.id}
+                          device={d}
+                          selected={d.id === selectedDeviceId}
+                          favorite
+                          onToggleFavorite={() => toggleFavorite(d.id)}
+                          onSelect={() => selectDevice(d.id)}
+                        />
+                      ))
+                    ))}
+
+                  {railTab === 'recent' &&
+                    (recentDevices.length === 0 ? (
+                      <p className="text-xs text-slate-400 px-2 py-3">Devices you test on will show up here.</p>
+                    ) : (
+                      recentDevices.map((d) => (
+                        <DeviceRow
+                          key={d.id}
+                          device={d}
+                          selected={d.id === selectedDeviceId}
+                          favorite={favoriteIds.includes(d.id)}
+                          onToggleFavorite={() => toggleFavorite(d.id)}
+                          onSelect={() => selectDevice(d.id)}
+                        />
+                      ))
+                    ))}
+
+                  {railTab !== 'favorites' && railTab !== 'recent' && (
+                    <>
+                      {visibleBrandDevices.map((d) => (
+                        <DeviceRow
+                          key={d.id}
+                          device={d}
+                          selected={d.id === selectedDeviceId}
+                          favorite={favoriteIds.includes(d.id)}
+                          onToggleFavorite={() => toggleFavorite(d.id)}
+                          onSelect={() => selectDevice(d.id)}
+                        />
+                      ))}
+                      {!showAllBrandDevices && brandDevices.length > BRAND_PAGE_SIZE && (
+                        <button
+                          onClick={() => setShowAllBrandDevices(true)}
+                          className="w-full text-left px-2.5 py-2 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                        >
+                          Show {brandDevices.length - BRAND_PAGE_SIZE} More Devices
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
-            ))}
-          </div>
+            )
+          )}
         </aside>
       )}
 
@@ -280,7 +506,13 @@ export const DeviceLabPage: React.FC = () => {
 
           <select
             value={browserEngine}
-            onChange={(e) => setBrowserEngine(e.target.value as typeof browserEngine)}
+            onChange={(e) => {
+              const next = e.target.value as typeof browserEngine;
+              setBrowserEngine(next);
+              // Switch the live session to the new engine immediately,
+              // instead of leaving it pending until the next manual "Go".
+              if (hasStarted) handleRun(orientation, next);
+            }}
             className="px-2.5 py-2 border rounded-lg text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200"
             title="Browser engine"
           >
@@ -412,25 +644,60 @@ export const DeviceLabPage: React.FC = () => {
 
   if (fullscreen && typeof document !== 'undefined') {
     return createPortal(
-      <div className="fixed inset-0 z-999 flex h-screen gap-6 bg-slate-50 dark:bg-slate-950 p-4 animate-fade-in">
+      <div className="fixed inset-0 z-999 flex flex-col sm:flex-row gap-4 sm:gap-6 bg-slate-50 dark:bg-slate-950 p-3 sm:p-4 overflow-y-auto animate-fade-in">
         {viewerBody}
       </div>,
       document.body
     );
   }
 
-  return <div className="flex h-full gap-6 animate-fade-in">{viewerBody}</div>;
+  return <div className="flex flex-col sm:flex-row h-full gap-4 sm:gap-6 animate-fade-in">{viewerBody}</div>;
 };
 
-const DeviceRow: React.FC<{ device: DeviceLabDevice; selected: boolean; onSelect: () => void }> = ({ device, selected, onSelect }) => (
+const RailButton: React.FC<{ active: boolean; icon: React.ReactNode; label: string; onClick: () => void }> = ({ active, icon, label, onClick }) => (
   <button
-    onClick={onSelect}
-    className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg text-left text-xs transition-colors cursor-pointer ${selected
+    onClick={onClick}
+    title={label}
+    className={`w-full flex flex-col items-center gap-1 px-1.5 py-2.5 text-center cursor-pointer ${
+      active
+        ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400'
+        : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900'
+    }`}
+  >
+    {icon}
+    <span className="text-[10px] font-semibold leading-tight line-clamp-2">{label}</span>
+  </button>
+);
+
+const DeviceRow: React.FC<{
+  device: DeviceLabDevice;
+  selected: boolean;
+  favorite: boolean;
+  onToggleFavorite: () => void;
+  onSelect: () => void;
+}> = ({ device, selected, favorite, onToggleFavorite, onSelect }) => (
+  <div
+    className={`w-full flex items-center gap-1.5 pl-1 pr-2.5 py-2 rounded-lg text-xs transition-colors ${selected
         ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold'
         : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 font-medium'
       }`}
   >
-    <span className="truncate">{device.name}</span>
-    <span className="text-[10px] text-slate-400 shrink-0">{device.width}×{device.height}</span>
-  </button>
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggleFavorite();
+      }}
+      title={favorite ? 'Remove from favourites' : 'Add to favourites'}
+      className="shrink-0 p-0.5 cursor-pointer text-amber-400 hover:text-amber-500"
+    >
+      <Star weight={favorite ? 'fill' : 'regular'} className="w-3.5 h-3.5" />
+    </button>
+    <button onClick={onSelect} className="flex-1 min-w-0 flex items-center justify-between gap-2 text-left cursor-pointer">
+      <span className="truncate">{device.name}</span>
+      <span className="flex items-center gap-1.5 shrink-0">
+        {getOsVersion(device) && <span className="text-[10px] text-slate-400">{getOsVersion(device)}</span>}
+        <span className="text-[10px] text-slate-400">{device.width}×{device.height}</span>
+      </span>
+    </button>
+  </div>
 );

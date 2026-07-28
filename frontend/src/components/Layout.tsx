@@ -7,10 +7,12 @@ import { useQAData } from '../context/QADataContext';
 import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
 import { useTheme } from '../context/ThemeContext';
-import { User, SignOut, Key, Envelope, LockOpen, ArrowLeft, CheckSquare, Square, Eye, EyeSlash } from '@phosphor-icons/react';
+import { User, SignOut, Key, Envelope, LockOpen, ArrowLeft, CheckSquare, Square, Eye, EyeSlash, List, X } from '@phosphor-icons/react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useIsAdmin } from '../hooks/useIsAdmin';
+import { useContent } from '../context/ContentContext';
 
-export type TabType = 'Dashboard' | 'Tests' | 'Scan Results' | 'Automation' | 'Settings';
+export type TabType = 'Dashboard' | 'Tests' | 'Scan Results' | 'Automation' | 'Settings' | 'Content';
 type AuthView = 'LOGIN' | 'FORGOT_PASSWORD' | 'REGISTER';
 
 interface LayoutProps {
@@ -32,9 +34,13 @@ export const Layout: React.FC<LayoutProps> = ({
   const { error } = useQAData();
   const { resolvedTheme } = useTheme();
   const { user, login, register, forgotPassword, logout } = useAuth();
+  const isAdmin = useIsAdmin();
+  const sidebarTitle = useContent('global.sidebar.title', { text: 'AI QA Engineer' });
+  const sidebarSubtitle = useContent('global.sidebar.subtitle', { text: 'Website Assistant' });
 
   // UI Panels Engine States
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [authView, setAuthView] = useState<AuthView>('LOGIN');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -129,25 +135,61 @@ export const Layout: React.FC<LayoutProps> = ({
     { label: 'Scan Results' as TabType, icon: 'ph-sparkle' },
     { label: 'Automation' as TabType, icon: 'ph-robot' },
     { label: 'Settings' as TabType, icon: 'ph-gear' },
+    // Admin/owner-only: manages the editable text/icon/image content shown
+    // across the 5 tabs above, hidden from everyone else's nav entirely.
+    ...(isAdmin ? [{ label: 'Content' as TabType, icon: 'ph-pencil-simple-line' }] : []),
   ];
 
   return (
-    <div className={`h-screen overflow-hidden flex transition-all duration-300 ${resolvedTheme === 'dark' ? 'bg-slate-950 text-white' : 'bg-[#F8FAFC] text-slate-800'}`}>
+    <div className={`h-app-shell overflow-hidden flex transition-all duration-300 ${resolvedTheme === 'dark' ? 'bg-slate-950 text-white' : 'bg-[#F8FAFC] text-slate-800'}`}>
 
-      {/* Sidebar Section */}
-      <aside className={`w-64 h-full hidden md:flex flex-col shrink-0 transition-all duration-300 ${resolvedTheme === 'dark' ? 'bg-slate-900 border-r border-slate-800' : 'bg-white border-r border-slate-200'}`}>
-        <div className={`h-20 flex items-center px-6 border-b ${resolvedTheme === 'dark' ? 'border-slate-800' : 'border-slate-100'}`}>
+      {/* Mobile nav backdrop — tapping it (or a nav item) closes the drawer */}
+      <AnimatePresence>
+        {mobileNavOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setMobileNavOpen(false)}
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden"
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Sidebar Section — a fixed off-canvas drawer below md, a normal
+          in-flow column at md+. The same drawer/toggle works no matter
+          which tab is active, since every tab renders inside this shell. */}
+      <aside
+        className={`w-64 h-full flex flex-col shrink-0 transition-transform duration-300 fixed md:static inset-y-0 left-0 z-50 md:translate-x-0 ${
+          mobileNavOpen ? 'translate-x-0' : '-translate-x-full'
+        } ${resolvedTheme === 'dark' ? 'bg-slate-900 border-r border-slate-800' : 'bg-white border-r border-slate-200'}`}
+      >
+        <div className={`h-20 flex items-center justify-between px-6 border-b ${resolvedTheme === 'dark' ? 'border-slate-800' : 'border-slate-100'}`}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-xl">Q</div>
             <div>
-              <h1 className={`font-bold ${resolvedTheme === 'dark' ? 'text-white' : 'text-slate-900'}`}>AI QA Engineer</h1>
-              <p className={`text-xs ${resolvedTheme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Website Assistant</p>
+              <h1 className={`font-bold ${resolvedTheme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{sidebarTitle.text}</h1>
+              <p className={`text-xs ${resolvedTheme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{sidebarSubtitle.text}</p>
             </div>
           </div>
+          <button
+            onClick={() => setMobileNavOpen(false)}
+            aria-label="Close navigation menu"
+            className={`md:hidden p-1.5 rounded-lg cursor-pointer ${resolvedTheme === 'dark' ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-400 hover:bg-slate-100'}`}
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
         <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
           {navItems.map((item) => (
-            <button key={item.label} onClick={() => setActiveTab(item.label)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all ${activeTab === item.label ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600' : resolvedTheme === 'dark' ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-50'}`}>
+            <button
+              key={item.label}
+              onClick={() => {
+                setActiveTab(item.label);
+                setMobileNavOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all cursor-pointer ${activeTab === item.label ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600' : resolvedTheme === 'dark' ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-50'}`}
+            >
               <i className={`ph ${item.icon} text-xl`} />
               {item.label}
             </button>
@@ -156,12 +198,20 @@ export const Layout: React.FC<LayoutProps> = ({
       </aside>
 
       {/* Main Container */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden">
+      <main className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
 
         {/* RUNTIME INTEGRATED GLOBAL HEADER */}
-        <header className={`h-20 px-8 flex items-center justify-between shrink-0 transition-all duration-300 relative ${resolvedTheme === 'dark' ? 'border-b border-slate-800 bg-slate-900/40' : 'border-b border-slate-200 bg-white'}`} ref={popupRef}>
-          <div>
-            <h2 className={`text-xl font-extrabold tracking-tight ${resolvedTheme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+        <header className={`h-20 px-4 sm:px-8 flex items-center justify-between gap-3 shrink-0 transition-all duration-300 relative ${resolvedTheme === 'dark' ? 'border-b border-slate-800 bg-slate-900/40' : 'border-b border-slate-200 bg-white'}`} ref={popupRef}>
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              onClick={() => setMobileNavOpen(true)}
+              aria-label="Open navigation menu"
+              className={`md:hidden p-2 rounded-lg border shrink-0 cursor-pointer ${resolvedTheme === 'dark' ? 'border-slate-800 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+            >
+              <List className="w-5 h-5" />
+            </button>
+            <div className="min-w-0">
+            <h2 className={`text-xl font-extrabold tracking-tight truncate ${resolvedTheme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
               {user ? (
                 <span>Welcome back, {user.name} 👋</span>
               ) : (
@@ -174,6 +224,7 @@ export const Layout: React.FC<LayoutProps> = ({
             {error && (
               <p className="text-xs mt-1 font-semibold text-red-600 dark:text-red-400">{error}</p>
             )}
+            </div>
           </div>
 
           {/* Action Utilities Controls */}
@@ -198,7 +249,7 @@ export const Layout: React.FC<LayoutProps> = ({
             {/* DYNAMIC BACKEND SECURED AUTH POPUP PANEL */}
             <AnimatePresence>
               {isLoginOpen && (
-                <motion.div initial={{ opacity: 0, y: 12, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 12, scale: 0.96 }} transition={{ duration: 0.15, ease: 'easeOut' }} className={`absolute right-8 top-16 w-[340px] rounded-2xl border shadow-2xl z-50 p-5 ${resolvedTheme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                <motion.div initial={{ opacity: 0, y: 12, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 12, scale: 0.96 }} transition={{ duration: 0.15, ease: 'easeOut' }} className={`absolute right-4 sm:right-8 top-16 w-[calc(100vw-2rem)] max-w-85 rounded-2xl border shadow-2xl z-50 p-5 ${resolvedTheme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
 
                   {/* Error Notification Block */}
                   {apiError && (
@@ -349,7 +400,7 @@ export const Layout: React.FC<LayoutProps> = ({
         </header>
 
         {/* Dashboard Dynamic Children Viewports Injection */}
-        <div className={`flex-1 overflow-y-auto px-8 py-6 space-y-6 transition-all duration-300 ${resolvedTheme === 'dark' ? 'bg-slate-950' : 'bg-[#F8FAFC]'}`}>
+        <div className={`flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-8 py-6 space-y-6 transition-all duration-300 ${resolvedTheme === 'dark' ? 'bg-slate-950' : 'bg-[#F8FAFC]'}`}>
           {children}
         </div>
       </main>

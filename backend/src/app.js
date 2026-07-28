@@ -30,6 +30,10 @@ app.use(
   "/branding",
   express.static(path.join(__dirname, "..", config.storage.brandingDir)),
 ); // Phase 4: white-label logo
+app.use(
+  "/content-images",
+  express.static(path.join(__dirname, "..", config.storage.contentImagesDir)),
+); // CMS-managed content block images
 
 // =========================================================================
 // 🚀 FIX FOR THE 404 STATUS REPEATED CRASH

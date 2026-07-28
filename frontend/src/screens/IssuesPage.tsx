@@ -172,16 +172,16 @@ export const IssuesPage: React.FC = () => {
           key in prev
             ? prev
             : {
-                ...prev,
-                [key]: {
-                  filePath: result.filePath,
-                  fileFullPath: result.fileFullPath,
-                  line: result.line,
-                  grounded: result.grounded,
-                  aiSuggested: result.aiSuggested,
-                  explanation: result.explanation,
-                },
-              }
+              ...prev,
+              [key]: {
+                filePath: result.filePath,
+                fileFullPath: result.fileFullPath,
+                line: result.line,
+                grounded: result.grounded,
+                aiSuggested: result.aiSuggested,
+                explanation: result.explanation,
+              },
+            }
         );
       } catch {
         if (cancelled) return;
@@ -497,11 +497,10 @@ export const IssuesPage: React.FC = () => {
                               }}
                               disabled={!rowEditorUrl}
                               title={rowEditorUrl ? `Open ${rowLabel} in VS Code` : 'No local source file matched for this issue yet'}
-                              className={`mt-3 inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-colors max-w-full ${
-                                rowEditorUrl
+                              className={`mt-3 inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-colors max-w-full ${rowEditorUrl
                                   ? 'text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 border-indigo-200 dark:border-indigo-900/50 bg-indigo-50 dark:bg-indigo-950/30 cursor-pointer'
                                   : 'text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30 cursor-not-allowed'
-                              }`}
+                                }`}
                             >
                               <Folder className="w-3.5 h-3.5 shrink-0" />
                               <span className="truncate">
@@ -524,11 +523,6 @@ export const IssuesPage: React.FC = () => {
             </div>
           </section>
 
-          {/* Right panel: a ticket-number + content list scoped to whatever
-              site/phase/tab/search filters are currently active, with a
-              Download menu (PDF / Excel-compatible CSV / Word) — full
-              per-issue detail (fix code, comments, assign) now lives on each
-              ticket's own dedicated page. */}
           <section className="hidden lg:flex lg:w-7/12 flex-col bg-white dark:bg-slate-800 overflow-y-auto">
             <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-800 z-10 gap-3">
               <div className="min-w-0">

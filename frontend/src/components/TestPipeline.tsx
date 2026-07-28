@@ -3,6 +3,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { BackendTest, BackendPipelineItem } from '../lib/types';
 import { useReportModal } from '../context/ReportModalContext';
+import { useContent } from '../context/ContentContext';
 
 const STAGE_ORDER = ['crawling', 'links', 'responsive', 'console', 'lighthouse', 'aggregating', 'done'];
 
@@ -18,12 +19,15 @@ type MinimalTest = Pick<BackendTest | BackendPipelineItem, 'id' | 'url' | 'statu
 
 export const TestPipeline: React.FC<{ test?: MinimalTest | null }> = ({ test }) => {
   const { openReport } = useReportModal();
+  const title = useContent('dashboard.testPipeline.title', { text: 'Latest Test Pipeline' });
+  const subtitle = useContent('dashboard.testPipeline.subtitle', { text: 'Automated crawl and system verification run metrics' });
+  const emptyText = useContent('dashboard.testPipeline.emptyText', { text: 'Run your first test to see live pipeline progress here.', icon: 'ph-flask' });
 
   if (!test) {
     return (
       <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col items-center justify-center h-full text-center text-slate-400 dark:text-slate-500 py-12">
-        <i className="ph ph-flask text-3xl mb-2"></i>
-        <p className="text-sm">Run your first test to see live pipeline progress here.</p>
+        <i className={`ph ${emptyText.icon} text-3xl mb-2`}></i>
+        <p className="text-sm">{emptyText.text}</p>
       </div>
     );
   }
@@ -35,8 +39,8 @@ export const TestPipeline: React.FC<{ test?: MinimalTest | null }> = ({ test }) 
       <div>
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
           <div>
-            <h3 className="font-bold text-slate-900 dark:text-slate-100">Latest Test Pipeline</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Automated crawl and system verification run metrics</p>
+            <h3 className="font-bold text-slate-900 dark:text-slate-100">{title.text}</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{subtitle.text}</p>
           </div>
           <span
             className={`font-medium text-xs px-2.5 py-1 rounded-full border ${test.status === 'passed'

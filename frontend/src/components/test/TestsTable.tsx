@@ -6,6 +6,7 @@ import { timeAgo } from '../../lib/format';
 import { useReportModal } from '../../context/ReportModalContext';
 import { Skeleton } from '../ui/Skeleton';
 import { EmptyState } from '../ui/EmptyState';
+import { useContent } from '../../context/ContentContext';
 
 interface TestsTableProps {
   tests: BackendTest[];
@@ -63,6 +64,8 @@ export const TestsTable: React.FC<TestsTableProps> = ({
   onRerun,
 }) => {
   const { openReport } = useReportModal();
+  const emptyTitle = useContent('tests.empty.title', { text: 'No tests yet', icon: 'ph-flask' });
+  const emptyDescription = useContent('tests.empty.description', { text: 'Run your first AI QA scan to see results here.' });
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
@@ -190,7 +193,7 @@ export const TestsTable: React.FC<TestsTableProps> = ({
       </table>
 
       {!loading && tests.length === 0 && (
-        <EmptyState icon="ph-flask" title="No tests yet" description="Run your first AI QA scan to see results here." />
+        <EmptyState icon={emptyTitle.icon} title={emptyTitle.text} description={emptyDescription.text} />
       )}
 
       <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">

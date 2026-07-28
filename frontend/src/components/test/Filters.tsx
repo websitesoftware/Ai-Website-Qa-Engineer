@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { useContent } from '../../context/ContentContext';
 
 export type StatusFilter = 'all' | 'passed' | 'failed' | 'running';
 export type SortOption = 'newest' | 'oldest' | 'score-desc' | 'score-asc';
@@ -11,14 +12,19 @@ interface FiltersProps {
   onSortChange: (s: SortOption) => void;
 }
 
-const tabs: { key: StatusFilter; label: string }[] = [
-  { key: 'all', label: 'All Tests' },
-  { key: 'passed', label: 'Completed' },
-  { key: 'running', label: 'Running' },
-  { key: 'failed', label: 'Failed' },
-];
-
 export const Filters: React.FC<FiltersProps> = ({ status, onStatusChange, sort, onSortChange }) => {
+  const all = useContent('tests.filter.all', { text: 'All Tests' });
+  const passed = useContent('tests.filter.passed', { text: 'Completed' });
+  const running = useContent('tests.filter.running', { text: 'Running' });
+  const failed = useContent('tests.filter.failed', { text: 'Failed' });
+
+  const tabs: { key: StatusFilter; label: string }[] = [
+    { key: 'all', label: all.text },
+    { key: 'passed', label: passed.text },
+    { key: 'running', label: running.text },
+    { key: 'failed', label: failed.text },
+  ];
+
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div className="flex space-x-1 bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">

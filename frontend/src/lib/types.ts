@@ -255,6 +255,16 @@ export interface BackendBranding {
   updatedAt: string | null;
 }
 
+export interface BackendContentBlock {
+  key: string;
+  tab: string;
+  label: string;
+  text: string;
+  icon: string;
+  imageUrl: string | null;
+  updatedAt: string | null;
+}
+
 export type TeamRole = 'owner' | 'admin' | 'editor' | 'viewer';
 
 export interface BackendTeamMember {
