@@ -18,14 +18,14 @@ export const DashboardHub: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in w-full">
-      <div className="flex gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-1.5 w-fit relative">
+      <div className="flex gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-1.5 w-full sm:w-fit relative overflow-x-auto">
         {TABS.map((tab) => {
           const isSelected = activeTab === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`relative px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 ${
+              className={`relative px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shrink-0 whitespace-nowrap ${
                 isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
               }`}
             >

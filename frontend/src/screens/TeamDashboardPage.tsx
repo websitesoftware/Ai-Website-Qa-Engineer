@@ -10,6 +10,7 @@ import { useToast } from '../context/ToastContext';
 import { api } from '../lib/api';
 import { BackendTeamMember } from '../lib/types';
 import { timeAgo, formatDate } from '../lib/format';
+import { useContent } from '../context/ContentContext';
 
 export const TeamDashboardPage: React.FC = () => {
   const { user } = useAuth();
@@ -18,6 +19,16 @@ export const TeamDashboardPage: React.FC = () => {
 
   const [members, setMembers] = useState<BackendTeamMember[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const pageTitle = useContent('dashboard.team.title', { text: 'Team Dashboard' });
+  const pageSubtitle = useContent('dashboard.team.subtitle', { text: "Who's on the team and what they've been scanning." });
+  const statMembers = useContent('dashboard.team.stat.members', { text: 'Team Members', icon: 'ph-users-three' });
+  const statScansThisWeek = useContent('dashboard.team.stat.scansThisWeek', { text: 'Scans This Week', icon: 'ph-chart-line-up' });
+  const statContributors = useContent('dashboard.team.stat.contributors', { text: 'Contributors', icon: 'ph-user-focus' });
+  const memberActivityTitle = useContent('dashboard.team.memberActivity.title', { text: 'Member Activity' });
+  const memberActivitySubtitle = useContent('dashboard.team.memberActivity.subtitle', { text: 'Scans run per member, all time.' });
+  const recentActivityTitle = useContent('dashboard.team.recentActivity.title', { text: 'Recent Activity' });
+  const recentActivitySubtitle = useContent('dashboard.team.recentActivity.subtitle', { text: 'Latest attributed scans.' });
 
   useEffect(() => {
     // No fetch to make while signed out — the component renders its own
@@ -73,8 +84,8 @@ export const TeamDashboardPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in w-full">
       <div>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Team Dashboard</h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Who&apos;s on the team and what they&apos;ve been scanning.</p>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{pageTitle.text}</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{pageSubtitle.text}</p>
       </div>
 
       {loading ? (
@@ -85,13 +96,13 @@ export const TeamDashboardPage: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <StatCard title="Team Members" value={members.length} icon="ph-users-three" variant="primary" />
-          <StatCard title="Scans This Week" value={testsThisWeek.length} icon="ph-chart-line-up" variant="success" />
+          <StatCard title={statMembers.text} value={members.length} icon={statMembers.icon} variant="primary" />
+          <StatCard title={statScansThisWeek.text} value={testsThisWeek.length} icon={statScansThisWeek.icon} variant="success" />
           <StatCard
-            title="Contributors"
+            title={statContributors.text}
             value={activityByMember.size}
             subValue="have run a scan"
-            icon="ph-user-focus"
+            icon={statContributors.icon}
             variant="warning"
           />
         </div>
@@ -100,8 +111,8 @@ export const TeamDashboardPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-            <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">Member Activity</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Scans run per member, all time.</p>
+            <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">{memberActivityTitle.text}</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{memberActivitySubtitle.text}</p>
           </div>
           <div className="p-6 space-y-3">
             {!loading && members.length === 0 && (
@@ -136,8 +147,8 @@ export const TeamDashboardPage: React.FC = () => {
 
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-            <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">Recent Activity</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Latest attributed scans.</p>
+            <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">{recentActivityTitle.text}</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{recentActivitySubtitle.text}</p>
           </div>
           <div className="p-4 space-y-1 max-h-[420px] overflow-y-auto">
             {recentActivity.length === 0 && (

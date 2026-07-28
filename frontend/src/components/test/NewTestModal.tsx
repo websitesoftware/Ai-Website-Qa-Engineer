@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { PHASE2_MODULES, BackendPolicy } from '../../lib/types';
 import { api } from '../../lib/api';
+import { useContent } from '../../context/ContentContext';
 
 interface NewTestModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export const NewTestModal: React.FC<NewTestModalProps> = ({ isOpen, onClose, onS
   const [selectedModules, setSelectedModules] = useState<string[]>([]);
   const [policies, setPolicies] = useState<BackendPolicy[]>([]);
   const [selectedPolicyId, setSelectedPolicyId] = useState<string>('');
+  const modalTitle = useContent('tests.newTestModal.title', { text: 'Run New AI Test' });
 
   useEffect(() => {
     if (!isOpen) return;
@@ -70,7 +72,7 @@ export const NewTestModal: React.FC<NewTestModalProps> = ({ isOpen, onClose, onS
           >
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Run New AI Test</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">{modalTitle.text}</h3>
               <button onClick={onClose} className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
                 <i className="ph ph-x text-xl"></i>
               </button>

@@ -6,6 +6,7 @@ import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { formatDate, timeAgo } from '../lib/format';
 import { api, API_ORIGIN } from '../lib/api';
+import { useContent } from '../context/ContentContext';
 import {
   BackendPolicy,
   BackendBranding,
@@ -52,6 +53,28 @@ export const SettingsPage: React.FC = () => {
   const { user } = useAuth();
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
+
+  const pageTitle = useContent('settings.header.title', { text: 'Settings' });
+  const pageSubtitle = useContent('settings.header.subtitle', {
+    text: 'Configure target domains, testing frequency, alerts, and team profiles.',
+  });
+  const navGeneral = useContent('settings.nav.general', { text: 'General Profile', icon: 'ph-user-circle' });
+  const navDomains = useContent('settings.nav.domains', { text: 'Target Domains', icon: 'ph-globe' });
+  const navAutomation = useContent('settings.nav.automation', { text: 'Continuous Monitoring', icon: 'ph-alarm' });
+  const navPolicies = useContent('settings.nav.policies', { text: 'Testing Policies', icon: 'ph-shield-check' });
+  const navBranding = useContent('settings.nav.branding', { text: 'White-label Reports', icon: 'ph-paint-bucket' });
+  const navTeam = useContent('settings.nav.team', { text: 'Team', icon: 'ph-users-three' });
+  const navIntegrations = useContent('settings.nav.integrations', { text: 'Integrations', icon: 'ph-plugs' });
+
+  const settingsNavItems: { id: SettingsTab; label: string; icon: string }[] = [
+    { id: 'general', label: navGeneral.text, icon: navGeneral.icon },
+    { id: 'domains', label: navDomains.text, icon: navDomains.icon },
+    { id: 'automation', label: navAutomation.text, icon: navAutomation.icon },
+    { id: 'policies', label: navPolicies.text, icon: navPolicies.icon },
+    { id: 'branding', label: navBranding.text, icon: navBranding.icon },
+    { id: 'team', label: navTeam.text, icon: navTeam.icon },
+    { id: 'integrations', label: navIntegrations.text, icon: navIntegrations.icon },
+  ];
 
   // Domains actually seen from real scans (read-only, derived from backend data)
   const scannedDomains = useMemo(() => {
@@ -400,24 +423,14 @@ export const SettingsPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in w-full">
       <div>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Settings</h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Configure target domains, testing frequency, alerts, and team profiles.</p>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{pageTitle.text}</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{pageSubtitle.text}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
         {/* Sidebar tabs */}
         <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-1">
-          {(
-            [
-              { id: 'general', label: 'General Profile', icon: 'ph-user-circle' },
-              { id: 'domains', label: 'Target Domains', icon: 'ph-globe' },
-              { id: 'automation', label: 'Continuous Monitoring', icon: 'ph-alarm' },
-              { id: 'policies', label: 'Testing Policies', icon: 'ph-shield-check' },
-              { id: 'branding', label: 'White-label Reports', icon: 'ph-paint-bucket' },
-              { id: 'team', label: 'Team', icon: 'ph-users-three' },
-              { id: 'integrations', label: 'Integrations', icon: 'ph-plugs' },
-            ] as const
-          ).map((tab) => {
+          {settingsNavItems.map((tab) => {
             const isSelected = activeTab === tab.id;
             return (
               <button

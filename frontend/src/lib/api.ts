@@ -6,6 +6,7 @@ import {
   BackendIssue,
   BackendPolicy,
   BackendBranding,
+  BackendContentBlock,
   BackendTeamMember,
   BackendMonitor,
   BackendAnalytics,
@@ -160,6 +161,18 @@ export const api = {
       logoHeight?: number;
       logoBase64?: string;
     }) => request<BackendBranding>('/branding', { method: 'PUT', body: JSON.stringify(payload) }, true),
+  },
+
+  content: {
+    list: () => request<{ blocks: BackendContentBlock[] }>('/content'),
+    update: (key: string, payload: { text?: string; icon?: string }) =>
+      request<BackendContentBlock>(`/content/${encodeURIComponent(key)}`, { method: 'PUT', body: JSON.stringify(payload) }, true),
+    uploadImage: (key: string, imageBase64: string) =>
+      request<BackendContentBlock>(
+        `/content/${encodeURIComponent(key)}/image`,
+        { method: 'POST', body: JSON.stringify({ imageBase64 }) },
+        true
+      ),
   },
 
   team: {

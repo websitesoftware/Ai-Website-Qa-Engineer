@@ -58,6 +58,19 @@ body {
     color .3s ease;
 }
 
+/* The app shell is a fixed-height flex column (header + internal
+   overflow-y-auto content) rather than a naturally scrolling page, so it
+   needs an accurate viewport height. 100vh overshoots on mobile browsers
+   that show/hide an address bar, clipping the bottom of the page with no
+   way to reach it. 100dvh fixes that, but isn't supported in some older
+   embedded/webview browsers (pre-Chromium 108) — an unsupported value makes
+   the whole declaration invalid and gets dropped, so the 100vh line above it
+   stays in effect there. Keep both lines, in this order, as the fallback. */
+.h-app-shell {
+  height: 100vh;
+  height: 100dvh;
+}
+
 /* =====================================================
    Theme Transition
 ===================================================== */

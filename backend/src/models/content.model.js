@@ -1,0 +1,91 @@
+// Default editable content blocks. Each key is a stable id the frontend
+// looks up via useContent(key) — "dashboard.stat.testsRun.title" etc. These
+// defaults match the copy/icons already hardcoded in the UI today, so the
+// app looks identical until an admin actually edits something here.
+const DEFAULTS = {
+  "dashboard.stat.testsRun.title": { tab: "Dashboard", label: "Tests Run stat card", text: "Tests Run", icon: "ph-squares-four", imageUrl: null },
+  "dashboard.stat.issuesFound.title": { tab: "Dashboard", label: "Issues Found stat card", text: "Issues Found", icon: "ph-warning", imageUrl: null },
+  "dashboard.stat.criticalIssues.title": { tab: "Dashboard", label: "Critical Issues stat card", text: "Critical Issues", icon: "ph-fire", imageUrl: null },
+  "dashboard.stat.overallScore.title": { tab: "Dashboard", label: "Overall Score stat card", text: "Overall Score", icon: "ph-gauge", imageUrl: null },
+
+  "tests.header.title": { tab: "Tests", label: "Page heading", text: "Test Management", icon: "", imageUrl: null },
+  "tests.header.subtitle": { tab: "Tests", label: "Page subtitle", text: "Run new tests or view previous analysis runs.", icon: "", imageUrl: null },
+  "tests.header.searchPlaceholder": { tab: "Tests", label: "Search box placeholder", text: "Search tests...", icon: "", imageUrl: null },
+  "tests.header.runButton": { tab: "Tests", label: "Run New Test button", text: "Run New Test", icon: "ph-plus-bold", imageUrl: null },
+  "tests.filter.all": { tab: "Tests", label: "\"All\" filter pill", text: "All Tests", icon: "", imageUrl: null },
+  "tests.filter.passed": { tab: "Tests", label: "\"Completed\" filter pill", text: "Completed", icon: "", imageUrl: null },
+  "tests.filter.running": { tab: "Tests", label: "\"Running\" filter pill", text: "Running", icon: "", imageUrl: null },
+  "tests.filter.failed": { tab: "Tests", label: "\"Failed\" filter pill", text: "Failed", icon: "", imageUrl: null },
+  "tests.empty.title": { tab: "Tests", label: "Empty-state title", text: "No tests yet", icon: "ph-flask", imageUrl: null },
+  "tests.empty.description": { tab: "Tests", label: "Empty-state description", text: "Run your first AI QA scan to see results here.", icon: "", imageUrl: null },
+
+  "scanResults.tab.phase1": { tab: "Scan Results", label: "\"Phase 1\" sub-tab", text: "Phase 1 · Foundation", icon: "ph-sparkle", imageUrl: null },
+  "scanResults.tab.phase2": { tab: "Scan Results", label: "\"Phase 2\" sub-tab", text: "Phase 2 · Intelligent QA", icon: "ph-sparkle", imageUrl: null },
+  "scanResults.tab.deviceLab": { tab: "Scan Results", label: "\"Device Lab\" sub-tab", text: "Device Lab", icon: "ph-device-mobile", imageUrl: null },
+
+  "automation.tab.issues": { tab: "Automation", label: "\"Issue Tracker\" sub-tab", text: "Issue Tracker", icon: "ph-flag", imageUrl: null },
+  "automation.tab.aiFixes": { tab: "Automation", label: "\"AI Fixes\" sub-tab", text: "AI Fixes", icon: "ph-robot", imageUrl: null },
+
+  "settings.header.title": { tab: "Settings", label: "Page heading", text: "Settings", icon: "", imageUrl: null },
+  "settings.header.subtitle": { tab: "Settings", label: "Page subtitle", text: "Configure target domains, testing frequency, alerts, and team profiles.", icon: "", imageUrl: null },
+  "settings.nav.general": { tab: "Settings", label: "\"General Profile\" nav item", text: "General Profile", icon: "ph-user-circle", imageUrl: null },
+  "settings.nav.domains": { tab: "Settings", label: "\"Target Domains\" nav item", text: "Target Domains", icon: "ph-globe", imageUrl: null },
+  "settings.nav.automation": { tab: "Settings", label: "\"Continuous Monitoring\" nav item", text: "Continuous Monitoring", icon: "ph-alarm", imageUrl: null },
+  "settings.nav.policies": { tab: "Settings", label: "\"Testing Policies\" nav item", text: "Testing Policies", icon: "ph-shield-check", imageUrl: null },
+  "settings.nav.branding": { tab: "Settings", label: "\"White-label Reports\" nav item", text: "White-label Reports", icon: "ph-paint-bucket", imageUrl: null },
+  "settings.nav.team": { tab: "Settings", label: "\"Team\" nav item", text: "Team", icon: "ph-users-three", imageUrl: null },
+  "settings.nav.integrations": { tab: "Settings", label: "\"Integrations\" nav item", text: "Integrations", icon: "ph-plugs", imageUrl: null },
+
+  "global.sidebar.title": { tab: "Global", label: "Sidebar app name", text: "AI QA Engineer", icon: "", imageUrl: null },
+  "global.sidebar.subtitle": { tab: "Global", label: "Sidebar tagline", text: "Website Assistant", icon: "", imageUrl: null },
+
+  "dashboard.testPipeline.title": { tab: "Dashboard", label: "Test pipeline card heading", text: "Latest Test Pipeline", icon: "", imageUrl: null },
+  "dashboard.testPipeline.subtitle": { tab: "Dashboard", label: "Test pipeline card subtitle", text: "Automated crawl and system verification run metrics", icon: "", imageUrl: null },
+  "dashboard.testPipeline.emptyText": { tab: "Dashboard", label: "Test pipeline empty-state text", text: "Run your first test to see live pipeline progress here.", icon: "ph-flask", imageUrl: null },
+  "dashboard.unresolvedIssues.title": { tab: "Dashboard", label: "Unresolved issues card heading", text: "Top Unresolved Issues", icon: "", imageUrl: null },
+  "dashboard.unresolvedIssues.subtitle": { tab: "Dashboard", label: "Unresolved issues card subtitle", text: "Highest priority problem logs needing resolution", icon: "", imageUrl: null },
+  "dashboard.unresolvedIssues.emptyText": { tab: "Dashboard", label: "Unresolved issues empty-state text", text: "No issues found! 🎉", icon: "", imageUrl: null },
+  "dashboard.unresolvedIssues.footerButton": { tab: "Dashboard", label: "\"Analyze all open tickets\" button", text: "Analyze all open tickets", icon: "ph-caret-right-bold", imageUrl: null },
+  "dashboard.analytics.title": { tab: "Dashboard", label: "Trends sub-tab heading", text: "Historical QA Analytics", icon: "", imageUrl: null },
+  "dashboard.analytics.subtitle": { tab: "Dashboard", label: "Trends sub-tab subtitle", text: "Trends across every scan, computed live from your test history.", icon: "", imageUrl: null },
+  "dashboard.analytics.scoreTrend.title": { tab: "Dashboard", label: "\"Score Trend\" chart title", text: "Score Trend", icon: "", imageUrl: null },
+  "dashboard.analytics.scoreTrend.subtitle": { tab: "Dashboard", label: "\"Score Trend\" chart subtitle", text: "Average overall score per day", icon: "", imageUrl: null },
+  "dashboard.analytics.topDomains.title": { tab: "Dashboard", label: "\"Top Domains\" chart title", text: "Top Domains", icon: "", imageUrl: null },
+  "dashboard.analytics.topDomains.subtitle": { tab: "Dashboard", label: "\"Top Domains\" chart subtitle", text: "Most-scanned URLs in range", icon: "", imageUrl: null },
+  "dashboard.analytics.passFail.title": { tab: "Dashboard", label: "\"Pass vs Fail\" chart title", text: "Pass vs Fail", icon: "", imageUrl: null },
+  "dashboard.analytics.passFail.subtitle": { tab: "Dashboard", label: "\"Pass vs Fail\" chart subtitle", text: "Daily outcome counts", icon: "", imageUrl: null },
+  "dashboard.analytics.issuesBySeverity.title": { tab: "Dashboard", label: "\"Issues by Severity\" chart title", text: "Issues by Severity", icon: "", imageUrl: null },
+  "dashboard.analytics.issuesBySeverity.subtitle": { tab: "Dashboard", label: "\"Issues by Severity\" chart subtitle", text: "Daily issue counts detected across all scans", icon: "", imageUrl: null },
+  "dashboard.team.title": { tab: "Dashboard", label: "Team sub-tab heading", text: "Team Dashboard", icon: "", imageUrl: null },
+  "dashboard.team.subtitle": { tab: "Dashboard", label: "Team sub-tab subtitle", text: "Who's on the team and what they've been scanning.", icon: "", imageUrl: null },
+  "dashboard.team.stat.members": { tab: "Dashboard", label: "\"Team Members\" stat card", text: "Team Members", icon: "ph-users-three", imageUrl: null },
+  "dashboard.team.stat.scansThisWeek": { tab: "Dashboard", label: "\"Scans This Week\" stat card", text: "Scans This Week", icon: "ph-chart-line-up", imageUrl: null },
+  "dashboard.team.stat.contributors": { tab: "Dashboard", label: "\"Contributors\" stat card", text: "Contributors", icon: "ph-user-focus", imageUrl: null },
+  "dashboard.team.memberActivity.title": { tab: "Dashboard", label: "\"Member Activity\" card heading", text: "Member Activity", icon: "", imageUrl: null },
+  "dashboard.team.memberActivity.subtitle": { tab: "Dashboard", label: "\"Member Activity\" card subtitle", text: "Scans run per member, all time.", icon: "", imageUrl: null },
+  "dashboard.team.recentActivity.title": { tab: "Dashboard", label: "\"Recent Activity\" card heading", text: "Recent Activity", icon: "", imageUrl: null },
+  "dashboard.team.recentActivity.subtitle": { tab: "Dashboard", label: "\"Recent Activity\" card subtitle", text: "Latest attributed scans.", icon: "", imageUrl: null },
+
+  "tests.newTestModal.title": { tab: "Tests", label: "\"Run New Test\" modal heading", text: "Run New AI Test", icon: "", imageUrl: null },
+
+  // These two blocks belong to components not currently wired into any live
+  // tab (components/report/TrendsAndSeverity.tsx and screens/ReportsPage.tsx
+  // are unused elsewhere in the app today) — migrated for consistency since
+  // they have the exact same hardcoded-text shape, but editing them here
+  // won't be visible anywhere until/unless those components get rendered.
+  "scanResults.reportsPage.title": { tab: "Scan Results", label: "Reports & Analytics heading (currently unused component)", text: "Reports & Analytics", icon: "", imageUrl: null },
+  "scanResults.reportsPage.subtitle": { tab: "Scan Results", label: "Reports & Analytics subtitle (currently unused component)", text: "Live QA scores, issue breakdown, and completed scan history — all from real scans.", icon: "", imageUrl: null },
+  "scanResults.trends.performanceTitle": { tab: "Scan Results", label: "Performance trends card heading (currently unused component)", text: "Stability & Performance Trends", icon: "", imageUrl: null },
+  "scanResults.trends.performanceSubtitle": { tab: "Scan Results", label: "Performance trends card subtitle (currently unused component)", text: "Average scoring metrics across continuous deployment test pipelines", icon: "", imageUrl: null },
+  "scanResults.trends.qualityToggle": { tab: "Scan Results", label: "\"Quality\" toggle label (currently unused component)", text: "Quality", icon: "", imageUrl: null },
+  "scanResults.trends.coverageToggle": { tab: "Scan Results", label: "\"Coverage\" toggle label (currently unused component)", text: "Coverage", icon: "", imageUrl: null },
+  "scanResults.trends.severityTitle": { tab: "Scan Results", label: "Severity distribution card heading (currently unused component)", text: "Issue Severity distribution", icon: "", imageUrl: null },
+  "scanResults.trends.severitySubtitle": { tab: "Scan Results", label: "Severity distribution card subtitle (currently unused component)", text: "Categorized breakdown of existing unresolved bug logs", icon: "", imageUrl: null },
+};
+
+function createContentBlock(key, overrides = {}) {
+  const base = DEFAULTS[key] || { tab: "General", label: key, text: "", icon: "", imageUrl: null };
+  return { key, ...base, ...overrides, updatedAt: overrides.updatedAt || null };
+}
+
+module.exports = { DEFAULTS, createContentBlock };

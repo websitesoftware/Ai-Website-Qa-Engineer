@@ -6,10 +6,15 @@ import { ReportsCharts } from '../components/report/ReportsCharts';
 import { ReportsTable } from '../components/report/ReportsTable';
 import { useQAData } from '../context/QADataContext';
 import { useToast } from '../context/ToastContext';
+import { useContent } from '../context/ContentContext';
 
 export const ReportsPage: React.FC = () => {
   const { tests } = useQAData();
   const { showToast } = useToast();
+  const pageTitle = useContent('scanResults.reportsPage.title', { text: 'Reports & Analytics' });
+  const pageSubtitle = useContent('scanResults.reportsPage.subtitle', {
+    text: 'Live QA scores, issue breakdown, and completed scan history — all from real scans.',
+  });
 
   const exportCsv = () => {
     const completed = tests.filter((t) => t.status === 'passed' || t.status === 'failed');
@@ -52,8 +57,8 @@ export const ReportsPage: React.FC = () => {
     <div className="space-y-6 animate-fade-in w-full">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Reports & Analytics</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Live QA scores, issue breakdown, and completed scan history — all from real scans.</p>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{pageTitle.text}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{pageSubtitle.text}</p>
         </div>
         <button
           onClick={exportCsv}
