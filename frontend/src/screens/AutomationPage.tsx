@@ -28,13 +28,13 @@ export const AutomationPage: React.FC = () => {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`relative px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shrink-0 whitespace-nowrap ${
-                isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                isSelected ? 'text-[#1C56C9] dark:text-blue-400 font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
               }`}
             >
               {isSelected && (
                 <motion.div
                   layoutId="activeAutomationTabIndicator"
-                  className="absolute inset-0 bg-indigo-50 dark:bg-indigo-950/30 rounded-lg -z-10"
+                  className="absolute inset-0 bg-white dark:bg-slate-700 shadow-sm rounded-lg -z-10"
                   transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                 />
               )}

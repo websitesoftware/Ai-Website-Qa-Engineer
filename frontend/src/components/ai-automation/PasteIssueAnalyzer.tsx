@@ -101,13 +101,13 @@ export const PasteIssueAnalyzer: React.FC = () => {
         onChange={(e) => setPastedText(e.target.value)}
         placeholder={'[HIGH] Broken link to /old-page\nURL: https://example.com/page\nCategory: broken-link\n\nAnalysis: ...'}
         rows={5}
-        className="w-full px-3 py-2.5 border rounded-lg text-xs font-mono focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 bg-slate-50 border-slate-200 text-slate-800 dark:bg-slate-950 dark:border-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-y"
+        className="w-full px-3 py-2.5 border rounded-lg text-xs font-mono focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 bg-slate-50 border-slate-200 text-slate-800 dark:bg-slate-950 dark:border-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-y"
       />
 
       <button
         onClick={analyze}
         disabled={loading || !pastedText.trim()}
-        className="mt-3 inline-flex items-center justify-center w-full px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
+        className="mt-3 inline-flex items-center justify-center w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
       >
         {loading ? 'Analyzing…' : '🔍 Analyze & Generate PR'}
       </button>

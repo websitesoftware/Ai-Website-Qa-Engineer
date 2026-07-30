@@ -222,7 +222,7 @@ export default function TicketPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-slate-50 dark:bg-slate-950 px-4 text-center">
         <p className="text-slate-500 dark:text-slate-400 font-medium">This ticket couldn&apos;t be found — it may have been cleared by a new scan.</p>
-        <Link href="/" className="text-indigo-600 dark:text-indigo-400 font-bold text-sm hover:underline">
+        <Link href="/" className="text-blue-600 dark:text-blue-400 font-bold text-sm hover:underline">
           ← Back to dashboard
         </Link>
       </div>
@@ -232,7 +232,7 @@ export default function TicketPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <div className="max-w-3xl mx-auto px-4 py-8">
-        <Link href="/" className="inline-flex items-center gap-1.5 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 mb-5">
+        <Link href="/" className="inline-flex items-center gap-1.5 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 mb-5">
           <ArrowLeft className="w-4 h-4" /> Back to dashboard
         </Link>
 
@@ -261,7 +261,7 @@ export default function TicketPage() {
                 <button
                   onClick={handleResolveToggle}
                   className={`px-3.5 py-1.5 rounded-lg font-bold text-xs shadow-sm flex items-center gap-1.5 text-white cursor-pointer ${
-                    row.resolved ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-indigo-600 hover:bg-indigo-700'
+                    row.resolved ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'
                   }`}
                 >
                   <Check className="w-3.5 h-3.5" /> {row.resolved ? 'Reopen' : 'Mark As Fixed'}
@@ -320,7 +320,7 @@ export default function TicketPage() {
                       fixDisplay.grounded
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900'
                         : fixDisplay.aiSuggested
-                          ? 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-900'
+                          ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900'
                           : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
                     }`}
                   >
@@ -341,7 +341,7 @@ export default function TicketPage() {
                         title={editorUrl ? `Open ${label} in VS Code` : 'No local source file matched for this issue yet'}
                         className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-colors ${
                           editorUrl
-                            ? 'text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 border-indigo-200 dark:border-indigo-900/50 bg-indigo-50 dark:bg-indigo-950/30 cursor-pointer'
+                            ? 'text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 cursor-pointer'
                             : 'text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30 cursor-not-allowed'
                         }`}
                       >
@@ -352,14 +352,14 @@ export default function TicketPage() {
                   <button
                     onClick={handleCopyForAutomation}
                     title="Copy this issue, then paste it into the AI Automation page to auto-generate a PR"
-                    className="inline-flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50 dark:bg-indigo-950/30 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
                   >
                     <Copy className="w-3.5 h-3.5" /> Copy for AI Automation
                   </button>
                 </div>
 
                 {row.appliedFix?.prUrl && (
-                  <a href={row.appliedFix.prUrl} target="_blank" rel="noreferrer" className="block text-xs text-indigo-600 dark:text-indigo-400 hover:underline mb-2">
+                  <a href={row.appliedFix.prUrl} target="_blank" rel="noreferrer" className="block text-xs text-blue-600 dark:text-blue-400 hover:underline mb-2">
                     View the pull request that carries this fix →
                   </a>
                 )}
@@ -378,7 +378,7 @@ export default function TicketPage() {
                       <Copy className="text-xs" /> Copy Solution Code
                     </button>
                   </div>
-                  <div className="p-4 overflow-x-auto font-mono text-xs text-indigo-200/90 leading-relaxed whitespace-pre bg-slate-950/95">
+                  <div className="p-4 overflow-x-auto font-mono text-xs text-blue-200/90 leading-relaxed whitespace-pre bg-slate-950/95">
                     {fixDisplay.code}
                   </div>
                 </div>
@@ -391,7 +391,7 @@ export default function TicketPage() {
                 <h2 className="font-bold text-sm text-slate-900 dark:text-slate-100">Assigned To</h2>
                 <button
                   onClick={() => setAssignOpen((v) => !v)}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50 dark:bg-indigo-950/30 px-2.5 py-1.5 rounded-lg cursor-pointer"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 px-2.5 py-1.5 rounded-lg cursor-pointer"
                 >
                   {assignOpen ? <X className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
                   {assignOpen ? 'Close' : 'Assign'}
@@ -407,7 +407,7 @@ export default function TicketPage() {
                     const m = memberById.get(id);
                     return (
                       <li key={id} className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-full pl-1 pr-3 py-1">
-                        <span className="w-6 h-6 rounded-full bg-indigo-500 text-white text-[10px] font-bold flex items-center justify-center">
+                        <span className="w-6 h-6 rounded-full bg-blue-500 text-white text-[10px] font-bold flex items-center justify-center">
                           {initials(m?.name, m?.email || '?')}
                         </span>
                         <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{m?.name || 'Former team member'}</span>
@@ -429,17 +429,17 @@ export default function TicketPage() {
                         key={m.id}
                         onClick={() => handleToggleAssignee(m.id)}
                         className={`w-full flex items-center gap-2.5 px-3 py-2 text-left cursor-pointer transition-colors ${
-                          isAssigned ? 'bg-indigo-50 dark:bg-indigo-950/40' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                          isAssigned ? 'bg-blue-50 dark:bg-blue-950/40' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
                         }`}
                       >
-                        <span className="w-7 h-7 rounded-full bg-indigo-500 text-white text-xs font-bold flex items-center justify-center shrink-0">
+                        <span className="w-7 h-7 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center shrink-0">
                           {initials(m.name, m.email)}
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{m.name || m.email}</p>
                           <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{m.email} · {m.role}</p>
                         </div>
-                        {isAssigned && <Check className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />}
+                        {isAssigned && <Check className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />}
                       </button>
                     );
                   })}
@@ -474,12 +474,12 @@ export default function TicketPage() {
                   onChange={(e) => setComment(e.target.value)}
                   placeholder="Add a comment…"
                   rows={2}
-                  className="flex-1 resize-none border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-950 text-slate-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500"
+                  className="flex-1 resize-none border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-950 text-slate-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"
                 />
                 <button
                   onClick={handleAddComment}
                   disabled={posting || !comment.trim()}
-                  className="shrink-0 p-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 dark:disabled:bg-indigo-900 text-white cursor-pointer"
+                  className="shrink-0 p-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 dark:disabled:bg-blue-900 text-white cursor-pointer"
                   title="Add comment"
                 >
                   <PaperPlaneRight className="w-4 h-4" />

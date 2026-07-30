@@ -45,7 +45,7 @@ export const Filters: React.FC<FiltersProps> = ({ status, onStatusChange, sort, 
         <select
           value={sort}
           onChange={(e) => onSortChange(e.target.value as SortOption)}
-          className="border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 bg-white dark:bg-slate-950"
+          className="border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 bg-white dark:bg-slate-950"
         >
           <option value="newest">Sort by: Newest</option>
           <option value="oldest">Sort by: Oldest</option>

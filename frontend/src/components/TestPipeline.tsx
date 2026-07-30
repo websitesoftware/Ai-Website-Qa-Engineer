@@ -8,11 +8,11 @@ import { useContent } from '../context/ContentContext';
 const STAGE_ORDER = ['crawling', 'links', 'responsive', 'console', 'lighthouse', 'aggregating', 'done'];
 
 const STEP_LABELS = [
-  { key: 'crawling', label: 'Crawl' },
-  { key: 'responsive', label: 'Responsive' },
-  { key: 'lighthouse', label: 'Performance' },
-  { key: 'console', label: 'Console' },
-  { key: 'links', label: 'Links' },
+  { key: 'crawling', label: 'Crawl', color: '#2FAE84' },
+  { key: 'responsive', label: 'Responsive', color: '#2E7BF6' },
+  { key: 'lighthouse', label: 'Performance', color: '#5AA0FF' },
+  { key: 'console', label: 'Console', color: '#FF9FC6' },
+  { key: 'links', label: 'Links', color: '#FFD36E' },
 ];
 
 type MinimalTest = Pick<BackendTest | BackendPipelineItem, 'id' | 'url' | 'status' | 'currentStage'>;
@@ -35,25 +35,25 @@ export const TestPipeline: React.FC<{ test?: MinimalTest | null }> = ({ test }) 
   const currentStageIndex = STAGE_ORDER.indexOf(test.currentStage || '');
 
   return (
-    <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between h-full">
+    <div className="bg-white/85 dark:bg-slate-800 backdrop-blur-md p-6 rounded-2xl border border-slate-200/70 dark:border-slate-700 shadow-lg shadow-slate-900/5 flex flex-col justify-between h-full">
       <div>
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
           <div>
-            <h3 className="font-bold text-slate-900 dark:text-slate-100">{title.text}</h3>
+            <h3 className="font-display font-bold text-slate-900 dark:text-slate-100">{title.text}</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{subtitle.text}</p>
           </div>
           <span
-            className={`font-medium text-xs px-2.5 py-1 rounded-full border ${test.status === 'passed'
-                ? 'text-emerald-700 bg-emerald-50 border-emerald-100 dark:text-emerald-400 dark:bg-emerald-950/40 dark:border-emerald-900'
+            className={`font-bold text-xs px-3 py-1.5 rounded-full text-white shadow-sm ${test.status === 'passed'
+                ? 'bg-gradient-to-br from-[#2FAE84] to-[#1F8F6B]'
                 : test.status === 'failed'
-                  ? 'text-red-700 bg-red-50 border-red-100 dark:text-red-400 dark:bg-red-950/40 dark:border-red-900'
+                  ? 'bg-gradient-to-br from-red-400 to-red-600'
                   : test.status === 'error'
-                    ? 'text-slate-600 bg-slate-100 border-slate-200 dark:text-slate-400 dark:bg-slate-800 dark:border-slate-700'
-                    : 'text-blue-700 bg-blue-50 border-blue-100 dark:text-blue-400 dark:bg-blue-950/40 dark:border-blue-900'
+                    ? 'bg-gradient-to-br from-slate-400 to-slate-600'
+                    : 'bg-gradient-to-br from-[#4C93FF] to-[#1C56C9]'
               }`}
           >
             {test.status === 'passed'
-              ? 'Passed'
+              ? '✓ Passed'
               : test.status === 'failed'
                 ? 'Failed'
                 : test.status === 'error'
@@ -62,8 +62,8 @@ export const TestPipeline: React.FC<{ test?: MinimalTest | null }> = ({ test }) 
           </span>
         </div>
 
-        <div className="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-100 mb-8 text-sm">
-          <i className="ph ph-globe text-[#6366F1] dark:text-indigo-400 text-lg"></i>
+        <div className="inline-flex items-center gap-2 font-mono font-semibold text-[#1C56C9] dark:text-blue-400 bg-[#EAF2FF] dark:bg-blue-950/40 mb-8 text-xs px-3.5 py-2 rounded-lg max-w-full">
+          <i className="ph ph-globe text-sm shrink-0"></i>
           <span className="truncate">{test.url}</span>
         </div>
 
@@ -80,12 +80,14 @@ export const TestPipeline: React.FC<{ test?: MinimalTest | null }> = ({ test }) 
                     initial={false}
                     animate={{ scale: active ? [1, 1.12, 1] : 1 }}
                     transition={{ duration: 1.2, repeat: active ? Infinity : 0 }}
-                    className={`w-9 h-9 rounded-full border flex items-center justify-center text-sm font-bold shadow-sm ${completed
-                        ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900'
+                    style={completed ? { background: step.color, borderColor: step.color } : undefined}
+                    className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-sm font-bold shadow-sm text-white ${
+                      completed
+                        ? ''
                         : active
-                          ? 'bg-indigo-50 text-indigo-500 border-indigo-300 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800'
+                          ? 'bg-[#2E7BF6] text-white border-[#2E7BF6] dark:bg-blue-600 dark:border-blue-500'
                           : 'bg-slate-50 text-slate-400 border-slate-200 dark:bg-slate-900/50 dark:text-slate-500 dark:border-slate-700'
-                      }`}
+                    }`}
                   >
                     {completed ? (
                       <i className="ph ph-check"></i>
@@ -99,9 +101,15 @@ export const TestPipeline: React.FC<{ test?: MinimalTest | null }> = ({ test }) 
                 </div>
                 {index < STEP_LABELS.length - 1 && (
                   <div
-                    className={`h-[2px] flex-1 -mt-5 min-w-[30px] transition-colors duration-500 ${completed ? 'bg-emerald-200 dark:bg-emerald-800' : 'bg-slate-200 dark:bg-slate-700'
-                      }`}
-                  />
+                    className="h-[2px] flex-1 -mt-5 min-w-[30px] transition-colors duration-500 dark:opacity-70"
+                    style={{
+                      background: completed
+                        ? `linear-gradient(90deg, ${step.color}, ${STEP_LABELS[index + 1].color})`
+                        : undefined,
+                    }}
+                  >
+                    {!completed && <div className="w-full h-full bg-slate-200 dark:bg-slate-700" />}
+                  </div>
                 )}
               </React.Fragment>
             );
@@ -112,7 +120,7 @@ export const TestPipeline: React.FC<{ test?: MinimalTest | null }> = ({ test }) 
       <div className="pt-6 border-t border-slate-100 dark:border-slate-800 mt-8 flex justify-end">
         <button
           onClick={() => openReport(test.id)}
-          className="border border-[#6366F1] text-[#6366F1] dark:border-indigo-500 dark:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/40 font-medium text-sm px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+          className="bg-[#1C56C9] hover:bg-[#164aac] dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-bold text-sm px-5 py-2.5 rounded-xl shadow-md shadow-blue-900/20 transition-colors flex items-center gap-2 cursor-pointer"
         >
           View Full Report
           <i className="ph ph-arrow-right"></i>

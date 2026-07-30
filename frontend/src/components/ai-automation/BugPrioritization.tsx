@@ -58,7 +58,7 @@ export const BugPrioritization: React.FC<PrioritizationProps> = ({ data }) => {
           <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{data.score} <span className="text-xs text-slate-400">/100</span></span>
           <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden mt-1.5">
             <motion.div
-              className="h-full bg-indigo-600"
+              className="h-full bg-blue-600"
               initial={{ width: 0 }}
               animate={{ width: `${data.score}%` }}
               transition={{ duration: 0.7, ease: 'easeOut', delay: 0.1 }}

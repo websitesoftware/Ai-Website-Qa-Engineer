@@ -91,7 +91,7 @@ export const ReportDetailModal: React.FC<{ testId: string | null; onClose: () =>
                 {test && (test.status === 'passed' || test.status === 'failed' || test.status === 'error') && (
                   <button
                     onClick={handleRerun}
-                    className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 px-3 py-1.5 rounded-lg border border-indigo-100 dark:border-indigo-900 transition-colors flex items-center gap-1.5"
+                    className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-3 py-1.5 rounded-lg border border-blue-100 dark:border-blue-900 transition-colors flex items-center gap-1.5"
                   >
                     <i className="ph ph-arrow-clockwise"></i> Re-run
                   </button>
@@ -126,19 +126,19 @@ export const ReportDetailModal: React.FC<{ testId: string | null; onClose: () =>
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900 rounded-xl p-6 text-center"
+                  className="bg-blue-50/60 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900 rounded-xl p-6 text-center"
                 >
-                  <i className="ph ph-spinner-gap animate-spin text-3xl text-indigo-500 dark:text-indigo-400 block mb-3"></i>
-                  <p className="font-semibold text-indigo-700 dark:text-indigo-400">{stageLabels[test.currentStage || ''] || 'Starting scan...'}</p>
-                  <div className="w-full max-w-sm mx-auto bg-white dark:bg-slate-800 rounded-full h-2 mt-4 overflow-hidden border border-indigo-100 dark:border-indigo-900">
+                  <i className="ph ph-spinner-gap animate-spin text-3xl text-blue-500 dark:text-blue-400 block mb-3"></i>
+                  <p className="font-semibold text-blue-700 dark:text-blue-400">{stageLabels[test.currentStage || ''] || 'Starting scan...'}</p>
+                  <div className="w-full max-w-sm mx-auto bg-white dark:bg-slate-800 rounded-full h-2 mt-4 overflow-hidden border border-blue-100 dark:border-blue-900">
                     <motion.div
-                      className="h-full bg-indigo-500 rounded-full"
+                      className="h-full bg-blue-500 rounded-full"
                       initial={{ width: 0 }}
                       animate={{ width: `${test.progress}%` }}
                       transition={{ ease: 'easeOut', duration: 0.6 }}
                     />
                   </div>
-                  <p className="text-xs text-indigo-400 dark:text-indigo-500 mt-2">{test.progress}% complete — updates live</p>
+                  <p className="text-xs text-blue-400 dark:text-blue-500 mt-2">{test.progress}% complete — updates live</p>
                 </motion.div>
               )}
 
@@ -192,7 +192,7 @@ export const ReportDetailModal: React.FC<{ testId: string | null; onClose: () =>
               {test && test.screenshots?.length > 0 && (
                 <div>
                   <h4 className="font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
-                    <i className="ph ph-devices text-indigo-500 dark:text-indigo-400"></i> Responsive Screenshots
+                    <i className="ph ph-devices text-blue-500 dark:text-blue-400"></i> Responsive Screenshots
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {test.screenshots.map((s) => (

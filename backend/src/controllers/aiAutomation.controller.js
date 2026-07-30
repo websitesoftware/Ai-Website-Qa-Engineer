@@ -1,4 +1,5 @@
 const aiAutomation = require("../services/aiAutomation.service");
+const codeReview = require("../services/codeReview.service");
 
 /**
  * GET /api/ai-automation/status?testId=...
@@ -112,4 +113,24 @@ async function locate(req, res, next) {
   }
 }
 
-module.exports = { getStatus, run, createPr, cicd, merge, analyzeIssue, locate };
+/**
+ * POST /api/ai-automation/review-code   body: { code, language? }
+ * Paste-a-snippet code review: detects hardcoded values, line-specific bugs,
+ * and CSS problems, and returns a fully corrected version of the snippet.
+ * Falls back to rule-based pattern checks (no auto-fix) if no AI provider
+ * is configured.
+ */
+async function reviewCode(req, res, next) {
+  try {
+    const code = req.body?.code;
+    if (!code || !String(code).trim()) {
+      return res.status(400).json({ error: "code is required" });
+    }
+    const result = await codeReview.reviewCode({ code, language: req.body?.language });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { getStatus, run, createPr, cicd, merge, analyzeIssue, locate, reviewCode };

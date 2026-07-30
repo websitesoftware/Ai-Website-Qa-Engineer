@@ -1,29 +1,15 @@
 'use client';
 import React from 'react';
-import { StatCard } from '../components/StatCard';
 import { TestPipeline } from '../components/TestPipeline';
 import { UnresolvedIssues } from '../components/UnresolvedIssues';
 import { AiTestStudio } from '../components/ai-automation/AiTestStudio';
-import { StatCardProps, IssueItem } from '../app/types/dashboard';
+import { HeroBanner } from '../components/dashboard/HeroBanner';
+import { IssueItem } from '../app/types/dashboard';
 import { useQAData } from '../context/QADataContext';
-import { useContent } from '../context/ContentContext';
-import { Skeleton } from '../components/ui/Skeleton';
 import { categoryLabel } from '../lib/format';
 
 export const DashboardView: React.FC = () => {
-  const { stats, pipeline, tests, loading } = useQAData();
-
-  const testsRun = useContent('dashboard.stat.testsRun.title', { text: 'Tests Run', icon: 'ph-squares-four' });
-  const issuesFound = useContent('dashboard.stat.issuesFound.title', { text: 'Issues Found', icon: 'ph-warning' });
-  const criticalIssues = useContent('dashboard.stat.criticalIssues.title', { text: 'Critical Issues', icon: 'ph-fire' });
-  const overallScore = useContent('dashboard.stat.overallScore.title', { text: 'Overall Score', icon: 'ph-gauge' });
-
-  const statsData: StatCardProps[] = [
-    { title: testsRun.text, value: stats?.total ?? 0, icon: testsRun.icon, variant: 'primary' },
-    { title: issuesFound.text, value: stats?.totalIssues ?? 0, icon: issuesFound.icon, variant: 'warning' },
-    { title: criticalIssues.text, value: stats?.issuesBySeverity.critical ?? 0, icon: criticalIssues.icon, variant: 'danger' },
-    { title: overallScore.text, value: stats?.avgScore ?? 0, subValue: ' /100', icon: overallScore.icon, variant: 'success' },
-  ];
+  const { pipeline, tests } = useQAData();
 
   // Group unresolved issues across all tests by category, most frequent first
   const issueMap = new Map<string, { count: number; severity: 'high' | 'medium' | 'low' | 'info' }>();
@@ -47,13 +33,7 @@ export const DashboardView: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in w-full">
-      {/* Metrics Row Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {loading && !stats
-          ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)
-          : statsData.map((stat, idx) => <StatCard key={idx} {...stat} />)}
-      </div>
-
+      <HeroBanner />
 
       <>
         {/* Top Row */}

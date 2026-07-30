@@ -7,7 +7,6 @@ const authRoutes = require("./authRoutes");
 const teamRoutes = require("./team.routes");
 const policiesRoutes = require("./policies.routes");
 const brandingRoutes = require("./branding.routes");
-const contentRoutes = require("./content.routes");
 const monitorsRoutes = require("./monitors.routes");
 const analyticsRoutes = require("./analytics.routes");
 const deviceLabRoutes = require("./deviceLab.routes");
@@ -20,7 +19,6 @@ router.use("/tests", testsRoutes);
 router.use("/team", teamRoutes);
 router.use("/policies", policiesRoutes);
 router.use("/branding", brandingRoutes);
-router.use("/content", contentRoutes);
 router.use("/monitors", monitorsRoutes);
 router.use("/analytics", analyticsRoutes);
 router.use("/device-lab", deviceLabRoutes);
@@ -34,6 +32,7 @@ router.post("/ai-automation/pr", aiAutomationController.createPr);
 router.post("/ai-automation/cicd", aiAutomationController.cicd);
 router.post("/ai-automation/merge", aiAutomationController.merge);
 router.post("/ai-automation/analyze-issue", aiAutomationController.analyzeIssue);
+router.post("/ai-automation/review-code", aiAutomationController.reviewCode);
 router.get("/ai-automation/locate", aiAutomationController.locate);
 
 router.get("/health", (req, res) =>

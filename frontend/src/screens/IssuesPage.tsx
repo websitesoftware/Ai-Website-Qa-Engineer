@@ -289,7 +289,7 @@ export const IssuesPage: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-5">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
-            <Bug className="text-indigo-600 w-7 h-7" /> Issue Tracker
+            <Bug className="text-blue-600 w-7 h-7" /> Issue Tracker
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
             {selectedPhase === 'all'
@@ -300,8 +300,8 @@ export const IssuesPage: React.FC = () => {
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           {/* PHASE DROPDOWN */}
-          <div className="relative flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm focus-within:ring-4 focus-within:ring-indigo-500/10 transition-all px-3">
-            <ListChecks className="text-indigo-500 w-4 h-4 mr-2" />
+          <div className="relative flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3">
+            <ListChecks className="text-blue-500 w-4 h-4 mr-2" />
             <select
               value={selectedPhase}
               onChange={(e) => {
@@ -321,8 +321,8 @@ export const IssuesPage: React.FC = () => {
           </div>
 
           {/* ===== SITE DROPDOWN — delete this block if you really want it gone ===== */}
-          <div className="relative flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm focus-within:ring-4 focus-within:ring-indigo-500/10 transition-all px-3">
-            <Folder className="text-indigo-500 w-4 h-4 mr-2" />
+          <div className="relative flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3">
+            <Folder className="text-blue-500 w-4 h-4 mr-2" />
             <select
               value={selectedWebsite}
               onChange={(e) => {
@@ -348,7 +348,7 @@ export const IssuesPage: React.FC = () => {
               placeholder="Search target issues..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-800 rounded-lg focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 text-sm w-full sm:w-64 bg-white dark:bg-slate-950 dark:text-white transition-all shadow-sm"
+              className="pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-800 rounded-lg focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-sm w-full sm:w-64 bg-white dark:bg-slate-950 dark:text-white transition-all shadow-sm"
             />
           </div>
         </div>
@@ -416,7 +416,7 @@ export const IssuesPage: React.FC = () => {
                         exit={{ opacity: 0 }}
                         onClick={() => setActiveKey(key)}
                         className={`p-5 cursor-pointer border-b border-slate-100 dark:border-slate-800 border-l-[5px] ${severityBorder[row.severity] || 'border-slate-400'
-                          } transition-all ${isSelected ? 'bg-indigo-50/40 shadow-sm dark:bg-indigo-950/30' : 'hover:bg-slate-50/60 dark:hover:bg-slate-800/40'}`}
+                          } transition-all ${isSelected ? 'bg-blue-50/40 shadow-sm dark:bg-blue-950/30' : 'hover:bg-slate-50/60 dark:hover:bg-slate-800/40'}`}
                       >
                         <div className="flex gap-3.5">
                           {/* Ticket thumbnail — the real page screenshot from the
@@ -452,7 +452,7 @@ export const IssuesPage: React.FC = () => {
                                 rel="noreferrer"
                                 onClick={(e) => e.stopPropagation()}
                                 title="Open this ticket in a new tab"
-                                className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50 dark:bg-indigo-950/30 px-2 py-1 rounded-lg cursor-pointer"
+                                className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 px-2 py-1 rounded-lg cursor-pointer"
                               >
                                 Open Ticket <ArrowSquareOut className="w-3 h-3" />
                               </a>
@@ -471,7 +471,7 @@ export const IssuesPage: React.FC = () => {
                                       <span
                                         key={id}
                                         title={m?.name || m?.email || id}
-                                        className="w-5 h-5 rounded-full bg-indigo-500 text-white text-[9px] font-bold flex items-center justify-center border-2 border-white dark:border-slate-900"
+                                        className="w-5 h-5 rounded-full bg-blue-500 text-white text-[9px] font-bold flex items-center justify-center border-2 border-white dark:border-slate-900"
                                       >
                                         {initials(m?.name, m?.email || '?')}
                                       </span>
@@ -498,7 +498,7 @@ export const IssuesPage: React.FC = () => {
                               disabled={!rowEditorUrl}
                               title={rowEditorUrl ? `Open ${rowLabel} in VS Code` : 'No local source file matched for this issue yet'}
                               className={`mt-3 inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-colors max-w-full ${rowEditorUrl
-                                  ? 'text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 border-indigo-200 dark:border-indigo-900/50 bg-indigo-50 dark:bg-indigo-950/30 cursor-pointer'
+                                  ? 'text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 cursor-pointer'
                                   : 'text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30 cursor-not-allowed'
                                 }`}
                             >
@@ -527,7 +527,7 @@ export const IssuesPage: React.FC = () => {
             <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-800 z-10 gap-3">
               <div className="min-w-0">
                 <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm flex items-center gap-2 truncate">
-                  <Ticket className="w-4 h-4 text-indigo-500 shrink-0" />
+                  <Ticket className="w-4 h-4 text-blue-500 shrink-0" />
                   Tickets — {selectedWebsite === 'all' ? 'All Scanned Sites' : selectedWebsite}
                 </h3>
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
@@ -609,7 +609,7 @@ const TicketDownloadMenu: React.FC<{
       <button
         onClick={() => setOpen((v) => !v)}
         disabled={rows.length === 0}
-        className="flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 dark:disabled:bg-indigo-900 px-3 py-2 rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed"
+        className="flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 dark:disabled:bg-blue-900 px-3 py-2 rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed"
       >
         <DownloadSimple className="w-4 h-4" /> Download
       </button>

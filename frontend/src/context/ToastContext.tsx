@@ -25,7 +25,7 @@ const iconMap: Record<ToastType, string> = {
 const colorMap: Record<ToastType, string> = {
   success: 'text-emerald-400',
   error: 'text-red-400',
-  info: 'text-indigo-400',
+  info: 'text-blue-400',
 };
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

@@ -34,7 +34,7 @@ const SEVERITY_COLORS: Record<string, string> = {
   low: '#94a3b8',
 };
 
-const CATEGORY_COLOR = '#6366f1';
+const CATEGORY_COLOR = '#2E7BF6';
 
 // Short, readable label for a test (its hostname, else its name).
 const shortLabel = (t: BackendTest): string => {
@@ -232,17 +232,17 @@ export const ReportsCharts: React.FC = () => {
           <AreaChart data={scoreTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.25} />
-                <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                <stop offset="5%" stopColor="#2E7BF6" stopOpacity={0.25} />
+                <stop offset="95%" stopColor="#2E7BF6" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: tickFillStrong }} />
             <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: tickFillMuted }} />
-            <Tooltip content={<LightTooltip suffix="/100" />} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }} />
-            <Area type="monotone" dataKey="score" name="Score" stroke="#6366f1" strokeWidth={2.5} fill="url(#trendFill)"
-              dot={{ r: 3, stroke: 'white', strokeWidth: 2, fill: '#6366f1' }}
-              activeDot={{ r: 5, stroke: 'white', strokeWidth: 2, fill: '#6366f1' }} />
+            <Tooltip content={<LightTooltip suffix="/100" />} cursor={{ stroke: '#2E7BF6', strokeWidth: 1, strokeDasharray: '4 4' }} />
+            <Area type="monotone" dataKey="score" name="Score" stroke="#2E7BF6" strokeWidth={2.5} fill="url(#trendFill)"
+              dot={{ r: 3, stroke: 'white', strokeWidth: 2, fill: '#2E7BF6' }}
+              activeDot={{ r: 5, stroke: 'white', strokeWidth: 2, fill: '#2E7BF6' }} />
           </AreaChart>
         </ResponsiveContainer>
       </ChartCard>

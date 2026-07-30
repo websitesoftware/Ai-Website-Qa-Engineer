@@ -26,13 +26,13 @@ export const Phase2ResultsPanel: React.FC<{ test: BackendTest }> = ({ test }) =>
 
   return (
     <div className="space-y-6">
-      <h4 className="font-bold text-slate-900 flex items-center gap-2">
-        <i className="ph ph-sparkle text-indigo-500"></i> Phase 2: Intelligent QA
+      <h4 className="font-display font-bold text-slate-900 flex items-center gap-2">
+        <i className="ph ph-sparkle text-purple-500"></i> Phase 2: Intelligent QA
       </h4>
 
       {/* Accessibility */}
       {hasAccessibility && (
-        <div className="border border-slate-200 rounded-xl p-4">
+        <div className="bg-white/85 backdrop-blur-md border border-slate-200/70 rounded-2xl p-4">
           <p className="text-sm font-semibold text-slate-800 mb-2">
             Accessibility — {test.accessibility!.violations.length} violation
             {test.accessibility!.violations.length === 1 ? '' : 's'} · {test.accessibility!.passes} passed checks
@@ -52,7 +52,7 @@ export const Phase2ResultsPanel: React.FC<{ test: BackendTest }> = ({ test }) =>
 
       {/* SEO */}
       {hasSEO && (
-        <div className="border border-slate-200 rounded-xl p-4">
+        <div className="bg-white/85 backdrop-blur-md border border-slate-200/70 rounded-2xl p-4">
           <p className="text-sm font-semibold text-slate-800 mb-2">
             SEO Audit — score {test.seo!.score ?? '—'}/100
           </p>
@@ -69,7 +69,7 @@ export const Phase2ResultsPanel: React.FC<{ test: BackendTest }> = ({ test }) =>
 
       {/* Visual regression */}
       {hasVisual && (
-        <div className="border border-slate-200 rounded-xl p-4">
+        <div className="bg-white/85 backdrop-blur-md border border-slate-200/70 rounded-2xl p-4">
           <p className="text-sm font-semibold text-slate-800 mb-3">Visual Regression</p>
           <VisualRegressionPanel results={test.visualRegression} screenshots={test.screenshots} />
         </div>
@@ -77,11 +77,11 @@ export const Phase2ResultsPanel: React.FC<{ test: BackendTest }> = ({ test }) =>
 
       {/* Cross-browser */}
       {hasCrossBrowser && (
-        <div className="border border-slate-200 rounded-xl p-4">
+        <div className="bg-white/85 backdrop-blur-md border border-slate-200/70 rounded-2xl p-4">
           <p className="text-sm font-semibold text-slate-800 mb-3">Cross-Browser Testing</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {test.crossBrowser!.map((r) => (
-              <div key={r.browser} className="border border-slate-200 rounded-lg p-3 text-center">
+              <div key={r.browser} className="border border-slate-200/70 rounded-xl p-3 text-center">
                 <p className="text-xs font-semibold capitalize text-slate-700">{r.browser}</p>
                 <p className={`text-xs mt-1 ${r.ok ? 'text-emerald-600' : 'text-red-500'}`}>
                   {r.ok ? `OK · ${fmtMs(r.loadTimeMs)}` : r.error || `Failed (${r.statusCode})`}
@@ -94,7 +94,7 @@ export const Phase2ResultsPanel: React.FC<{ test: BackendTest }> = ({ test }) =>
 
       {/* Performance benchmark */}
       {hasPerf && test.performanceBenchmark && (
-        <div className="border border-slate-200 rounded-xl p-4">
+        <div className="bg-white/85 backdrop-blur-md border border-slate-200/70 rounded-2xl p-4">
           <p className="text-sm font-semibold text-slate-800 mb-3">
             Performance Benchmark {test.performanceBenchmark.comparedAgainstTestId ? '(vs. previous run)' : '(first run — no baseline yet)'}
           </p>
@@ -102,7 +102,7 @@ export const Phase2ResultsPanel: React.FC<{ test: BackendTest }> = ({ test }) =>
             {(Object.keys(test.performanceBenchmark.metrics) as Array<keyof typeof test.performanceBenchmark.metrics>).map((key) => {
               const delta = test.performanceBenchmark!.delta[key];
               return (
-                <div key={key} className="border border-slate-100 rounded-lg p-2">
+                <div key={key} className="border border-slate-200/70 rounded-xl p-2">
                   <p className="text-slate-500 capitalize">{key.replace(/([A-Z])/g, ' $1')}</p>
                   <p className="font-semibold text-slate-800">{fmtMs(test.performanceBenchmark!.metrics[key])}</p>
                   {typeof delta === 'number' && (

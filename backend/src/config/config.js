@@ -34,7 +34,6 @@ module.exports = {
     reportsDir: "storage/reports",
     baselinesDir: "storage/baselines",
     brandingDir: "storage/branding",
-    contentImagesDir: "storage/content-images",
   },
 
   // ---- Phase 3: AI Automation ----
@@ -65,12 +64,32 @@ module.exports = {
     },
   },
 
-  // Email invites are optional. Without RESEND_API_KEY, invites still work —
-  // the API response includes the raw invite link instead of sending it.
+  // Email invites are optional. Three interchangeable providers:
+  //  - Gmail SMTP (GMAIL_USER + GMAIL_APP_PASSWORD): no domain to verify,
+  //    sends to any real inbox immediately using a personal Gmail account's
+  //    app password.
+  //  - Outlook/Microsoft SMTP (OUTLOOK_USER + OUTLOOK_APP_PASSWORD): same
+  //    idea via smtp.office365.com, for accounts that support self-service
+  //    app passwords (personal Microsoft accounts, including ones with a
+  //    custom domain) rather than gmail.com.
+  //  - Resend (RESEND_API_KEY): needs a verified sending domain for
+  //    production use; without one it can only deliver to the Resend
+  //    account owner's own address.
+  // Without any configured, invites still work — the API response
+  // includes the raw invite link instead of sending it.
   email: {
+    provider: (process.env.EMAIL_PROVIDER || "").toLowerCase(), // "gmail" | "outlook" | "resend" | "" (auto)
     resendApiKey: process.env.RESEND_API_KEY || "",
     fromAddress: process.env.EMAIL_FROM || "onboarding@resend.dev",
     frontendUrl: process.env.FRONTEND_URL || "http://localhost:3000",
+    gmail: {
+      user: process.env.GMAIL_USER || "",
+      appPassword: (process.env.GMAIL_APP_PASSWORD || "").replace(/\s+/g, ""),
+    },
+    outlook: {
+      user: process.env.OUTLOOK_USER || "",
+      appPassword: (process.env.OUTLOOK_APP_PASSWORD || "").replace(/\s+/g, ""),
+    },
   },
 
   // GitHub is optional. Needed only for real PR creation + Actions dispatch.

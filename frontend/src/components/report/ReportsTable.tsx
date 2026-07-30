@@ -47,7 +47,7 @@ export const ReportsTable: React.FC = () => {
               >
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-500 dark:text-indigo-400 flex items-center justify-center text-md font-bold shrink-0">
+                    <div className="w-8 h-8 rounded bg-blue-50 dark:bg-blue-950/40 text-blue-500 dark:text-blue-400 flex items-center justify-center text-md font-bold shrink-0">
                       {test.url.replace(/^https?:\/\//, '')[0]?.toUpperCase()}
                     </div>
                     <div className="min-w-0">
@@ -77,7 +77,7 @@ export const ReportsTable: React.FC = () => {
                       (test.score ?? 0) >= 90
                         ? 'text-emerald-600 dark:text-emerald-400'
                         : (test.score ?? 0) >= 70
-                        ? 'text-indigo-600 dark:text-indigo-400'
+                        ? 'text-blue-600 dark:text-blue-400'
                         : (test.score ?? 0) >= 50
                         ? 'text-amber-500 dark:text-amber-400'
                         : 'text-red-500 dark:text-red-400'
@@ -90,7 +90,7 @@ export const ReportsTable: React.FC = () => {
                 <td className="px-6 py-4 text-right">
                   <button
                     onClick={() => openReport(test.id)}
-                    className="text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 font-bold text-sm px-3 py-1 bg-indigo-50 dark:bg-indigo-950/40 rounded-md transition-colors"
+                    className="text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 font-bold text-sm px-3 py-1 bg-blue-50 dark:bg-blue-950/40 rounded-md transition-colors"
                   >
                     Inspect
                   </button>

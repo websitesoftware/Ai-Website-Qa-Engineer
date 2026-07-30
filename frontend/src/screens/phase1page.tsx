@@ -10,7 +10,6 @@ interface StatCardProps {
   value: string | number;
   subtext: string;
   subType?: 'up' | 'down' | 'neutral';
-  accentColor: string;
 }
 
 interface GaugeProps {
@@ -189,40 +188,40 @@ export default function ScanlinePhase1Report() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-sans selection:bg-indigo-500 selection:text-white antialiased">
+    <div className="text-slate-800 dark:text-slate-200 font-sans selection:bg-purple-500 selection:text-white antialiased">
 
-      {/* ===== TOPBAR (outside reportRef, so never in the PDF) ===== */}
-      <header className="border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 shadow-sm backdrop-blur-md bg-white/90 dark:bg-slate-900/90">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      {/* ===== Report header (outside reportRef, so never in the PDF) ===== */}
+      <header className="mb-5">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-indigo-500 via-purple-500 to-indigo-600 shadow-md shadow-indigo-200 dark:shadow-indigo-950 flex items-center justify-center">
-              <div className="w-3 h-3 bg-white rounded-sm rotate-45" />
+            <div className="w-9.5 h-9.5 rounded-xl bg-gradient-to-br from-[#7C5CFC] to-[#5B3FE0] shadow-md shadow-purple-500/35 flex items-center justify-center">
+              <i className="ph ph-sparkle text-white text-lg"></i>
             </div>
             <div>
-              <div className="font-bold text-slate-900 dark:text-slate-100 text-base tracking-tight">Scanline</div>
-              <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 uppercase tracking-wider">AI QA Engineer — Phase 1</div>
+              <div className="font-display font-bold text-slate-900 dark:text-slate-100 text-base tracking-tight">Scanline</div>
+              <div className="text-[11.5px] text-slate-500 dark:text-slate-400">AI QA Engineer — Phase 1</div>
             </div>
           </div>
 
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full font-mono text-xs border transition-colors ${isScanning
-            ? 'bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-950/40 dark:border-amber-900 dark:text-amber-400'
-            : 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-900 dark:text-emerald-400'
+          <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11.5px] font-bold transition-colors ${isScanning
+            ? 'bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400'
+            : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
             }`}>
-            <span className={`w-2 h-2 rounded-full ${isScanning ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500 shadow-sm'}`} />
+            <span className={`w-1.75 h-1.75 rounded-full ${isScanning ? 'bg-orange-500 animate-pulse' : 'bg-emerald-500'}`} />
             {isScanning ? 'SCANNING SYSTEM...' : 'SCAN COMPLETE'}
           </div>
         </div>
       </header>
 
       {/* ===== MAIN — export scans this subtree for [data-pdf-block] ===== */}
-      <main ref={reportRef} className="max-w-6xl mx-auto px-6 py-8">
+      <main ref={reportRef}>
 
         {/* BLOCK 1: run metadata */}
         <div
           data-pdf-block
-          className="flex flex-wrap gap-x-6 gap-y-2 items-baseline mb-6 font-mono text-sm border-b border-slate-200 dark:border-slate-800 pb-4 bg-white dark:bg-slate-950"
+          className="flex flex-wrap gap-x-6 gap-y-2 items-baseline mb-6 font-mono text-sm border-b border-slate-200/70 dark:border-slate-800 pb-4"
         >
-          <div className="text-indigo-600 dark:text-indigo-400 font-semibold">scan → yourdomain.com</div>
+          <div className="text-[#1C56C9] dark:text-blue-400 font-semibold">scan → yourdomain.com</div>
           <div className="text-slate-500 dark:text-slate-400 text-xs"><b>{pagesCrawled}</b> pages crawled</div>
           <div className="text-slate-500 dark:text-slate-400 text-xs"><b>4m 12s</b> duration</div>
           <div className="text-slate-500 dark:text-slate-400 text-xs ml-auto">run <b>#0891</b> · Jul 09, 2026, 14:22</div>
@@ -237,27 +236,23 @@ export default function ScanlinePhase1Report() {
             label="Pages Crawled"
             value={pagesCrawled}
             subtext={isScanning ? 'Crawling map tree...' : '6 unreachable'}
-            accentColor="bg-indigo-500"
           />
           <StatCard
             label="Issues Found"
             value={issuesFound}
             subtext="↑ 9 vs last scan"
             subType="down"
-            accentColor="bg-rose-500"
           />
           <StatCard
             label="Broken Links"
             value={isScanning ? Math.floor(issuesFound * 0.3) : 11}
             subtext="3 are 500s"
-            accentColor="bg-amber-500"
           />
           <StatCard
             label="Avg Lighthouse"
             value={isScanning ? '--' : 78}
             subtext="↑ 4 vs last scan"
             subType="up"
-            accentColor="bg-emerald-500"
           />
         </div>
 
@@ -266,41 +261,41 @@ export default function ScanlinePhase1Report() {
           data-pdf-block
           className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8"
         >
-          <section className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
+          <section className="lg:col-span-2 bg-white/85 dark:bg-slate-800 backdrop-blur-md rounded-xl border border-slate-200/70 dark:border-slate-700 p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100 uppercase">
-                <span className="text-indigo-500 dark:text-indigo-400 font-mono mr-1">01</span> Lighthouse Scores
+              <h2 className="font-display text-[13px] font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <span className="bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 text-[9.5px] font-extrabold px-1.5 py-0.5 rounded">01</span> Lighthouse Scores
               </h2>
               <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">avg across {pagesCrawled} pages</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
-              <Gauge label="Performance" value={71} color="text-amber-500" />
+              <Gauge label="Performance" value={71} color="text-orange-500" />
               <Gauge label="Accessibility" value={88} color="text-emerald-500" />
               <Gauge label="Best Practices" value={82} color="text-emerald-500" />
-              <Gauge label="SEO" value={74} color="text-amber-500" />
+              <Gauge label="SEO" value={74} color="text-orange-500" />
             </div>
           </section>
 
-          <section className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm flex flex-col justify-between">
+          <section className="bg-white/85 dark:bg-slate-800 backdrop-blur-md rounded-xl border border-slate-200/70 dark:border-slate-700 p-5 shadow-sm flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100 uppercase">
-                  <span className="text-indigo-500 dark:text-indigo-400 font-mono mr-1">02</span> Viewport Testing
+                <h2 className="font-display text-[13px] font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <span className="bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 text-[9.5px] font-extrabold px-1.5 py-0.5 rounded">02</span> Viewport Testing
                 </h2>
                 <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">/pricing</span>
               </div>
               <div className="space-y-2.5">
-                <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 text-xs">
-                  <div><span className="font-semibold text-slate-700 dark:text-slate-300">Desktop</span> <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500">(1440×900)</span></div>
-                  <span className="px-2 py-0.5 font-mono text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900">PASS</span>
+                <div className="flex items-center justify-between py-2.5 border-b border-slate-100 dark:border-slate-800 text-xs">
+                  <div><span className="font-semibold text-slate-700 dark:text-slate-300">Desktop</span> <span className="text-[11px] text-slate-400 dark:text-slate-500">1440×900</span></div>
+                  <span className="px-2.5 py-1 text-[10px] font-extrabold bg-emerald-50 text-emerald-700 rounded-md dark:bg-emerald-950/40 dark:text-emerald-400">PASS</span>
                 </div>
-                <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 text-xs">
-                  <div><span className="font-semibold text-slate-700 dark:text-slate-300">Tablet</span> <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500">(768×1024)</span></div>
-                  <span className="px-2 py-0.5 font-mono text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900">MINOR</span>
+                <div className="flex items-center justify-between py-2.5 border-b border-slate-100 dark:border-slate-800 text-xs">
+                  <div><span className="font-semibold text-slate-700 dark:text-slate-300">Tablet</span> <span className="text-[11px] text-slate-400 dark:text-slate-500">768×1024</span></div>
+                  <span className="px-2.5 py-1 text-[10px] font-extrabold bg-orange-50 text-orange-700 rounded-md dark:bg-orange-950/40 dark:text-orange-400">ISSUE</span>
                 </div>
-                <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 text-xs">
-                  <div><span className="font-semibold text-slate-700 dark:text-slate-300">Mobile</span> <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500">(375×812)</span></div>
-                  <span className="px-2 py-0.5 font-mono text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 rounded dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900">OVERFLOW</span>
+                <div className="flex items-center justify-between py-2.5 text-xs">
+                  <div><span className="font-semibold text-slate-700 dark:text-slate-300">Mobile</span> <span className="text-[11px] text-slate-400 dark:text-slate-500">375×812</span></div>
+                  <span className="px-2.5 py-1 text-[10px] font-extrabold bg-red-50 text-red-700 rounded-md dark:bg-red-950/40 dark:text-red-400">OVERFLOW</span>
                 </div>
               </div>
             </div>
@@ -310,13 +305,13 @@ export default function ScanlinePhase1Report() {
         {/* BLOCK 4: broken links */}
         <section
           data-pdf-block
-          className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm mb-8 overflow-hidden"
+          className="bg-white/85 dark:bg-slate-800 backdrop-blur-md rounded-xl border border-slate-200/70 dark:border-slate-700 p-5 shadow-sm mb-8 overflow-hidden"
         >
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100 uppercase">
-              <span className="text-indigo-500 dark:text-indigo-400 font-mono mr-1">03</span> Broken Links Detected
+            <h2 className="font-display text-[13px] font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <span className="bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 text-[9.5px] font-extrabold px-1.5 py-0.5 rounded">03</span> Broken Links Detected
             </h2>
-            <span className="text-[11px] font-mono text-rose-500 dark:text-rose-400 font-semibold bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900 px-2 py-0.5 rounded">11 total exceptions</span>
+            <span className="text-[11px] font-mono text-red-500 dark:text-red-400 font-semibold bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900 px-2 py-0.5 rounded">11 total exceptions</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
@@ -331,21 +326,21 @@ export default function ScanlinePhase1Report() {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
                 <tr>
                   <td className="py-3 px-3 text-slate-700 dark:text-slate-300 font-medium">/checkout/confirm</td>
-                  <td className="py-3 px-3 text-rose-600 dark:text-rose-400 font-bold">500</td>
+                  <td className="py-3 px-3 text-red-600 dark:text-red-400 font-bold">500</td>
                   <td className="py-3 px-3 text-slate-500 dark:text-slate-400">/checkout</td>
-                  <td className="py-3 px-3 text-right"><span className="bg-rose-50 border border-rose-200 text-rose-700 px-2 py-0.5 rounded text-[10px] font-bold dark:bg-rose-950/40 dark:border-rose-900 dark:text-rose-400">Server Error</span></td>
+                  <td className="py-3 px-3 text-right"><span className="bg-red-50 border border-red-200 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold dark:bg-red-950/40 dark:border-red-900 dark:text-red-400">Server Error</span></td>
                 </tr>
                 <tr>
                   <td className="py-3 px-3 text-slate-700 dark:text-slate-300 font-medium">/assets/img/hero-old.png</td>
-                  <td className="py-3 px-3 text-rose-500 dark:text-rose-400 font-bold">404</td>
+                  <td className="py-3 px-3 text-red-500 dark:text-red-400 font-bold">404</td>
                   <td className="py-3 px-3 text-slate-500 dark:text-slate-400">/</td>
-                  <td className="py-3 px-3 text-right"><span className="bg-rose-50 border border-rose-200 text-rose-700 px-2 py-0.5 rounded text-[10px] font-bold dark:bg-rose-950/40 dark:border-rose-900 dark:text-rose-400">Not Found</span></td>
+                  <td className="py-3 px-3 text-right"><span className="bg-red-50 border border-red-200 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold dark:bg-red-950/40 dark:border-red-900 dark:text-red-400">Not Found</span></td>
                 </tr>
                 <tr>
                   <td className="py-3 px-3 text-slate-700 dark:text-slate-300 font-medium">/blog/2023/black-friday</td>
-                  <td className="py-3 px-3 text-amber-600 dark:text-amber-400 font-bold">301</td>
+                  <td className="py-3 px-3 text-orange-600 dark:text-orange-400 font-bold">301</td>
                   <td className="py-3 px-3 text-slate-500 dark:text-slate-400">/blog</td>
-                  <td className="py-3 px-3 text-right"><span className="bg-amber-50 border border-amber-200 text-amber-700 px-2 py-0.5 rounded text-[10px] font-bold dark:bg-amber-950/40 dark:border-amber-900 dark:text-amber-400">Redirect Loop</span></td>
+                  <td className="py-3 px-3 text-right"><span className="bg-orange-50 border border-orange-200 text-orange-700 px-2 py-0.5 rounded text-[10px] font-bold dark:bg-orange-950/40 dark:border-orange-900 dark:text-orange-400">Redirect Loop</span></td>
                 </tr>
               </tbody>
             </table>
@@ -355,23 +350,23 @@ export default function ScanlinePhase1Report() {
         {/* BLOCK 5: console exceptions */}
         <section
           data-pdf-block
-          className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm mb-8"
+          className="bg-white/85 dark:bg-slate-800 backdrop-blur-md rounded-xl border border-slate-200/70 dark:border-slate-700 p-5 shadow-sm mb-8"
         >
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100 uppercase">
-              <span className="text-indigo-500 dark:text-indigo-400 font-mono mr-1">04</span> Live Console Stream Exceptions
+            <h2 className="font-display text-[13px] font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <span className="bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 text-[9.5px] font-extrabold px-1.5 py-0.5 rounded">04</span> Live Console Stream Exceptions
             </h2>
             <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">Captured in pipeline</span>
           </div>
           <div className="divide-y divide-slate-100 dark:divide-slate-800 font-mono text-xs">
             <div className="py-2.5 flex items-start gap-4">
-              <span className="text-rose-500 dark:text-rose-400 font-bold bg-rose-50 border border-rose-100 dark:bg-rose-950/40 dark:border-rose-900 w-5 h-5 flex items-center justify-center rounded-md text-[10px]">✕</span>
+              <span className="text-red-500 dark:text-red-400 font-bold bg-red-50 border border-red-100 dark:bg-red-950/40 dark:border-red-900 w-5 h-5 flex items-center justify-center rounded-md text-[10px]">✕</span>
               <span className="text-slate-400 dark:text-slate-500 text-[11px]">14:22:03</span>
               <span className="text-slate-800 dark:text-slate-200 flex-1">Uncaught TypeError: cannot read properties of undefined (reading &apos;map&apos;)</span>
               <span className="text-slate-400 dark:text-slate-500 text-right text-[11px]">cart.bundle.js:88</span>
             </div>
             <div className="py-2.5 flex items-start gap-4">
-              <span className="text-amber-600 dark:text-amber-400 font-bold bg-amber-50 border border-amber-100 dark:bg-amber-950/40 dark:border-amber-900 w-5 h-5 flex items-center justify-center rounded-md text-[10px]">!</span>
+              <span className="text-orange-600 dark:text-orange-400 font-bold bg-orange-50 border border-orange-100 dark:bg-orange-950/40 dark:border-orange-900 w-5 h-5 flex items-center justify-center rounded-md text-[10px]">!</span>
               <span className="text-slate-400 dark:text-slate-500 text-[11px]">14:22:05</span>
               <span className="text-slate-800 dark:text-slate-200 flex-1">Failed to load resource: net::ERR_CONNECTION_REFUSED</span>
               <span className="text-slate-400 dark:text-slate-500 text-right text-[11px]">analytics.js:12</span>
@@ -382,12 +377,12 @@ export default function ScanlinePhase1Report() {
         {/* BLOCK 6: QA actions header + export button (button excluded from capture) */}
         <section
           data-pdf-block
-          className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm mb-3"
+          className="bg-white/85 dark:bg-slate-800 backdrop-blur-md rounded-xl border border-slate-200/70 dark:border-slate-700 p-5 shadow-sm mb-3"
         >
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100 uppercase">
-                <span className="text-indigo-500 dark:text-indigo-400 font-mono mr-1">05</span> QA Actions &amp; Prescriptions
+              <h2 className="font-display text-[13px] font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <span className="bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 text-[9.5px] font-extrabold px-1.5 py-0.5 rounded">05</span> QA Actions &amp; Prescriptions
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Automated AI recommended code changes</p>
             </div>
@@ -396,7 +391,7 @@ export default function ScanlinePhase1Report() {
               onClick={handleDownloadPDF}
               disabled={isExporting}
               data-html2canvas-ignore
-              className="px-4 py-2 border border-indigo-200 dark:border-indigo-900 hover:border-indigo-500 dark:hover:border-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 rounded-lg text-xs font-semibold tracking-wide font-mono shadow-sm transition-all hover:bg-indigo-100 dark:hover:bg-indigo-950/70 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+              className="px-4.5 py-2.5 bg-[#1C56C9] hover:bg-[#164aac] dark:bg-blue-600 dark:hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-900/25 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 cursor-pointer"
             >
               {isExporting ? 'Exporting…' : 'Export PDF Report'}
             </button>
@@ -410,7 +405,7 @@ export default function ScanlinePhase1Report() {
           the current page, or it moves to the next page in one piece.
         */}
         <div className="space-y-3">
-          <div data-pdf-block className="bg-white dark:bg-slate-800 rounded-xl">
+          <div data-pdf-block className="bg-white/85 dark:bg-slate-800 backdrop-blur-md rounded-xl">
             <IssueRow
               title="Checkout confirmation throws 500 on submit"
               fix="Null-check the order payload stack context before rendering the confirmation DOM tree."
@@ -418,7 +413,7 @@ export default function ScanlinePhase1Report() {
               severity="high"
             />
           </div>
-          <div data-pdf-block className="bg-white dark:bg-slate-800 rounded-xl">
+          <div data-pdf-block className="bg-white/85 dark:bg-slate-800 backdrop-blur-md rounded-xl">
             <IssueRow
               title="Pricing table overflows viewport on mobile (375px)"
               fix="Switch the standard grid element structure layout parameters down to single stacked view configurations below 480px thresholds."
@@ -426,7 +421,7 @@ export default function ScanlinePhase1Report() {
               severity="high"
             />
           </div>
-          <div data-pdf-block className="bg-white dark:bg-slate-800 rounded-xl">
+          <div data-pdf-block className="bg-white/85 dark:bg-slate-800 backdrop-blur-md rounded-xl">
             <IssueRow
               title="Hero images missing alt attributes on 34 static page routes"
               fix="Inject explicit alternative metadata definitions to element matrices."
@@ -442,13 +437,12 @@ export default function ScanlinePhase1Report() {
 }
 
 // --- Stat Cards ---
-function StatCard({ label, value, subtext, subType = 'neutral', accentColor }: StatCardProps) {
+function StatCard({ label, value, subtext, subType = 'neutral' }: StatCardProps) {
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 relative overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-      <div className={`absolute top-0 left-0 bottom-0 w-1 ${accentColor}`} />
-      <div className="text-[10px] uppercase font-mono tracking-wider font-semibold text-slate-400 dark:text-slate-500 mb-1">{label}</div>
-      <div className="text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-slate-100">{value}</div>
-      <div className={`text-[11px] font-mono mt-2 ${subType === 'up' ? 'text-emerald-600 dark:text-emerald-400' : subType === 'down' ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400 dark:text-slate-500'
+    <div className="bg-white/85 dark:bg-slate-800 backdrop-blur-md rounded-2xl border border-slate-200/70 dark:border-slate-700 p-4.5 shadow-sm hover:shadow-md transition-shadow">
+      <div className="text-[10.5px] uppercase tracking-wider font-bold text-slate-400 dark:text-slate-500 mb-1.5">{label}</div>
+      <div className="font-display text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">{value}</div>
+      <div className={`text-[11px] font-semibold mt-1 ${subType === 'up' ? 'text-emerald-600 dark:text-emerald-400' : subType === 'down' ? 'text-red-600 dark:text-red-400' : 'text-slate-400 dark:text-slate-500'
         }`}>
         {subtext}
       </div>
@@ -475,19 +469,19 @@ function Gauge({ label, value, color }: GaugeProps) {
 // --- Issue Rows ---
 function IssueRow({ title, fix, category, severity }: IssueRowProps) {
   const sevColors = {
-    high: 'bg-rose-500',
-    med: 'bg-amber-500',
-    low: 'bg-indigo-500',
+    high: 'bg-red-500',
+    med: 'bg-orange-500',
+    low: 'bg-blue-500',
   };
 
   return (
-    <div className="flex items-start gap-4 p-3 rounded-xl bg-slate-50/60 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
+    <div className="flex items-start gap-4 p-3 rounded-xl bg-slate-50/60 dark:bg-slate-900/40 border border-slate-200/70 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
       <div className={`w-1.5 h-10 rounded-full self-center shrink-0 ${sevColors[severity]}`} />
       <div className="flex-1 min-w-0">
         <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">{title}</h4>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5"><b>Fix:</b> {fix}</p>
       </div>
-      <span className="text-[10px] font-mono font-semibold px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-md shrink-0 uppercase tracking-wider">
+      <span className="text-[10px] font-mono font-semibold px-2 py-1 bg-white/85 dark:bg-slate-800 backdrop-blur-md border border-slate-200/70 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-md shrink-0 uppercase tracking-wider">
         {category}
       </span>
     </div>

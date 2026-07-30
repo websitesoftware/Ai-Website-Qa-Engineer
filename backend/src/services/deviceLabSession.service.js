@@ -15,6 +15,28 @@ const BURST_SCREENSHOT_THROTTLE_MS = 200;
 // sync with what really happened.
 const sessions = new Map();
 
+// One warm Browser PROCESS per engine, shared across every device/session —
+// each session still gets its own isolated BrowserContext (own cookies,
+// storage, viewport), so nothing leaks between devices or users. Without
+// this, switching devices (or reconnecting) relaunched a brand-new
+// chromium/firefox/webkit process every time, which is the ~1-2s of the
+// "Go" click that made the whole lab feel slow — a launch is now only paid
+// once per engine, ever, instead of once per session.
+const browserPool = new Map();
+
+async function getBrowser(engineName) {
+  const engine = ENGINES[engineName] || chromium;
+  const existing = browserPool.get(engineName);
+  if (existing) {
+    const browser = await existing;
+    if (browser.isConnected()) return browser;
+    browserPool.delete(engineName);
+  }
+  const launching = engine.launch({ headless: true });
+  browserPool.set(engineName, launching);
+  return launching;
+}
+
 async function screenshotAndEmit(socket, session) {
   // The idle refresh timer and an in-flight input action can otherwise both
   // call page.screenshot() at once; overlapping captures were the source of
@@ -28,7 +50,12 @@ async function screenshotAndEmit(socket, session) {
     // action/idle-tick, PNG's lossless encode is both slower to produce and
     // 3-5x larger over the socket than a quality-80 JPEG — the difference
     // is the gap between input feeling laggy and feeling instant.
-    const buffer = await page.screenshot({ timeout: 8000, type: "jpeg", quality: 80 });
+    // scale: "css" captures at 1 physical pixel per CSS pixel instead of the
+    // device's real deviceScaleFactor (up to 3x on modern phones) — the
+    // frontend displays this scaled to fit its panel anyway, so those extra
+    // pixels were pure encode time + socket bandwidth with no visible
+    // benefit. On a 3x-DPR device this alone is up to a 9x smaller capture.
+    const buffer = await page.screenshot({ timeout: 8000, type: "jpeg", quality: 80, scale: "css" });
     socket.emit("device-lab:frame", {
       image: `data:image/jpeg;base64,${buffer.toString("base64")}`,
       url: page.url(),
@@ -85,9 +112,7 @@ async function startSession(socket, { url, deviceId, orientation = "portrait", b
 
   await stopSession(socket);
 
-  const engine = ENGINES[engineName] || chromium;
-
-  const browser = await engine.launch({ headless: true });
+  const browser = await getBrowser(engineName);
   const context = await browser.newContext({ ...descriptor, viewport });
   const page = await context.newPage();
 
@@ -471,7 +496,9 @@ async function stopSession(socket) {
   sessions.delete(socket.id);
   if (session.idleTimer) clearInterval(session.idleTimer);
   try {
-    await session.browser.close();
+    // Only the context (this session's cookies/storage/page) — the browser
+    // itself is shared from the pool and stays warm for the next session.
+    await session.context.close();
   } catch {
     // already gone
   }

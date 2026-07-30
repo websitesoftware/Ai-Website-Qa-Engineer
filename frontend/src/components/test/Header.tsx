@@ -33,12 +33,12 @@ export const Header: React.FC<HeaderProps> = ({ onRunNewTest, search = '', onSea
             placeholder={searchPlaceholder.text}
             value={search}
             onChange={(e) => onSearchChange?.(e.target.value)}
-            className="pl-10 pr-4 py-2 border border-slate-200 dark:border-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm w-64 bg-white dark:bg-slate-950 dark:text-white transition-shadow"
+            className="pl-10 pr-4 py-2 border border-slate-200 dark:border-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm w-64 bg-white dark:bg-slate-950 dark:text-white transition-shadow"
           />
         </div>
         <button
           onClick={onRunNewTest}
-          className="bg-indigo-500 hover:bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center gap-2 shrink-0"
+          className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center gap-2 shrink-0"
         >
           <i className={`ph ${runButton.icon}`}></i>
           {runButton.text}

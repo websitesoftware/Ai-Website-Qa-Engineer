@@ -19,6 +19,19 @@
 
   --sidebar: #ffffff;
   --header: #ffffff;
+
+  /* Aqua Bloom palette — the app's brand identity. */
+  --sky-1: #eaf4ff;
+  --sky-2: #cfe8ff;
+  --brand-blue: #2e7bf6;
+  --brand-blue-deep: #1c56c9;
+  --sky-line: #8fc1ff;
+  --leaf: #2fae84;
+  --leaf-2: #1f8f6b;
+  --petal: #ff9fc6;
+  --gold: #ffd36e;
+  --ink: #0f2440;
+  --sub: #5a7092;
 }
 
 html.dark {
@@ -36,8 +49,9 @@ html.dark {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+  --font-display: var(--font-sora);
 }
 
 /* =====================================================
@@ -51,11 +65,28 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
 
   transition:
     background-color .3s ease,
     color .3s ease;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-sora), var(--font-inter), sans-serif;
+}
+
+/* Aqua Bloom sky background for the app shell — light mode only; dark mode
+   keeps its existing slate background since the reference design has no
+   dark variant. */
+.bg-app-sky {
+  background:
+    radial-gradient(1200px 600px at 50% -15%, var(--sky-2), transparent 60%),
+    linear-gradient(180deg, var(--sky-1) 0%, #ffffff 55%, var(--sky-1) 100%);
+}
+
+html.dark .bg-app-sky {
+  background: var(--background);
 }
 
 /* The app shell is a fixed-height flex column (header + internal
@@ -172,6 +203,58 @@ body {
 }
 
 /* =====================================================
+   Aqua Bloom animated background scene (trees/clouds/petals)
+===================================================== */
+
+@keyframes aquaSway {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+
+@keyframes aquaFall {
+  0% { transform: translate(0, -5vh) rotate(0deg); opacity: 0; }
+  10% { opacity: .9; }
+  90% { opacity: .85; }
+  100% { transform: translate(var(--drift, 40px), 108vh) rotate(360deg); opacity: 0; }
+}
+
+@keyframes aquaDrift {
+  0% { transform: translateX(-10vw); }
+  100% { transform: translateX(110vw); }
+}
+
+.aqua-tree {
+  position: absolute;
+  bottom: -10px;
+  transform-origin: bottom center;
+  animation: aquaSway 6s ease-in-out infinite;
+  opacity: .9;
+}
+
+.aqua-petal {
+  position: absolute;
+  top: -40px;
+  animation: aquaFall linear infinite;
+  opacity: .85;
+}
+
+.aqua-cloud {
+  position: absolute;
+  opacity: .55;
+  animation: aquaDrift linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aqua-tree, .aqua-petal, .aqua-cloud {
+    animation: none !important;
+  }
+}
+
+html.dark .aqua-scene {
+  display: none;
+}
+
+/* =====================================================
    Skeleton Loader
 ===================================================== */
 
@@ -237,7 +320,7 @@ html.dark ::-webkit-scrollbar-thumb {
 ===================================================== */
 
 ::selection {
-  background: #6366f1;
+  background: #2E7BF6;
   color: white;
 }
 
@@ -246,6 +329,6 @@ html.dark ::-webkit-scrollbar-thumb {
 ===================================================== */
 
 *:focus-visible {
-  outline: 2px solid #6366f1;
+  outline: 2px solid #2E7BF6;
   outline-offset: 2px;
 }

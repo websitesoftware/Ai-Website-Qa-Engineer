@@ -288,7 +288,7 @@ export const SettingsPage: React.FC = () => {
   // ---------------------------------------------------------------------
   const [branding, setBranding] = useState<BackendBranding | null>(null);
   const [brandingForm, setBrandingForm] = useState({
-    primaryColor: '#4f46e5',
+    primaryColor: '#1C56C9',
     footerText: '',
     headerText: '',
     headerFontSize: 16,
@@ -437,13 +437,13 @@ export const SettingsPage: React.FC = () => {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 relative ${
-                  isSelected ? 'text-indigo-600 dark:text-indigo-400 font-semibold' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                  isSelected ? 'text-blue-600 dark:text-blue-400 font-semibold' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'
                 }`}
               >
                 {isSelected && (
                   <motion.div
                     layoutId="activeSettingsTabIndicator"
-                    className="absolute inset-0 bg-indigo-50 dark:bg-indigo-950/30 rounded-lg -z-10"
+                    className="absolute inset-0 bg-blue-50 dark:bg-blue-950/30 rounded-lg -z-10"
                     transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                   />
                 )}
@@ -526,7 +526,7 @@ export const SettingsPage: React.FC = () => {
                         {d.score !== null && (
                           <span
                             className={`font-bold text-sm shrink-0 ${
-                              d.score >= 90 ? 'text-emerald-600 dark:text-emerald-400' : d.score >= 70 ? 'text-indigo-600 dark:text-indigo-400' : d.score >= 50 ? 'text-amber-500 dark:text-amber-400' : 'text-red-500 dark:text-red-400'
+                              d.score >= 90 ? 'text-emerald-600 dark:text-emerald-400' : d.score >= 70 ? 'text-blue-600 dark:text-blue-400' : d.score >= 50 ? 'text-amber-500 dark:text-amber-400' : 'text-red-500 dark:text-red-400'
                             }`}
                           >
                             {d.score}/100
@@ -557,7 +557,7 @@ export const SettingsPage: React.FC = () => {
                             className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-xl hover:border-slate-300 dark:hover:border-slate-600 transition-colors bg-white dark:bg-slate-800 overflow-hidden"
                           >
                             <div className="flex items-center gap-3 min-w-0">
-                              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 shrink-0">
+                              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 shrink-0">
                                 <i className="ph ph-git-branch"></i>
                               </div>
                               <span className="font-bold text-slate-950 dark:text-slate-100 text-sm block truncate">{domain.url}</span>
@@ -585,9 +585,9 @@ export const SettingsPage: React.FC = () => {
                           placeholder="https://dev.example.com"
                           value={newDomainUrl}
                           onChange={(e) => setNewDomainUrl(e.target.value)}
-                          className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:outline-none focus:border-indigo-500 text-sm bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-white"
+                          className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:outline-none focus:border-blue-500 text-sm bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-white"
                         />
-                        <button type="submit" className="bg-indigo-500 hover:bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm shrink-0">
+                        <button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm shrink-0">
                           Add
                         </button>
                       </div>
@@ -629,7 +629,7 @@ export const SettingsPage: React.FC = () => {
                           placeholder={'https://example.com\nhttp://localhost:3000\n(one URL per line — add as many as you like)'}
                           value={newMonitorUrls}
                           onChange={(e) => setNewMonitorUrls(e.target.value)}
-                          className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:outline-none focus:border-indigo-500 text-sm bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-white resize-y"
+                          className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:outline-none focus:border-blue-500 text-sm bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-white resize-y"
                         />
                         <div className="flex sm:flex-col gap-3 shrink-0">
                           <select
@@ -644,7 +644,7 @@ export const SettingsPage: React.FC = () => {
                           <button
                             type="submit"
                             disabled={monitorSaving}
-                            className="bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm whitespace-nowrap"
+                            className="bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm whitespace-nowrap"
                           >
                             {monitorSaving ? 'Creating...' : 'Create Monitor'}
                           </button>
@@ -668,8 +668,8 @@ export const SettingsPage: React.FC = () => {
                                     {m.frequency}
                                   </span>
                                   {m.lastTestId && !m.lastRunReconciled && (
-                                    <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                                    <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
                                       Scanning now
                                     </span>
                                   )}
@@ -686,14 +686,14 @@ export const SettingsPage: React.FC = () => {
                               <div className="flex items-center gap-2 shrink-0">
                                 <button
                                   onClick={() => runMonitorNow(m)}
-                                  className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100/60 dark:hover:bg-indigo-900/50 font-bold text-xs rounded-lg transition-colors"
+                                  className="px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100/60 dark:hover:bg-blue-900/50 font-bold text-xs rounded-lg transition-colors"
                                 >
                                   Run Now
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => toggleMonitor(m)}
-                                  className={`w-11 h-6 rounded-full p-0.5 transition-colors relative focus:outline-none ${m.enabled ? 'bg-indigo-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+                                  className={`w-11 h-6 rounded-full p-0.5 transition-colors relative focus:outline-none ${m.enabled ? 'bg-blue-500' : 'bg-slate-200 dark:bg-slate-700'}`}
                                   title={m.enabled ? 'Enabled' : 'Disabled'}
                                 >
                                   <motion.div
@@ -796,7 +796,7 @@ export const SettingsPage: React.FC = () => {
                         <button
                           type="submit"
                           disabled={policySaving}
-                          className="bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm shrink-0"
+                          className="bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm shrink-0"
                         >
                           {policySaving ? 'Creating...' : 'Create Policy'}
                         </button>
@@ -833,7 +833,7 @@ export const SettingsPage: React.FC = () => {
                               {!p.active && (
                                 <button
                                   onClick={() => activatePolicy(p)}
-                                  className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100/60 dark:hover:bg-indigo-900/50 font-bold text-xs rounded-lg transition-colors"
+                                  className="px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100/60 dark:hover:bg-blue-900/50 font-bold text-xs rounded-lg transition-colors"
                                 >
                                   Set Active
                                 </button>
@@ -993,7 +993,7 @@ export const SettingsPage: React.FC = () => {
                         <button
                           type="submit"
                           disabled={brandingSaving}
-                          className="bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 text-white px-5 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm"
+                          className="bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white px-5 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm"
                         >
                           {brandingSaving ? 'Saving...' : 'Save Branding'}
                         </button>
@@ -1047,7 +1047,7 @@ export const SettingsPage: React.FC = () => {
                         <button
                           type="submit"
                           disabled={inviteSaving}
-                          className="bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm shrink-0"
+                          className="bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm shrink-0"
                         >
                           {inviteSaving ? 'Adding...' : 'Add to Team'}
                         </button>
@@ -1088,7 +1088,7 @@ export const SettingsPage: React.FC = () => {
                                   <option value="admin">Admin</option>
                                 </select>
                               ) : (
-                                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">
+                                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
                                   {m.role}
                                 </span>
                               )}
@@ -1135,7 +1135,7 @@ export const SettingsPage: React.FC = () => {
                     </div>
                     <button
                       onClick={() => showToast('Slack integration is planned for a later phase', 'info')}
-                      className="px-4 py-2 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100/60 dark:hover:bg-indigo-900/50 font-bold text-xs rounded-lg transition-colors cursor-pointer"
+                      className="px-4 py-2 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100/60 dark:hover:bg-blue-900/50 font-bold text-xs rounded-lg transition-colors cursor-pointer"
                     >
                       Configure
                     </button>
