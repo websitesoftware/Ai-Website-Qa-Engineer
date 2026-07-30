@@ -27,8 +27,8 @@ export const StatsGrid: React.FC = () => {
       label: 'Total Tests',
       value: stats?.total ?? 0,
       icon: <FileText />,
-      bg: 'bg-indigo-50 dark:bg-indigo-950/40',
-      text: 'text-indigo-500 dark:text-indigo-400',
+      bg: 'bg-blue-50 dark:bg-blue-950/40',
+      text: 'text-blue-500 dark:text-blue-400',
       sub: (
         <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1 mt-1.5">
           <ArrowUpRight weight="bold" /> {stats?.passed ?? 0} passed
@@ -51,7 +51,7 @@ export const StatsGrid: React.FC = () => {
       bg: 'bg-blue-50 dark:bg-blue-950/40',
       text: 'text-blue-600 dark:text-blue-400',
       sub: (
-        <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium flex items-center gap-1 mt-1.5">
+        <span className="text-xs text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1 mt-1.5">
           <CheckSquare /> {resolutionRate}% resolution rate
         </span>
       ),

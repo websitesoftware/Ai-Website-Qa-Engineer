@@ -1,7 +1,7 @@
 'use client';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { MagnifyingGlass, ArrowsClockwise, ArrowClockwise, Plus, Minus, Globe, SidebarSimple, Devices, Code, ArrowsOut, X, Star, AppleLogo, AndroidLogo, Monitor, WindowsLogo, ClockCounterClockwise } from '@phosphor-icons/react';
+import { MagnifyingGlass, ArrowsClockwise, ArrowClockwise, Plus, Minus, LockSimple, SidebarSimple, Devices, Code, ArrowsOut, X, Star, AppleLogo, AndroidLogo, Monitor, WindowsLogo, ClockCounterClockwise } from '@phosphor-icons/react';
 import { api, DeviceLabDevice } from '../lib/api';
 import { DeviceFrame, DEVICE_FRAME_CHROME_HEIGHT, DeviceFrameHandlers } from '../components/devicelab/DeviceFrame';
 import { DevToolsPanel } from '../components/devicelab/DevToolsPanel';
@@ -323,7 +323,7 @@ export const DeviceLabPage: React.FC = () => {
           full panel; toggled back open via the button in the toolbar. */}
       {sidebarOpen && (
         <aside
-          className={`shrink-0 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl flex flex-col overflow-hidden transition-[width] max-h-80 sm:max-h-none ${
+          className={`shrink-0 w-full bg-white/85 dark:bg-slate-800 backdrop-blur-md border border-slate-200/70 dark:border-slate-700 rounded-xl flex flex-col overflow-hidden transition-[width] max-h-80 sm:max-h-none ${
             search || brandsForTab.length === 0 ? 'sm:w-72' : 'sm:w-120'
           }`}
         >
@@ -336,7 +336,7 @@ export const DeviceLabPage: React.FC = () => {
                 placeholder="Search devices..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 border rounded-lg text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500"
+                className="w-full pl-9 pr-3 py-2 border rounded-lg text-xs bg-slate-50 dark:bg-slate-950 border-slate-200/70 dark:border-slate-700 text-slate-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"
               />
             </div>
           </div>
@@ -404,7 +404,7 @@ export const DeviceLabPage: React.FC = () => {
                         onClick={() => setSelectedBrand(brand)}
                         className={`w-full text-left px-3 py-2 text-xs font-semibold cursor-pointer truncate ${
                           selectedBrand === brand
-                            ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400'
+                            ? 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400'
                             : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'
                         }`}
                       >
@@ -463,7 +463,7 @@ export const DeviceLabPage: React.FC = () => {
                       {!showAllBrandDevices && brandDevices.length > BRAND_PAGE_SIZE && (
                         <button
                           onClick={() => setShowAllBrandDevices(true)}
-                          className="w-full text-left px-2.5 py-2 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                          className="w-full text-left px-2.5 py-2 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                         >
                           Show {brandDevices.length - BRAND_PAGE_SIZE} More Devices
                         </button>
@@ -480,13 +480,13 @@ export const DeviceLabPage: React.FC = () => {
       {/* Main viewer */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* URL bar + toolbar */}
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 mb-4 flex flex-wrap items-center gap-2">
+        <div className="bg-white/85 dark:bg-slate-800 backdrop-blur-md border border-slate-200/70 dark:border-slate-700 rounded-xl p-3 mb-4 flex flex-wrap items-center gap-2">
           <button
             onClick={() => setSidebarOpen((v) => !v)}
             title={sidebarOpen ? 'Hide device list' : 'Switch device'}
-            className={`p-2 rounded-lg border flex items-center gap-1.5 text-xs font-bold cursor-pointer shrink-0 ${sidebarOpen
-                ? 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'
-                : 'border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400'
+            className={`p-2.5 rounded-xl border shadow-sm flex items-center gap-1.5 text-xs font-bold cursor-pointer shrink-0 ${sidebarOpen
+                ? 'bg-white dark:bg-slate-900 border-slate-200/70 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                : 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'
               }`}
           >
             {sidebarOpen ? <SidebarSimple className="w-4 h-4" /> : <Devices className="w-4 h-4" />}
@@ -494,21 +494,21 @@ export const DeviceLabPage: React.FC = () => {
           </button>
 
           <div className="relative flex-1 min-w-55">
-            <Globe className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <LockSimple className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 w-3.5 h-3.5" weight="fill" />
             <input
               type="text"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleRun()}
               placeholder="https://your-site.com"
-              className="w-full pl-9 pr-3 py-2 border rounded-lg text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500"
+              className="w-full pl-9 pr-3 py-2.5 rounded-xl text-xs font-mono bg-slate-50 dark:bg-slate-950 border border-slate-200/70 dark:border-slate-700 text-slate-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"
             />
           </div>
 
           <button
             onClick={() => handleRun()}
             disabled={starting || !selectedDevice}
-            className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-xs font-bold cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-[#1C56C9] hover:bg-[#164aac] disabled:bg-blue-400 dark:bg-blue-600 dark:hover:bg-blue-500 text-white text-xs font-bold shadow-sm cursor-pointer"
           >
             {starting ? 'Loading…' : 'Go'}
           </button>
@@ -522,7 +522,7 @@ export const DeviceLabPage: React.FC = () => {
               // instead of leaving it pending until the next manual "Go".
               if (hasStarted) handleRun(orientation, next);
             }}
-            className="px-2.5 py-2 border rounded-lg text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200"
+            className="px-3 py-2.5 rounded-xl text-xs bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-700 text-slate-700 dark:text-slate-200 shadow-sm cursor-pointer"
             title="Browser engine"
           >
             <option value="">Default engine</option>
@@ -542,12 +542,12 @@ export const DeviceLabPage: React.FC = () => {
             }}
             disabled={!selectedDevice?.isMobile}
             title="Rotate device"
-            className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 disabled:opacity-40 cursor-pointer"
+            className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-700 text-slate-500 dark:text-slate-300 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 cursor-pointer"
           >
             <ArrowClockwise className="w-4 h-4" />
           </button>
 
-          <div className="flex items-center gap-1 border border-slate-200 dark:border-slate-700 rounded-lg px-1">
+          <div className="flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-700 rounded-xl px-1 shadow-sm">
             <button onClick={() => setZoom((z) => Math.max(0.25, z - 0.1))} className="p-1.5 text-slate-500 dark:text-slate-300 cursor-pointer" title="Zoom out">
               <Minus className="w-3.5 h-3.5" />
             </button>
@@ -561,7 +561,7 @@ export const DeviceLabPage: React.FC = () => {
             onClick={() => sendInput({ type: 'reload' })}
             disabled={starting || !selectedDevice || !hasStarted}
             title="Refresh"
-            className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 disabled:opacity-40 cursor-pointer"
+            className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-700 text-slate-500 dark:text-slate-300 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 cursor-pointer"
           >
             <ArrowsClockwise className={`w-4 h-4 ${starting ? 'animate-spin' : ''}`} />
           </button>
@@ -570,9 +570,9 @@ export const DeviceLabPage: React.FC = () => {
             onClick={() => setDevToolsOpen((v) => !v)}
             disabled={!hasStarted}
             title="DevTools"
-            className={`p-2 rounded-lg border flex items-center gap-1.5 text-xs font-bold cursor-pointer disabled:opacity-40 ${devToolsOpen
-                ? 'border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400'
-                : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'
+            className={`p-2.5 rounded-xl border shadow-sm flex items-center gap-1.5 text-xs font-bold cursor-pointer disabled:opacity-40 ${devToolsOpen
+                ? 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'
+                : 'bg-white dark:bg-slate-900 border-slate-200/70 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
           >
             <Code className="w-4 h-4" />
@@ -581,14 +581,14 @@ export const DeviceLabPage: React.FC = () => {
           <button
             onClick={() => setFullscreen((v) => !v)}
             title={fullscreen ? 'Exit full screen' : 'Full screen'}
-            className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer"
+            className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-700 text-slate-500 dark:text-slate-300 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
           >
             {fullscreen ? <X className="w-4 h-4" /> : <ArrowsOut className="w-4 h-4" />}
           </button>
         </div>
 
         {/* Device frame */}
-        <div ref={framePanelRef} className="flex-1 bg-slate-100 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden flex items-center justify-center p-8">
+        <div ref={framePanelRef} className="flex-1 bg-slate-100 dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-700 rounded-xl overflow-hidden flex items-center justify-center p-8">
           <div style={{ transform: `scale(${zoom})`, transition: 'transform 0.15s ease-out' }}>
             <DeviceFrame
               device={selectedDevice}
@@ -669,7 +669,7 @@ const RailButton: React.FC<{ active: boolean; icon: React.ReactNode; label: stri
     title={label}
     className={`w-full flex flex-col items-center gap-1 px-1.5 py-2.5 text-center cursor-pointer ${
       active
-        ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400'
+        ? 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400'
         : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900'
     }`}
   >
@@ -687,7 +687,7 @@ const DeviceRow: React.FC<{
 }> = ({ device, selected, favorite, onToggleFavorite, onSelect }) => (
   <div
     className={`w-full flex items-center gap-1.5 pl-1 pr-2.5 py-2 rounded-lg text-xs transition-colors ${selected
-        ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold'
+        ? 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 font-bold'
         : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 font-medium'
       }`}
   >

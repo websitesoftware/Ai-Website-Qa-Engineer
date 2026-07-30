@@ -109,9 +109,9 @@ export const TeamDashboardPage: React.FC = () => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div className="lg:col-span-2 bg-white/85 dark:bg-slate-800 backdrop-blur-md rounded-2xl border border-slate-200/70 dark:border-slate-700 shadow-lg shadow-slate-900/5 overflow-hidden">
           <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-            <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">{memberActivityTitle.text}</h3>
+            <h3 className="font-display font-bold text-slate-900 dark:text-slate-100 text-base">{memberActivityTitle.text}</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{memberActivitySubtitle.text}</p>
           </div>
           <div className="p-6 space-y-3">
@@ -129,7 +129,7 @@ export const TeamDashboardPage: React.FC = () => {
                   className="flex items-center justify-between gap-3 p-4 border border-slate-200 dark:border-slate-700 rounded-xl"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-sm shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#FFD36E] to-[#FF9FC6] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
                       {(m.name || m.email).slice(0, 2).toUpperCase()}
                     </div>
                     <div className="min-w-0">
@@ -139,15 +139,15 @@ export const TeamDashboardPage: React.FC = () => {
                       </span>
                     </div>
                   </div>
-                  <span className="font-bold text-indigo-600 dark:text-indigo-400 text-lg shrink-0">{m.testCount}</span>
+                  <span className="font-bold text-blue-600 dark:text-blue-400 text-lg shrink-0">{m.testCount}</span>
                 </motion.div>
               ))}
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div className="bg-white/85 dark:bg-slate-800 backdrop-blur-md rounded-2xl border border-slate-200/70 dark:border-slate-700 shadow-lg shadow-slate-900/5 overflow-hidden">
           <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-            <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">{recentActivityTitle.text}</h3>
+            <h3 className="font-display font-bold text-slate-900 dark:text-slate-100 text-base">{recentActivityTitle.text}</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{recentActivitySubtitle.text}</p>
           </div>
           <div className="p-4 space-y-1 max-h-[420px] overflow-y-auto">
@@ -158,7 +158,7 @@ export const TeamDashboardPage: React.FC = () => {
               <div key={t.id} className="p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                 <p className="text-sm text-slate-800 dark:text-slate-200 truncate">
                   <span className="font-semibold">{t.createdByName || 'Someone'}</span> scanned{' '}
-                  <span className="text-indigo-600 dark:text-indigo-400 truncate">{t.url}</span>
+                  <span className="text-blue-600 dark:text-blue-400 truncate">{t.url}</span>
                 </p>
                 <p className="text-xs text-slate-400 dark:text-slate-500">
                   {timeAgo(t.createdAt)} · {formatDate(t.createdAt)}

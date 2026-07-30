@@ -64,8 +64,8 @@ const ChartCard: React.FC<{ title: string; subtitle?: string; className?: string
   className = '',
   children,
 }) => (
-  <div className={`bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm ${className}`}>
-    <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">{title}</h3>
+  <div className={`bg-white/85 dark:bg-slate-800 backdrop-blur-md p-6 rounded-2xl border border-slate-200/70 dark:border-slate-700 shadow-lg shadow-slate-900/5 ${className}`}>
+    <h3 className="font-display font-bold text-slate-900 dark:text-slate-100 text-base">{title}</h3>
     {subtitle && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 mb-2">{subtitle}</p>}
     <div className="h-64 mt-4 w-full text-[11px] text-slate-400 dark:text-slate-500">{children}</div>
   </div>
@@ -152,7 +152,7 @@ export const AnalyticsPage: React.FC = () => {
               key={r.days}
               onClick={() => setDays(r.days)}
               className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                days === r.days ? 'bg-indigo-500 text-white' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/50'
+                days === r.days ? 'bg-blue-500 text-white' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/50'
               }`}
             >
               {r.label}
@@ -197,23 +197,23 @@ export const AnalyticsPage: React.FC = () => {
                 <AreaChart data={scoreTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="analyticsTrendFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#2E7BF6" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#2E7BF6" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: tickFillStrong }} />
                   <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: tickFillMuted }} />
-                  <Tooltip content={<LightTooltip suffix="/100" />} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }} />
+                  <Tooltip content={<LightTooltip suffix="/100" />} cursor={{ stroke: '#2E7BF6', strokeWidth: 1, strokeDasharray: '4 4' }} />
                   <Area
                     type="monotone"
                     dataKey="score"
                     name="Avg Score"
-                    stroke="#6366f1"
+                    stroke="#2E7BF6"
                     strokeWidth={2.5}
                     fill="url(#analyticsTrendFill)"
-                    dot={{ r: 3, stroke: 'white', strokeWidth: 2, fill: '#6366f1' }}
-                    activeDot={{ r: 5, stroke: 'white', strokeWidth: 2, fill: '#6366f1' }}
+                    dot={{ r: 3, stroke: 'white', strokeWidth: 2, fill: '#2E7BF6' }}
+                    activeDot={{ r: 5, stroke: 'white', strokeWidth: 2, fill: '#2E7BF6' }}
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -228,7 +228,7 @@ export const AnalyticsPage: React.FC = () => {
                       <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">{d.url}</p>
                       <p className="text-[10px] text-slate-400 dark:text-slate-500">{d.testCount} scans · {formatDate(d.lastScan)}</p>
                     </div>
-                    <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 shrink-0">{d.avgScore ?? '-'}</span>
+                    <span className="text-sm font-bold text-blue-600 dark:text-blue-400 shrink-0">{d.avgScore ?? '-'}</span>
                   </div>
                 ))}
               </div>

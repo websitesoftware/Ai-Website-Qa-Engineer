@@ -56,7 +56,7 @@ export const RootCauseAnalysis: React.FC<RcaProps> = ({ data, editorUrl, editorL
             title={editorUrl ? `Open ${editorLabel} in VS Code` : 'No local source file matched for this issue yet'}
             className={`mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-colors ${
               editorUrl
-                ? 'text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 border-indigo-200 dark:border-indigo-900/50 bg-indigo-50 dark:bg-indigo-950/30 cursor-pointer'
+                ? 'text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 cursor-pointer'
                 : 'text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30 cursor-not-allowed'
             }`}
           >
@@ -69,7 +69,7 @@ export const RootCauseAnalysis: React.FC<RcaProps> = ({ data, editorUrl, editorL
           <div className="flex items-center gap-2">
             <div className="w-16 bg-slate-100 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
               <motion.div
-                className="bg-indigo-600 h-full"
+                className="bg-blue-600 h-full"
                 initial={{ width: 0 }}
                 animate={{ width: `${data.confidence * 100}%` }}
                 transition={{ duration: 0.7, ease: 'easeOut', delay: 0.1 }}

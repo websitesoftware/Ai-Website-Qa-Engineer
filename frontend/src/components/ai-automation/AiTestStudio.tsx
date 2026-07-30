@@ -326,42 +326,44 @@ export const AiTestStudio: React.FC = () => {
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-6 mt-4">
-      <div>
-        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-          <i className="ph ph-layout text-emerald-600 text-xl"></i>
-          AI Manual Test Case Matrix Studio
-        </h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-          Scan any website live to auto-generate a manual QA test pack — multi-step Test Cases,
-          grouped by page component, headed with the real website and page name.
-        </p>
-      </div>
+    <div className="space-y-4 mt-4">
+      <div className="relative overflow-hidden rounded-2xl px-6 py-6 sm:px-8 sm:py-7 flex flex-col lg:flex-row lg:items-center justify-between gap-5 bg-gradient-to-br from-[#4C93FF] to-[#1C56C9] shadow-lg shadow-blue-900/20 text-white">
+        <div>
+          <h3 className="font-display text-lg font-bold flex items-center gap-2">
+            <i className="ph ph-layout text-xl"></i>
+            AI Manual Test Case Matrix Studio
+          </h3>
+          <p className="text-xs opacity-90 mt-2 max-w-xl">
+            Scan any website live to auto-generate a manual QA test pack — multi-step Test Cases,
+            grouped by page component, headed with the real website and page name.
+          </p>
+        </div>
 
-      <div className="flex gap-3">
-        <input
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://www.themdu.com/"
-          className="flex-1 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm text-slate-900 dark:text-white dark:bg-slate-900 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-        />
-        <button
-          onClick={handleGenerateTests}
-          disabled={loading || !url}
-          className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-medium text-sm px-5 py-2.5 rounded-lg transition-colors flex items-center gap-2 min-w-[180px] justify-center"
-        >
-          {loading ? (
-            <><i className="ph ph-spinner-gap animate-spin"></i> Matrix Mapping...</>
-          ) : (
-            <><i className="ph ph-table"></i> Generate Test Matrix</>
-          )}
-        </button>
+        <div className="flex gap-2.5 shrink-0">
+          <input
+            type="url"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://www.themdu.com/"
+            className="border-none rounded-xl px-4 py-3 text-sm w-64 text-white bg-white/20 backdrop-blur-sm placeholder:text-white/75 focus:outline-none focus:ring-2 focus:ring-white/50"
+          />
+          <button
+            onClick={handleGenerateTests}
+            disabled={loading || !url}
+            className="bg-white hover:bg-slate-50 disabled:opacity-50 text-[#1C56C9] font-bold text-sm px-5 py-3 rounded-xl transition-colors flex items-center gap-2 min-w-[180px] justify-center cursor-pointer"
+          >
+            {loading ? (
+              <><i className="ph ph-spinner-gap animate-spin"></i> Matrix Mapping...</>
+            ) : (
+              <><i className="ph ph-table"></i> Generate Test Matrix</>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Section-grouped preview (mirrors the exact look of the exported docs) */}
       {groupedSteps.length > 0 && (
-        <div className="space-y-5">
+        <div className="bg-white/85 dark:bg-slate-800 backdrop-blur-md p-6 rounded-2xl border border-slate-200/70 dark:border-slate-700 shadow-lg shadow-slate-900/5 space-y-5">
           <p className="text-sm font-bold text-slate-800 dark:text-slate-200 text-center">{documentTitle}</p>
           {groupedSteps.map(({ section, rows }, index) => (
             <div key={section} className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">

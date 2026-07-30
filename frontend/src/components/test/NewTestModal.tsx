@@ -93,7 +93,7 @@ export const NewTestModal: React.FC<NewTestModalProps> = ({ isOpen, onClose, onS
                       placeholder="https://example.com"
                       value={url}
                       onChange={(e) => setUrl(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-shadow bg-slate-50 dark:bg-slate-950 dark:text-white focus:bg-white dark:focus:bg-slate-950"
+                      className="w-full pl-10 pr-4 py-3 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-shadow bg-slate-50 dark:bg-slate-950 dark:text-white focus:bg-white dark:focus:bg-slate-950"
                       required
                     />
                   </div>
@@ -117,15 +117,15 @@ export const NewTestModal: React.FC<NewTestModalProps> = ({ isOpen, onClose, onS
                     Test Configuration (Select modules to run)
                   </label>
                   <div className="space-y-3">
-                    <label className="flex items-start gap-3 p-4 border border-indigo-500 dark:border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/30 rounded-xl cursor-pointer">
+                    <label className="flex items-start gap-3 p-4 border border-blue-500 dark:border-blue-500 bg-blue-50/50 dark:bg-blue-950/30 rounded-xl cursor-pointer">
                       <input
                         type="checkbox"
                         checked
                         readOnly
-                        className="mt-1 w-4 h-4 text-indigo-500 border-slate-300 dark:border-slate-700 rounded focus:ring-indigo-500"
+                        className="mt-1 w-4 h-4 text-blue-500 border-slate-300 dark:border-slate-700 rounded focus:ring-blue-500"
                       />
                       <div>
-                        <p className="font-semibold text-indigo-600 dark:text-indigo-400">Phase 1: Foundation Analysis (MVP)</p>
+                        <p className="font-semibold text-blue-600 dark:text-blue-400">Phase 1: Foundation Analysis (MVP)</p>
                         <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                           Crawling, Responsive checks, Broken links, Lighthouse, Console Errors.
                         </p>
@@ -143,14 +143,14 @@ export const NewTestModal: React.FC<NewTestModalProps> = ({ isOpen, onClose, onS
                           return (
                             <label
                               key={mod.id}
-                              className={`flex items-start gap-3 p-3 border rounded-xl cursor-pointer transition-colors ${checked ? 'border-indigo-400 dark:border-indigo-500 bg-indigo-50/40 dark:bg-indigo-950/30' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                              className={`flex items-start gap-3 p-3 border rounded-xl cursor-pointer transition-colors ${checked ? 'border-blue-400 dark:border-blue-500 bg-blue-50/40 dark:bg-blue-950/30' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/60'
                                 }`}
                             >
                               <input
                                 type="checkbox"
                                 checked={checked}
                                 onChange={() => toggleModule(mod.id)}
-                                className="mt-1 w-4 h-4 text-indigo-500 border-slate-300 dark:border-slate-700 rounded focus:ring-indigo-500"
+                                className="mt-1 w-4 h-4 text-blue-500 border-slate-300 dark:border-slate-700 rounded focus:ring-blue-500"
                               />
                               <div>
                                 <p className="font-medium text-sm text-slate-800 dark:text-slate-200">{mod.label}</p>
@@ -172,7 +172,7 @@ export const NewTestModal: React.FC<NewTestModalProps> = ({ isOpen, onClose, onS
                   <select
                     value={selectedPolicyId}
                     onChange={(e) => setSelectedPolicyId(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-sm bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500"
+                    className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-sm bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
                   >
                     <option value="">No policy — default grading</option>
                     {policies.map((p) => (
@@ -201,7 +201,7 @@ export const NewTestModal: React.FC<NewTestModalProps> = ({ isOpen, onClose, onS
                 <button
                   type="submit"
                   disabled={isInitializing}
-                  className={`bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center gap-2 ${isInitializing ? 'opacity-80 cursor-not-allowed' : ''
+                  className={`bg-blue-500 hover:bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center gap-2 ${isInitializing ? 'opacity-80 cursor-not-allowed' : ''
                     }`}
                 >
                   {isInitializing ? (

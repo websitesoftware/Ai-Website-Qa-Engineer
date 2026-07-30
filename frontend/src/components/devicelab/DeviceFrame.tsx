@@ -158,9 +158,9 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({
         // eslint-disable-next-line @next/next/no-img-element
         <img src={frameImage} alt={`${device.name} live view of ${currentUrl}`} className="block w-full h-full pointer-events-none select-none" draggable={false} />
       ) : (
-        <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-slate-400 px-6 text-center bg-slate-50">
-          <DeviceMobile className="w-8 h-8" />
-          <p className="text-xs font-medium">
+        <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-slate-300 dark:text-slate-600 px-8 text-center bg-white dark:bg-slate-900">
+          <DeviceMobile className="w-10 h-10" />
+          <p className="text-[13px] font-semibold text-slate-400 dark:text-slate-500 leading-snug">
             {starting ? 'Launching real browser engine…' : 'Enter a URL and press Go to open it live on this device.'}
           </p>
         </div>
@@ -222,18 +222,18 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({
           {/* Status bar */}
           <div className="flex items-center justify-between px-4 text-[11px] font-semibold text-black" style={{ height: STATUS_BAR_H }}>
             <span>{time}</span>
-            <div className="flex items-center gap-1 text-black">
-              <CellSignalFull size={12} weight="fill" />
-              <WifiHigh size={12} weight="fill" />
-              <BatteryFull size={15} weight="fill" />
+            <div className="flex items-center gap-1">
+              <CellSignalFull size={12} weight="fill" className="text-[#2E7BF6]" />
+              <WifiHigh size={12} weight="fill" className="text-slate-500" />
+              <BatteryFull size={15} weight="fill" className="text-emerald-500" />
             </div>
           </div>
 
           {/* Browser chrome */}
           <div className="flex items-center gap-1.5 px-2 border-b border-slate-100" style={{ height: BROWSER_CHROME_H }}>
-            <House size={14} className="text-slate-500 shrink-0" />
+            <House size={14} className="text-orange-500 shrink-0" weight="fill" />
             <div className="flex-1 flex items-center gap-1 bg-slate-100 rounded-full px-2.5 py-1 min-w-0">
-              <LockSimple size={10} className="text-slate-400 shrink-0" />
+              <LockSimple size={10} className="text-orange-500 shrink-0" weight="fill" />
               <span className="text-[10px] text-slate-600 truncate">{host}</span>
             </div>
             <Plus size={14} className="text-slate-500 shrink-0" />

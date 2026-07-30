@@ -8,6 +8,7 @@ import { SuggestedFixes } from '../components/ai-automation/SuggestedFixes';
 import { PullRequestGeneration } from '../components/ai-automation/PullRequestGeneration';
 import { CicdIntegration } from '../components/ai-automation/CicdIntegration';
 import { PasteIssueAnalyzer } from '../components/ai-automation/PasteIssueAnalyzer';
+import { CodeReviewPanel } from '../components/ai-automation/CodeReviewPanel';
 import { API_BASE_URL, api } from '../lib/api';
 import { usePolling } from '../hooks/usePolling';
 
@@ -278,7 +279,7 @@ export const AIAutomationPage: React.FC = () => {
   if (loading && !resp) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center gap-3">
-        <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
         <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 tracking-wide animate-pulse">
           Analysing latest scan…
         </p>
@@ -293,7 +294,7 @@ export const AIAutomationPage: React.FC = () => {
     <div className="bg-slate-50 dark:bg-slate-900 min-h-screen p-6 sm:p-8 text-slate-800 dark:text-slate-200 transition-colors duration-200">
       <header className="max-w-7xl mx-auto mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
         <div>
-          <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-1 flex items-center gap-2 flex-wrap">
+          <div className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1 flex items-center gap-2 flex-wrap">
             Core Operations Suite
             <span
               className={`normal-case font-semibold text-[10px] px-2 py-0.5 rounded-full border ${llmEnabled
@@ -382,7 +383,7 @@ export const AIAutomationPage: React.FC = () => {
             </div>
             <div className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
               <motion.div
-                className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500"
+                className="h-full bg-gradient-to-r from-blue-500 to-emerald-500"
                 initial={{ width: 0 }}
                 animate={{ width: `${progressPct}%` }}
                 transition={{ duration: 0.6, ease: 'easeOut' }}

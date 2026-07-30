@@ -114,7 +114,7 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
             title="Inspect element (pick an element on the device)"
             className={`p-2 mr-0.5 rounded cursor-pointer shrink-0 ${
               inspectMode
-                ? 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400'
+                ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400'
                 : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800'
             }`}
           >
@@ -204,7 +204,7 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
                   <span className="text-slate-400 font-sans">
                     {inspectMode ? 'Click an element on the device…' : ''}
                   </span>
-                  <button onClick={onInspectDom} className="flex items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-indigo-500 font-sans cursor-pointer shrink-0">
+                  <button onClick={onInspectDom} className="flex items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-blue-500 font-sans cursor-pointer shrink-0">
                     <ArrowsClockwise className="w-3.5 h-3.5" /> Refresh
                   </button>
                 </div>
@@ -267,7 +267,7 @@ const SourcesTab: React.FC<{
               onFetchSource(f.url);
             }}
             className={`w-full flex items-center gap-1.5 px-2 py-1.5 text-left text-[11px] cursor-pointer border-b border-slate-50 dark:border-slate-800/60 ${
-              selectedUrl === f.url ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+              selectedUrl === f.url ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'
             }`}
           >
             <File className="w-3 h-3 shrink-0" />
@@ -292,7 +292,7 @@ const SourcesTab: React.FC<{
 const PerformanceTab: React.FC<{ metrics: PerformanceMetrics | null; onRefresh: () => void }> = ({ metrics, onRefresh }) => (
   <div className="p-3 font-sans text-xs">
     <div className="flex justify-end mb-2">
-      <button onClick={onRefresh} className="flex items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-indigo-500 cursor-pointer">
+      <button onClick={onRefresh} className="flex items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-blue-500 cursor-pointer">
         <ArrowsClockwise className="w-3.5 h-3.5" /> Refresh
       </button>
     </div>
@@ -314,7 +314,7 @@ const PerformanceTab: React.FC<{ metrics: PerformanceMetrics | null; onRefresh: 
             <div key={type} className="flex items-center gap-2">
               <span className="w-24 shrink-0 text-slate-500 dark:text-slate-400">{type}</span>
               <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div className="h-full bg-indigo-400" style={{ width: `${Math.min(100, (count / metrics.resourceCount) * 100)}%` }} />
+                <div className="h-full bg-blue-400" style={{ width: `${Math.min(100, (count / metrics.resourceCount) * 100)}%` }} />
               </div>
               <span className="w-6 text-right text-slate-500 dark:text-slate-400">{count}</span>
             </div>
@@ -335,7 +335,7 @@ const MetricCard: React.FC<{ label: string; value: string }> = ({ label, value }
 const MemoryTab: React.FC<{ memory: MemoryInfo | null; onRefresh: () => void }> = ({ memory, onRefresh }) => (
   <div className="p-3 font-sans text-xs">
     <div className="flex justify-end mb-2">
-      <button onClick={onRefresh} className="flex items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-indigo-500 cursor-pointer">
+      <button onClick={onRefresh} className="flex items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-blue-500 cursor-pointer">
         <ArrowsClockwise className="w-3.5 h-3.5" /> Refresh
       </button>
     </div>
@@ -364,7 +364,7 @@ const MemoryTab: React.FC<{ memory: MemoryInfo | null; onRefresh: () => void }> 
 const ApplicationTab: React.FC<{ storage: StorageSnapshot | null; onRefresh: () => void }> = ({ storage, onRefresh }) => (
   <div className="p-3 font-sans text-xs">
     <div className="flex justify-end mb-2">
-      <button onClick={onRefresh} className="flex items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-indigo-500 cursor-pointer">
+      <button onClick={onRefresh} className="flex items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-blue-500 cursor-pointer">
         <ArrowsClockwise className="w-3.5 h-3.5" /> Refresh
       </button>
     </div>
@@ -441,13 +441,13 @@ const StylesPane: React.FC<{ element: InspectedElement }> = ({ element }) => {
       <div className="flex items-center border-b border-slate-100 dark:border-slate-800">
         <button
           onClick={() => setSub('styles')}
-          className={`px-3 py-1.5 text-[11px] font-semibold cursor-pointer border-b-2 ${sub === 'styles' ? 'border-indigo-500 text-slate-900 dark:text-slate-100' : 'border-transparent text-slate-400'}`}
+          className={`px-3 py-1.5 text-[11px] font-semibold cursor-pointer border-b-2 ${sub === 'styles' ? 'border-blue-500 text-slate-900 dark:text-slate-100' : 'border-transparent text-slate-400'}`}
         >
           Styles
         </button>
         <button
           onClick={() => setSub('computed')}
-          className={`px-3 py-1.5 text-[11px] font-semibold cursor-pointer border-b-2 ${sub === 'computed' ? 'border-indigo-500 text-slate-900 dark:text-slate-100' : 'border-transparent text-slate-400'}`}
+          className={`px-3 py-1.5 text-[11px] font-semibold cursor-pointer border-b-2 ${sub === 'computed' ? 'border-blue-500 text-slate-900 dark:text-slate-100' : 'border-transparent text-slate-400'}`}
         >
           Computed
         </button>
@@ -546,7 +546,7 @@ const TabButton: React.FC<{ active: boolean; onClick: () => void; icon?: React.R
     onClick={onClick}
     className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium font-sans border-b-2 cursor-pointer transition-colors shrink-0 ${
       active
-        ? 'border-indigo-500 text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900'
+        ? 'border-blue-500 text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900'
         : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
     }`}
   >

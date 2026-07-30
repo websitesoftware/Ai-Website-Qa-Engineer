@@ -137,7 +137,7 @@ export const TestsTable: React.FC<TestsTableProps> = ({
                           test.score >= 90
                             ? 'border-emerald-400'
                             : test.score >= 70
-                            ? 'border-indigo-400'
+                            ? 'border-blue-400'
                             : test.score >= 50
                             ? 'border-amber-400'
                             : 'border-red-400'
@@ -155,7 +155,7 @@ export const TestsTable: React.FC<TestsTableProps> = ({
                       {(test.status === 'passed' || test.status === 'failed') && (
                         <button
                           onClick={() => openReport(test.id)}
-                          className="text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 font-medium text-sm transition-colors"
+                          className="text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 font-medium text-sm transition-colors"
                         >
                           View Report
                         </button>
@@ -171,7 +171,7 @@ export const TestsTable: React.FC<TestsTableProps> = ({
                         <button
                           onClick={() => onRerun(test.id)}
                           title="Re-run"
-                          className="text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
+                          className="text-slate-400 dark:text-slate-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
                         >
                           <i className="ph ph-arrow-clockwise text-lg"></i>
                         </button>

@@ -9,10 +9,10 @@ import { ThemeToggle } from './ThemeToggle';
 import { useTheme } from '../context/ThemeContext';
 import { User, SignOut, Key, Envelope, LockOpen, ArrowLeft, CheckSquare, Square, Eye, EyeSlash, List, X } from '@phosphor-icons/react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useIsAdmin } from '../hooks/useIsAdmin';
 import { useContent } from '../context/ContentContext';
+import { AquaScene } from './ui/AquaScene';
 
-export type TabType = 'Dashboard' | 'Tests' | 'Scan Results' | 'Automation' | 'Settings' | 'Content';
+export type TabType = 'Dashboard' | 'Tests' | 'Scan Results' | 'Automation' | 'Settings';
 type AuthView = 'LOGIN' | 'FORGOT_PASSWORD' | 'REGISTER';
 
 interface LayoutProps {
@@ -34,7 +34,6 @@ export const Layout: React.FC<LayoutProps> = ({
   const { error } = useQAData();
   const { resolvedTheme } = useTheme();
   const { user, login, register, forgotPassword, logout } = useAuth();
-  const isAdmin = useIsAdmin();
   const sidebarTitle = useContent('global.sidebar.title', { text: 'AI QA Engineer' });
   const sidebarSubtitle = useContent('global.sidebar.subtitle', { text: 'Website Assistant' });
 
@@ -135,13 +134,11 @@ export const Layout: React.FC<LayoutProps> = ({
     { label: 'Scan Results' as TabType, icon: 'ph-sparkle' },
     { label: 'Automation' as TabType, icon: 'ph-robot' },
     { label: 'Settings' as TabType, icon: 'ph-gear' },
-    // Admin/owner-only: manages the editable text/icon/image content shown
-    // across the 5 tabs above, hidden from everyone else's nav entirely.
-    ...(isAdmin ? [{ label: 'Content' as TabType, icon: 'ph-pencil-simple-line' }] : []),
   ];
 
   return (
-    <div className={`h-app-shell overflow-hidden flex transition-all duration-300 ${resolvedTheme === 'dark' ? 'bg-slate-950 text-white' : 'bg-[#F8FAFC] text-slate-800'}`}>
+    <div className={`h-app-shell overflow-hidden flex relative transition-all duration-300 ${resolvedTheme === 'dark' ? 'bg-slate-950 text-white' : 'bg-app-sky text-slate-800'}`}>
+      <AquaScene />
 
       {/* Mobile nav backdrop — tapping it (or a nav item) closes the drawer */}
       <AnimatePresence>
@@ -162,11 +159,11 @@ export const Layout: React.FC<LayoutProps> = ({
       <aside
         className={`w-64 h-full flex flex-col shrink-0 transition-transform duration-300 fixed md:static inset-y-0 left-0 z-50 md:translate-x-0 ${
           mobileNavOpen ? 'translate-x-0' : '-translate-x-full'
-        } ${resolvedTheme === 'dark' ? 'bg-slate-900 border-r border-slate-800' : 'bg-white border-r border-slate-200'}`}
+        } ${resolvedTheme === 'dark' ? 'bg-slate-900 border-r border-slate-800' : 'bg-white/20 border-r border-white/30'}`}
       >
-        <div className={`h-20 flex items-center justify-between px-6 border-b ${resolvedTheme === 'dark' ? 'border-slate-800' : 'border-slate-100'}`}>
+        <div className={`h-20 flex items-center justify-between px-6 border-b ${resolvedTheme === 'dark' ? 'border-slate-800' : 'border-white/40'}`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-xl">Q</div>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-pink-500 shadow-md shadow-violet-500/30 flex items-center justify-center text-white font-bold text-xl">Q</div>
             <div>
               <h1 className={`font-bold ${resolvedTheme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{sidebarTitle.text}</h1>
               <p className={`text-xs ${resolvedTheme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{sidebarSubtitle.text}</p>
@@ -188,7 +185,13 @@ export const Layout: React.FC<LayoutProps> = ({
                 setActiveTab(item.label);
                 setMobileNavOpen(false);
               }}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all cursor-pointer ${activeTab === item.label ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600' : resolvedTheme === 'dark' ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-50'}`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all cursor-pointer ${
+                activeTab === item.label
+                  ? 'bg-gradient-to-r from-pink-100 to-violet-100 dark:from-violet-900/40 dark:to-pink-900/30 text-violet-700 dark:text-violet-300 font-bold'
+                  : resolvedTheme === 'dark'
+                    ? 'text-slate-300 hover:bg-slate-800'
+                    : 'text-slate-600 hover:bg-slate-50'
+              }`}
             >
               <i className={`ph ${item.icon} text-xl`} />
               {item.label}
@@ -198,15 +201,15 @@ export const Layout: React.FC<LayoutProps> = ({
       </aside>
 
       {/* Main Container */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
+      <main className="flex-1 flex flex-col h-full overflow-hidden min-w-0 relative z-10">
 
         {/* RUNTIME INTEGRATED GLOBAL HEADER */}
-        <header className={`h-20 px-4 sm:px-8 flex items-center justify-between gap-3 shrink-0 transition-all duration-300 relative ${resolvedTheme === 'dark' ? 'border-b border-slate-800 bg-slate-900/40' : 'border-b border-slate-200 bg-white'}`} ref={popupRef}>
+        <header className={`h-20 px-4 sm:px-8 flex items-center justify-between gap-3 shrink-0 transition-all duration-300 relative ${resolvedTheme === 'dark' ? 'border-b border-slate-800 bg-slate-900/40' : 'bg-white/15'}`} ref={popupRef}>
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => setMobileNavOpen(true)}
               aria-label="Open navigation menu"
-              className={`md:hidden p-2 rounded-lg border shrink-0 cursor-pointer ${resolvedTheme === 'dark' ? 'border-slate-800 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+              className={`md:hidden p-2 rounded-full shadow-sm shrink-0 cursor-pointer ${resolvedTheme === 'dark' ? 'bg-slate-900 text-slate-300' : 'bg-white text-slate-600'}`}
             >
               <List className="w-5 h-5" />
             </button>
@@ -215,7 +218,7 @@ export const Layout: React.FC<LayoutProps> = ({
               {user ? (
                 <span>Welcome back, {user.name} 👋</span>
               ) : (
-                <span>Welcome, Guest! Please <span className="text-indigo-600 dark:text-indigo-400 underline cursor-pointer hover:text-indigo-700" onClick={() => { setAuthView('LOGIN'); setIsLoginOpen(true); }}>Sign In</span></span>
+                <span>Welcome, Guest! Please <span className="text-blue-600 dark:text-blue-400 underline cursor-pointer hover:text-blue-700" onClick={() => { setAuthView('LOGIN'); setIsLoginOpen(true); }}>Sign In</span></span>
               )}
             </h2>
             <p className={`text-xs mt-0.5 font-medium ${resolvedTheme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -231,8 +234,16 @@ export const Layout: React.FC<LayoutProps> = ({
           <div className="flex items-center gap-3.5">
             {onSearchChange && (
               <div className="relative hidden lg:block">
-                <i className="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                <input type="text" placeholder="Search data metrics..." value={search} onChange={(e) => onSearchChange(e.target.value)} className={`pl-9 pr-4 py-2 border rounded-xl text-xs w-56 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all ${resolvedTheme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} />
+                <i className="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input
+                  type="text"
+                  placeholder="Search data metrics..."
+                  value={search}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  className={`pl-9 pr-4 py-2 rounded-full text-xs w-56 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all shadow-sm ${
+                    resolvedTheme === 'dark' ? 'bg-slate-900 border border-slate-800 text-white' : 'bg-white border border-transparent text-slate-800'
+                  }`}
+                />
               </div>
             )}
 
@@ -240,9 +251,22 @@ export const Layout: React.FC<LayoutProps> = ({
 
             <ThemeToggle />
 
-            {/* Profile Context Active Dropdown Trigger */}
-            <button aria-label="Describe this button's action" onClick={() => setIsLoginOpen(!isLoginOpen)} className={`px-3.5 py-2 rounded-xl border transition-all shadow-sm flex items-center gap-1.5 cursor-pointer text-xs font-bold ${isLoginOpen ? 'bg-indigo-600 border-indigo-600 text-white' : user ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400' : resolvedTheme === 'dark' ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700'}`}>
-              <User className="w-4 h-4" weight={user || isLoginOpen ? "fill" : "bold"} />
+            {/* Profile Context Active Dropdown Trigger — matches the Aqua Bloom
+                reference's pill-shaped avatar chip. */}
+            <button
+              aria-label="Describe this button's action"
+              onClick={() => setIsLoginOpen(!isLoginOpen)}
+              className={`pl-1.5 pr-4 py-1.5 rounded-full transition-all shadow-sm flex items-center gap-2.5 cursor-pointer text-xs font-bold ${
+                isLoginOpen ? 'bg-blue-600 text-white' : resolvedTheme === 'dark' ? 'bg-slate-900 text-slate-200' : 'bg-white text-slate-700'
+              }`}
+            >
+              <span
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-white shrink-0 ${
+                  isLoginOpen ? 'bg-white/20' : 'bg-gradient-to-br from-[#FFD36E] to-[#FF9FC6]'
+                }`}
+              >
+                {user ? user.name.slice(0, 1).toUpperCase() : <User className="w-4 h-4" weight="bold" />}
+              </span>
               <span className="hidden sm:inline">{user ? user.name : 'Account'}</span>
             </button>
 
@@ -288,18 +312,18 @@ export const Layout: React.FC<LayoutProps> = ({
                               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Email Address</label>
                               <div className="relative flex items-center">
                                 <Envelope className="absolute left-3 text-slate-400 w-4 h-4" />
-                                <input type="email" required placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full pl-9 pr-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-semibold ${resolvedTheme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} />
+                                <input type="email" required placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full pl-9 pr-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-semibold ${resolvedTheme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} />
                               </div>
                             </div>
 
                             <div className="space-y-1">
                               <div className="flex justify-between items-center">
                                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Password</label>
-                                <button type="button" onClick={() => { setAuthView('FORGOT_PASSWORD'); setApiError(''); }} className="text-[11px] font-bold text-indigo-500 hover:underline bg-transparent border-none cursor-pointer">Forgot?</button>
+                                <button type="button" onClick={() => { setAuthView('FORGOT_PASSWORD'); setApiError(''); }} className="text-[11px] font-bold text-blue-500 hover:underline bg-transparent border-none cursor-pointer">Forgot?</button>
                               </div>
                               <div className="relative flex items-center">
                                 <Key className="absolute left-3 text-slate-400 w-4 h-4" />
-                                <input type={showPassword ? 'text' : 'password'} required placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className={`w-full pl-9 pr-9 py-2 border rounded-xl text-xs focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-semibold ${resolvedTheme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} />
+                                <input type={showPassword ? 'text' : 'password'} required placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className={`w-full pl-9 pr-9 py-2 border rounded-xl text-xs focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-semibold ${resolvedTheme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} />
                                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 text-slate-400 hover:text-slate-500 bg-transparent border-none cursor-pointer">
                                   {showPassword ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>
@@ -307,17 +331,17 @@ export const Layout: React.FC<LayoutProps> = ({
                             </div>
 
                             <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => setRememberMe(!rememberMe)}>
-                              {rememberMe ? <CheckSquare className="w-4 h-4 text-indigo-500" weight="fill" /> : <Square className="w-4 h-4 text-slate-300" />}
+                              {rememberMe ? <CheckSquare className="w-4 h-4 text-blue-500" weight="fill" /> : <Square className="w-4 h-4 text-slate-300" />}
                               <span className="text-xs text-slate-400 font-semibold">Remember this machine</span>
                             </div>
                           </div>
 
-                          <button type="submit" disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold py-2.5 rounded-xl text-xs shadow-sm flex items-center justify-center gap-1.5 cursor-pointer mt-1">
+                          <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold py-2.5 rounded-xl text-xs shadow-sm flex items-center justify-center gap-1.5 cursor-pointer mt-1">
                             {loading ? 'Authenticating...' : 'Sign In Account'}
                           </button>
 
                           <div className="text-center pt-2 border-t border-slate-100 dark:border-slate-800/60">
-                            <span className="text-xs text-slate-400 font-medium">Don&apos;t have an account? <button type="button" onClick={() => { setAuthView('REGISTER'); setApiError(''); }} className="text-indigo-500 font-bold hover:underline bg-transparent border-none cursor-pointer">Sign Up</button></span>
+                            <span className="text-xs text-slate-400 font-medium">Don&apos;t have an account? <button type="button" onClick={() => { setAuthView('REGISTER'); setApiError(''); }} className="text-blue-500 font-bold hover:underline bg-transparent border-none cursor-pointer">Sign Up</button></span>
                           </div>
                         </form>
                       )}
@@ -344,10 +368,10 @@ export const Layout: React.FC<LayoutProps> = ({
                                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Registered Email</label>
                                 <div className="relative flex items-center">
                                   <Envelope className="absolute left-3 text-slate-400 w-4 h-4" />
-                                  <input type="email" required placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full pl-9 pr-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-semibold ${resolvedTheme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} />
+                                  <input type="email" required placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full pl-9 pr-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-semibold ${resolvedTheme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} />
                                 </div>
                               </div>
-                              <button type="submit" disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold py-2.5 rounded-xl text-xs shadow-sm cursor-pointer">
+                              <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold py-2.5 rounded-xl text-xs shadow-sm cursor-pointer">
                                 {loading ? 'Processing...' : 'Send Recovery Link'}
                               </button>
                             </div>
@@ -372,7 +396,7 @@ export const Layout: React.FC<LayoutProps> = ({
                               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Email Address</label>
                               <div className="relative flex items-center">
                                 <Envelope className="absolute left-3 text-slate-400 w-4 h-4" />
-                                <input type="email" required placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full pl-9 pr-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-semibold ${resolvedTheme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} />
+                                <input type="email" required placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full pl-9 pr-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-semibold ${resolvedTheme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} />
                               </div>
                             </div>
 
@@ -380,12 +404,12 @@ export const Layout: React.FC<LayoutProps> = ({
                               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Password</label>
                               <div className="relative flex items-center">
                                 <Key className="absolute left-3 text-slate-400 w-4 h-4" />
-                                <input type="password" required placeholder="Create custom password (min 8 chars)" value={password} onChange={(e) => setPassword(e.target.value)} className={`w-full pl-9 pr-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-semibold ${resolvedTheme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} />
+                                <input type="password" required placeholder="Create custom password (min 8 chars)" value={password} onChange={(e) => setPassword(e.target.value)} className={`w-full pl-9 pr-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-semibold ${resolvedTheme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} />
                               </div>
                             </div>
                           </div>
 
-                          <button type="submit" disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold py-2.5 rounded-xl text-xs shadow-sm cursor-pointer mt-1">
+                          <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold py-2.5 rounded-xl text-xs shadow-sm cursor-pointer mt-1">
                             {loading ? 'Initializing...' : 'Register & Initialize'}
                           </button>
                         </form>
@@ -400,7 +424,7 @@ export const Layout: React.FC<LayoutProps> = ({
         </header>
 
         {/* Dashboard Dynamic Children Viewports Injection */}
-        <div className={`flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-8 py-6 space-y-6 transition-all duration-300 ${resolvedTheme === 'dark' ? 'bg-slate-950' : 'bg-[#F8FAFC]'}`}>
+        <div className={`flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-8 py-6 space-y-6 transition-all duration-300 ${resolvedTheme === 'dark' ? 'bg-slate-950' : 'bg-transparent'}`}>
           {children}
         </div>
       </main>

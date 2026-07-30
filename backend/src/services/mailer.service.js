@@ -1,24 +1,104 @@
+const nodemailer = require("nodemailer");
 const config = require("../config/config");
 const logger = require("../utils/logger");
 
 /**
- * Thin wrapper around Resend's REST API (https://resend.com) via plain
- * fetch — no SDK dependency needed. Optional: without RESEND_API_KEY set,
- * every send() call just logs and reports failure; callers must treat that
- * as "couldn't send," never as a hard error (same "never fabricate
- * confidence" pattern as gemini.service.js).
+ * Three interchangeable send strategies, picked automatically (or forced via
+ * EMAIL_PROVIDER):
+ *  - Gmail SMTP via nodemailer — no domain to verify, sends to any real
+ *    inbox immediately using a personal Gmail account + app password.
+ *  - Outlook/Microsoft SMTP via nodemailer (smtp.office365.com) — same idea
+ *    for accounts that support self-service app passwords via a Microsoft
+ *    account rather than gmail.com.
+ *  - Resend's REST API via plain fetch — no SDK dependency, but needs a
+ *    verified sending domain to reach arbitrary recipients in production.
+ * Without any configured, send() just logs and reports failure; callers
+ * must treat that as "couldn't send," never as a hard error (same
+ * "never fabricate confidence" pattern as gemini.service.js).
  */
 
-function isEnabled() {
+function isGmailConfigured() {
+  return Boolean(config.email.gmail.user && config.email.gmail.appPassword);
+}
+
+function isOutlookConfigured() {
+  return Boolean(config.email.outlook.user && config.email.outlook.appPassword);
+}
+
+function isResendConfigured() {
   return Boolean(config.email.resendApiKey);
 }
 
-async function send({ to, subject, html }) {
-  if (!isEnabled()) {
-    logger.warn("mailer", `RESEND_API_KEY not set — would have emailed ${to}: "${subject}"`);
-    return { ok: false, reason: "not_configured" };
-  }
+function activeProvider() {
+  if (config.email.provider === "gmail") return isGmailConfigured() ? "gmail" : null;
+  if (config.email.provider === "outlook") return isOutlookConfigured() ? "outlook" : null;
+  if (config.email.provider === "resend") return isResendConfigured() ? "resend" : null;
+  // Auto: prefer whichever no-domain SMTP account is configured, else Resend.
+  if (isGmailConfigured()) return "gmail";
+  if (isOutlookConfigured()) return "outlook";
+  if (isResendConfigured()) return "resend";
+  return null;
+}
 
+function isEnabled() {
+  return activeProvider() !== null;
+}
+
+let gmailTransporter = null;
+function getGmailTransporter() {
+  if (!gmailTransporter) {
+    gmailTransporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: config.email.gmail.user, pass: config.email.gmail.appPassword },
+    });
+  }
+  return gmailTransporter;
+}
+
+async function sendViaGmail({ to, subject, html }) {
+  try {
+    await getGmailTransporter().sendMail({
+      from: `AI QA Engineer <${config.email.gmail.user}>`,
+      to,
+      subject,
+      html,
+    });
+    return { ok: true };
+  } catch (err) {
+    logger.warn("mailer", `Gmail SMTP send failed: ${err.message}`);
+    return { ok: false, reason: "send_failed" };
+  }
+}
+
+let outlookTransporter = null;
+function getOutlookTransporter() {
+  if (!outlookTransporter) {
+    outlookTransporter = nodemailer.createTransport({
+      host: "smtp.office365.com",
+      port: 587,
+      secure: false, // STARTTLS on 587, not implicit TLS
+      auth: { user: config.email.outlook.user, pass: config.email.outlook.appPassword },
+    });
+  }
+  return outlookTransporter;
+}
+
+async function sendViaOutlook({ to, subject, html }) {
+  try {
+    await getOutlookTransporter().sendMail({
+      from: `AI QA Engineer <${config.email.outlook.user}>`,
+      to,
+      subject,
+      html,
+    });
+    return { ok: true };
+  } catch (err) {
+    logger.warn("mailer", `Outlook SMTP send failed: ${err.message}`);
+    return { ok: false, reason: "send_failed" };
+  }
+}
+
+async function sendViaResend({ to, subject, html }) {
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -38,6 +118,17 @@ async function send({ to, subject, html }) {
     logger.warn("mailer", `Resend request failed: ${err.message}`);
     return { ok: false, reason: "network_error" };
   }
+}
+
+const SENDERS = { gmail: sendViaGmail, outlook: sendViaOutlook, resend: sendViaResend };
+
+async function send({ to, subject, html }) {
+  const provider = activeProvider();
+  if (!provider) {
+    logger.warn("mailer", `No email provider configured — would have emailed ${to}: "${subject}"`);
+    return { ok: false, reason: "not_configured" };
+  }
+  return SENDERS[provider]({ to, subject, html });
 }
 
 function sendInviteEmail(to, inviteLink, inviterName, role) {

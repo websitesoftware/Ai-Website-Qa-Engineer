@@ -55,7 +55,7 @@ const CustomTooltip = ({
   if (active && payload && payload.length) {
     return (
       <div className="bg-slate-900 dark:bg-slate-950 text-white text-xs font-bold px-3 py-1.5 rounded shadow-md flex items-center gap-1.5 border border-transparent dark:border-slate-700">
-        <span className="w-2 h-2 rounded-full bg-indigo-400"></span>
+        <span className="w-2 h-2 rounded-full bg-blue-400"></span>
         {payload[0].value}% {metricLabel} ({payload[0].payload?.name})
       </div>
     );
@@ -130,8 +130,8 @@ export const TrendsAndSeverity: React.FC = () => {
             <AreaChart data={dynamicTrendData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0.0} />
+                  <stop offset="5%" stopColor="#2E7BF6" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#2E7BF6" stopOpacity={0.0} />
                 </linearGradient>
               </defs>
               <XAxis
@@ -148,16 +148,16 @@ export const TrendsAndSeverity: React.FC = () => {
                 tickLine={false}
                 hide={true}
               />
-              <Tooltip content={<CustomTooltip metricLabel={metricLabel} />} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }} />
+              <Tooltip content={<CustomTooltip metricLabel={metricLabel} />} cursor={{ stroke: '#2E7BF6', strokeWidth: 1, strokeDasharray: '4 4' }} />
               <Area
                 type="monotone"
                 dataKey={activeMetric} // Dynamic key mapping based on state (quality or coverage)
-                stroke="#6366f1"
+                stroke="#2E7BF6"
                 strokeWidth={2.5}
                 fillOpacity={1}
                 fill="url(#colorScore)"
-                activeDot={{ r: 5, stroke: 'white', strokeWidth: 2, fill: '#6366f1' }}
-                dot={{ r: 4, stroke: 'white', strokeWidth: 2, fill: '#6366f1' }}
+                activeDot={{ r: 5, stroke: 'white', strokeWidth: 2, fill: '#2E7BF6' }}
+                dot={{ r: 4, stroke: 'white', strokeWidth: 2, fill: '#2E7BF6' }}
               />
             </AreaChart>
           </ResponsiveContainer>

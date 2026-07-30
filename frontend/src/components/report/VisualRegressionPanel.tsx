@@ -15,7 +15,7 @@ type Verdict = 'perfect' | 'good' | 'bad' | 'new-baseline';
 
 const VERDICT: Record<Verdict, { label: string; cls: string; Icon: React.ElementType }> = {
   perfect: { label: 'Perfect', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900', Icon: CheckCircle },
-  good: { label: 'Good', cls: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900', Icon: Warning },
+  good: { label: 'Good', cls: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-900', Icon: Warning },
   bad: { label: 'Bad', cls: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900', Icon: XCircle },
   'new-baseline': { label: 'New baseline', cls: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700', Icon: Plus },
 };
@@ -36,7 +36,7 @@ const ShotCard: React.FC<{ result: BackendVisualRegressionResult; currentPath?: 
   const isNew = verdict === 'new-baseline';
 
   return (
-    <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-800">
+    <div className="border border-slate-200/70 dark:border-slate-700 rounded-xl overflow-hidden bg-white/85 dark:bg-slate-800 backdrop-blur-md">
       <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50">
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider px-2 py-1 rounded border ${v.cls}`}>
@@ -65,7 +65,7 @@ const ShotCard: React.FC<{ result: BackendVisualRegressionResult; currentPath?: 
           </p>
           {currentPath && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={api.screenshotUrl(currentPath)} alt="Current capture" className="w-full border border-slate-200 dark:border-slate-700 rounded-lg" />
+            <img src={api.screenshotUrl(currentPath)} alt="Current capture" className="w-full border border-slate-200/70 dark:border-slate-700 rounded-lg" />
           )}
         </div>
       ) : (
@@ -77,7 +77,7 @@ const ShotCard: React.FC<{ result: BackendVisualRegressionResult; currentPath?: 
                 onClick={() => setMode(m)}
                 disabled={m === 'diff' && !result.diffImagePath}
                 className={`px-2.5 py-1 text-[11px] font-bold rounded-md capitalize transition-all disabled:opacity-40 ${
-                  mode === m ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                  mode === m ? 'bg-white/85 dark:bg-slate-800 backdrop-blur-md text-slate-900 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                 }`}
               >
                 {m.replace('-', ' ')}
@@ -92,14 +92,14 @@ const ShotCard: React.FC<{ result: BackendVisualRegressionResult; currentPath?: 
                   <figure>
                     <figcaption className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">Baseline</figcaption>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={api.screenshotUrl(result.baselinePath)} alt="Baseline" className="w-full border border-slate-200 dark:border-slate-700 rounded-lg" />
+                    <img src={api.screenshotUrl(result.baselinePath)} alt="Baseline" className="w-full border border-slate-200/70 dark:border-slate-700 rounded-lg" />
                   </figure>
                 )}
                 {currentPath && (
                   <figure>
                     <figcaption className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">Current</figcaption>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={api.screenshotUrl(currentPath)} alt="Current" className="w-full border border-slate-200 dark:border-slate-700 rounded-lg" />
+                    <img src={api.screenshotUrl(currentPath)} alt="Current" className="w-full border border-slate-200/70 dark:border-slate-700 rounded-lg" />
                   </figure>
                 )}
               </div>
@@ -111,7 +111,7 @@ const ShotCard: React.FC<{ result: BackendVisualRegressionResult; currentPath?: 
                   Changed pixels highlighted
                 </figcaption>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={api.screenshotUrl(result.diffImagePath)} alt="Diff" className="w-full border border-slate-200 dark:border-slate-700 rounded-lg" />
+                <img src={api.screenshotUrl(result.diffImagePath)} alt="Diff" className="w-full border border-slate-200/70 dark:border-slate-700 rounded-lg" />
               </figure>
             )}
           </div>

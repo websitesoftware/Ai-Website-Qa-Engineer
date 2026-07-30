@@ -10,7 +10,7 @@
 
 // function colorForScore(score: number) {
 //   if (score >= 90) return '#10b981'; // emerald
-//   if (score >= 70) return '#6366F1'; // indigo
+//   if (score >= 70) return '#2E7BF6'; // blue
 //   if (score >= 50) return '#f59e0b'; // amber
 //   return '#ef4444'; // red
 // }
@@ -68,7 +68,7 @@ interface ScoreGaugeProps {
 
 function colorForScore(score: number) {
   if (score >= 90) return '#10b981'; // Green
-  if (score >= 70) return '#6366F1'; // Indigo
+  if (score >= 70) return '#2E7BF6'; // Indigo
   if (score >= 50) return '#f59e0b'; // Amber
   return '#ef4444'; // Red
 }
