@@ -24,6 +24,7 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  alternates: { canonical: "http://localhost:3000/" },
   title: "AI Website QA Engineer",
   description: "AI Website QA Dashboard",
 };
