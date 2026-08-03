@@ -105,7 +105,7 @@ function fromAccessibility(violations, pageUrl) {
             : v.impact === "moderate"
               ? "medium"
               : "low",
-      title: v.help,
+      title: v.categoryLabel || v.help,
       description: `${v.description} (${v.nodes} element${v.nodes === 1 ? "" : "s"} affected)`,
       url: pageUrl,
       suggestion: v.helpUrl,
