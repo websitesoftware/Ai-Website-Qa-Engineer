@@ -255,6 +255,126 @@ html.dark .aqua-scene {
 }
 
 /* =====================================================
+   Night scene animated background (dark mode) — moon,
+   stars, sparkles, drifting clouds, shooting star.
+   Mirror of .aqua-scene, shown only in dark mode.
+===================================================== */
+
+.night-scene {
+  display: none;
+}
+
+html.dark .night-scene {
+  display: block;
+}
+
+@keyframes nightMoonGlow {
+  0%, 100% { box-shadow: 0 0 70px 20px rgba(180, 200, 255, .22), 0 0 160px 60px rgba(140, 165, 255, .10); }
+  50% { box-shadow: 0 0 90px 26px rgba(180, 200, 255, .32), 0 0 190px 70px rgba(140, 165, 255, .16); }
+}
+
+.night-moon {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 35%, #fff 0%, #dce7ff 35%, #a9bfec 70%, transparent 100%);
+  animation: nightMoonGlow 6s ease-in-out infinite;
+}
+
+.night-moon::before,
+.night-moon::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(160, 180, 225, .32);
+}
+
+.night-moon::before {
+  top: 30%;
+  left: 22%;
+  width: 14%;
+  height: 14%;
+}
+
+.night-moon::after {
+  top: 55%;
+  left: 55%;
+  width: 20%;
+  height: 20%;
+}
+
+@keyframes nightTwinkle {
+  0%, 100% { opacity: .25; transform: scale(.8); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+.night-star {
+  position: absolute;
+  background: #fff;
+  border-radius: 50%;
+  animation: nightTwinkle 3s ease-in-out infinite;
+}
+
+@keyframes nightSparkle {
+  0%, 100% { opacity: .2; transform: scale(.7) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.1) rotate(20deg); }
+}
+
+.night-sparkle {
+  position: absolute;
+  animation: nightSparkle 2.6s ease-in-out infinite;
+}
+
+@keyframes nightDrift {
+  from { transform: translateX(-40px); }
+  to { transform: translateX(60px); }
+}
+
+.night-cloud {
+  position: absolute;
+  opacity: .5;
+  border-radius: 50px;
+  filter: blur(1px);
+  background: linear-gradient(180deg, rgba(120, 140, 200, .20), rgba(80, 95, 150, .05));
+  animation: nightDrift linear infinite alternate;
+}
+
+@keyframes nightShoot {
+  0% { opacity: 0; transform: translate(0, 0); }
+  2% { opacity: 1; }
+  16% { opacity: 0; transform: translate(-260px, 160px); }
+  100% { opacity: 0; }
+}
+
+.night-shoot {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 6px 1px #fff;
+  animation: nightShoot 6s linear infinite;
+  animation-delay: 3s;
+  opacity: 0;
+}
+
+.night-shoot::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 90px;
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .9));
+  transform: translateY(.5px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .night-moon, .night-star, .night-sparkle, .night-cloud, .night-shoot {
+    animation: none !important;
+  }
+}
+
+/* =====================================================
    Skeleton Loader
 ===================================================== */
 

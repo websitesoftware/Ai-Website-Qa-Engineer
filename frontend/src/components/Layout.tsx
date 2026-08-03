@@ -11,6 +11,7 @@ import { User, SignOut, Key, Envelope, LockOpen, ArrowLeft, CheckSquare, Square,
 import { AnimatePresence, motion } from 'framer-motion';
 import { useContent } from '../context/ContentContext';
 import { AquaScene } from './ui/AquaScene';
+import { NightScene } from './ui/NightScene';
 
 export type TabType = 'Dashboard' | 'Tests' | 'Scan Results' | 'Automation' | 'Settings';
 type AuthView = 'LOGIN' | 'FORGOT_PASSWORD' | 'REGISTER';
@@ -139,6 +140,7 @@ export const Layout: React.FC<LayoutProps> = ({
   return (
     <div className={`h-app-shell overflow-hidden flex relative transition-all duration-300 ${resolvedTheme === 'dark' ? 'bg-slate-950 text-white' : 'bg-app-sky text-slate-800'}`}>
       <AquaScene />
+      <NightScene />
 
       {/* Mobile nav backdrop — tapping it (or a nav item) closes the drawer */}
       <AnimatePresence>
@@ -159,9 +161,10 @@ export const Layout: React.FC<LayoutProps> = ({
       <aside
         className={`w-64 h-full flex flex-col shrink-0 transition-transform duration-300 fixed md:static inset-y-0 left-0 z-50 md:translate-x-0 ${
           mobileNavOpen ? 'translate-x-0' : '-translate-x-full'
-        } ${resolvedTheme === 'dark' ? 'bg-slate-900 border-r border-slate-800' : 'bg-white/20 border-r border-white/30'}`}
+        } ${resolvedTheme === 'dark' ? 'backdrop-blur-md' : 'bg-white/20 border-r border-white/30'}`}
+        style={resolvedTheme === 'dark' ? { background: 'rgba(10, 13, 26, 0.4)' } : undefined}
       >
-        <div className={`h-20 flex items-center justify-between px-6 border-b ${resolvedTheme === 'dark' ? 'border-slate-800' : 'border-white/40'}`}>
+        <div className={`h-20 flex items-center justify-between px-6 ${resolvedTheme === 'dark' ? '' : 'border-b border-white/40'}`}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-pink-500 shadow-md shadow-violet-500/30 flex items-center justify-center text-white font-bold text-xl">Q</div>
             <div>
@@ -204,7 +207,7 @@ export const Layout: React.FC<LayoutProps> = ({
       <main className="flex-1 flex flex-col h-full overflow-hidden min-w-0 relative z-10">
 
         {/* RUNTIME INTEGRATED GLOBAL HEADER */}
-        <header className={`h-20 px-4 sm:px-8 flex items-center justify-between gap-3 shrink-0 transition-all duration-300 relative ${resolvedTheme === 'dark' ? 'border-b border-slate-800 bg-slate-900/40' : 'bg-white/15'}`} ref={popupRef}>
+        <header className={`h-20 px-4 sm:px-8 flex items-center justify-between gap-3 shrink-0 transition-all duration-300 relative ${resolvedTheme === 'dark' ? 'bg-transparent' : 'bg-white/15'}`} ref={popupRef}>
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => setMobileNavOpen(true)}
@@ -424,7 +427,7 @@ export const Layout: React.FC<LayoutProps> = ({
         </header>
 
         {/* Dashboard Dynamic Children Viewports Injection */}
-        <div className={`flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-8 py-6 space-y-6 transition-all duration-300 ${resolvedTheme === 'dark' ? 'bg-slate-950' : 'bg-transparent'}`}>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-8 py-6 space-y-6 transition-all duration-300 bg-transparent">
           {children}
         </div>
       </main>

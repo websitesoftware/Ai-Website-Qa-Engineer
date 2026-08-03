@@ -228,6 +228,7 @@ export const SettingsPage: React.FC = () => {
   const [newPolicyName, setNewPolicyName] = useState('');
   const [newPolicyRanges, setNewPolicyRanges] = useState<PolicyScoreRanges>(DEFAULT_SCORE_RANGES);
   const [policySaving, setPolicySaving] = useState(false);
+  const [editingPolicyId, setEditingPolicyId] = useState<string | null>(null);
 
   const fetchPolicies = useCallback(async () => {
     if (!user) return;
@@ -246,18 +247,34 @@ export const SettingsPage: React.FC = () => {
     if (activeTab === 'policies') fetchPolicies();
   }, [activeTab, fetchPolicies]);
 
-  const handleCreatePolicy = async (e: React.FormEvent) => {
+  const resetPolicyForm = () => {
+    setEditingPolicyId(null);
+    setNewPolicyName('');
+    setNewPolicyRanges(DEFAULT_SCORE_RANGES);
+  };
+
+  const startEditPolicy = (p: BackendPolicy) => {
+    setEditingPolicyId(p.id);
+    setNewPolicyName(p.name);
+    setNewPolicyRanges({ ...DEFAULT_SCORE_RANGES, ...p.scoreRanges });
+  };
+
+  const handleSubmitPolicy = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPolicyName) return;
     setPolicySaving(true);
     try {
-      await api.policies.create({ name: newPolicyName, scoreRanges: newPolicyRanges });
-      setNewPolicyName('');
-      setNewPolicyRanges(DEFAULT_SCORE_RANGES);
-      showToast('Policy created', 'success');
+      if (editingPolicyId) {
+        await api.policies.update(editingPolicyId, { name: newPolicyName, scoreRanges: newPolicyRanges });
+        showToast('Policy updated', 'success');
+      } else {
+        await api.policies.create({ name: newPolicyName, scoreRanges: newPolicyRanges });
+        showToast('Policy created', 'success');
+      }
+      resetPolicyForm();
       await fetchPolicies();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Could not create policy', 'error');
+      showToast(err instanceof Error ? err.message : 'Could not save policy', 'error');
     } finally {
       setPolicySaving(false);
     }
@@ -276,6 +293,7 @@ export const SettingsPage: React.FC = () => {
   const deletePolicy = async (p: BackendPolicy) => {
     try {
       await api.policies.remove(p.id);
+      if (editingPolicyId === p.id) resetPolicyForm();
       showToast('Policy deleted', 'info');
       await fetchPolicies();
     } catch (err) {
@@ -743,7 +761,21 @@ export const SettingsPage: React.FC = () => {
                       </p>
                     </div>
 
-                    <form onSubmit={handleCreatePolicy} className="p-6 border-b border-slate-100 dark:border-slate-800 space-y-4">
+                    <form onSubmit={handleSubmitPolicy} className="p-6 border-b border-slate-100 dark:border-slate-800 space-y-4">
+                      {editingPolicyId && (
+                        <div className="flex items-center justify-between gap-3 -mt-1 mb-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
+                            Editing policy
+                          </span>
+                          <button
+                            type="button"
+                            onClick={resetPolicyForm}
+                            className="text-xs font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      )}
                       <input
                         type="text"
                         required
@@ -798,7 +830,7 @@ export const SettingsPage: React.FC = () => {
                           disabled={policySaving}
                           className="bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm shrink-0"
                         >
-                          {policySaving ? 'Creating...' : 'Create Policy'}
+                          {policySaving ? 'Saving...' : editingPolicyId ? 'Save Changes' : 'Create Policy'}
                         </button>
                       </div>
                     </form>
@@ -838,7 +870,14 @@ export const SettingsPage: React.FC = () => {
                                   Set Active
                                 </button>
                               )}
-                              <button onClick={() => deletePolicy(p)} className="text-slate-400 hover:text-red-500 p-1.5 transition-colors">
+                              <button
+                                onClick={() => startEditPolicy(p)}
+                                className="text-slate-400 hover:text-blue-500 p-1.5 transition-colors"
+                                aria-label={`Edit ${p.name}`}
+                              >
+                                <i className="ph ph-pencil-simple text-lg"></i>
+                              </button>
+                              <button onClick={() => deletePolicy(p)} className="text-slate-400 hover:text-red-500 p-1.5 transition-colors" aria-label={`Delete ${p.name}`}>
                                 <i className="ph ph-trash text-lg"></i>
                               </button>
                             </div>

@@ -1,6 +1,8 @@
 const fs = require("fs");
 const config = require("../config/config");
 const logger = require("../utils/logger");
+const { mapAxeRuleToCategory } = require("../utils/accessibilityCategories");
+const { runCustomAccessibilityChecks } = require("./accessibilityCustomChecks");
 
 const axeSource = fs.readFileSync(
   require.resolve("axe-core/axe.min.js"),
@@ -22,22 +24,29 @@ async function runAccessibilityAudit(browser, url) {
       return axe.run(document, { runOnly: standards });
     }, config.accessibility.standards);
 
-    return {
-      violations: results.violations.map((v) => ({
-        id: v.id,
-        impact: v.impact,
-        description: v.description,
-        help: v.help,
-        helpUrl: v.helpUrl,
-        nodes: v.nodes.length,
-        targets: v.nodes.slice(0, 5).map((n) => n.target.join(" ")),
-        // Real, observed markup for the first few violating nodes — used to
-        // ground automated fixes in the actual source instead of guessing.
-        locators: v.nodes.slice(0, 3).map((n) => ({
-          selector: n.target.join(" "),
-          html: n.html,
-        })),
+    const axeViolations = results.violations.map((v) => ({
+      id: v.id,
+      categoryLabel: mapAxeRuleToCategory(v.id),
+      impact: v.impact,
+      description: v.description,
+      help: v.help,
+      helpUrl: v.helpUrl,
+      nodes: v.nodes.length,
+      targets: v.nodes.slice(0, 5).map((n) => n.target.join(" ")),
+      // Real, observed markup for the first few violating nodes — used to
+      // ground automated fixes in the actual source instead of guessing.
+      locators: v.nodes.slice(0, 3).map((n) => ({
+        selector: n.target.join(" "),
+        html: n.html,
       })),
+    }));
+
+    // axe-core doesn't have (or ships disabled) rules for some of the
+    // categories QA wants covered — see accessibilityCustomChecks.js.
+    const customViolations = await runCustomAccessibilityChecks(page);
+
+    return {
+      violations: [...axeViolations, ...customViolations],
       passes: results.passes.length,
       incomplete: results.incomplete.length,
     };
