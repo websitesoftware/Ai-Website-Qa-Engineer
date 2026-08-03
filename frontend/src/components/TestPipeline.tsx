@@ -67,7 +67,7 @@ export const TestPipeline: React.FC<{ test?: MinimalTest | null }> = ({ test }) 
           <span className="truncate">{test.url}</span>
         </div>
 
-        <div className="flex items-center w-full relative overflow-x-auto pb-2">
+        <div tabIndex={0} className="flex items-center w-full relative overflow-x-auto pb-2">
           {STEP_LABELS.map((step, index) => {
             const stepStageIndex = STAGE_ORDER.indexOf(step.key);
             const completed = test.status === 'passed' || test.status === 'failed' ? true : currentStageIndex > stepStageIndex;
