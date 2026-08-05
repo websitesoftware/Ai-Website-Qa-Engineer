@@ -95,7 +95,7 @@ async function runScan(testId) {
     const consoleErrors = await detectConsoleErrors(browser, test.url);
 
     await updateStage(testId, "lighthouse", 50);
-    const { scores, metrics, failingAudits, auditCounts: lighthouseAuditCounts } = await runLighthouseAudit(
+    const { scores, metrics, failingAudits } = await runLighthouseAudit(
       test.url,
     );
 
@@ -175,7 +175,6 @@ async function runScan(testId) {
       score,
       scores,
       metrics,
-      lighthouseAuditCounts,
       issues,
       brokenLinks,
       consoleErrors,
@@ -201,7 +200,6 @@ async function runScan(testId) {
       score,
       scores,
       metrics,
-      lighthouseAuditCounts,
       pagesScanned: pages.length,
       issues,
       brokenLinks,

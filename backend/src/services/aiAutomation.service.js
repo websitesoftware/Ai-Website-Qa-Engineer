@@ -21,14 +21,6 @@ const gemini = require("./gemini.service");
 const github = require("./github.service");
 const repoRegistry = require("./repoRegistry.service");
 const fileLocator = require("./fileLocator.service");
-const { classifyIssueType } = require("./issueDetector.service");
-const { getBrowser } = require("./browser.service");
-const componentSnapshot = require("./componentSnapshot.service");
-const { checkLinks } = require("./linkChecker.service");
-const { detectConsoleErrors } = require("./consoleError.service");
-const { runAccessibilityAudit } = require("./accessibility.service");
-const { auditSEO } = require("./seo.service");
-const { runLighthouseAudit } = require("./lighthouse.service");
 const logger = require("../utils/logger");
 
 function normalizeWhitespace(str) {
@@ -105,23 +97,11 @@ function buildPrioritization(test) {
     bugId: `QA-${i.id.slice(0, 8).toUpperCase()}`,
     issueId: i.id,
     category: i.category,
-    issueType: i.issueType || classifyIssueType(i.category, i.title, i.description),
     title: i.title,
-    description: i.description || null,
-    suggestion: i.suggestion || null,
-    selector: i.selector || null,
-    url: i.url || null,
     severity: SEVERITY_LABEL[i.severity] || "Low",
     score: top.score,
     impactSummary,
-    // Top 10 for display (bug list UI) — NOT the search space for "find a
-    // patchable issue": a category with many hits (e.g. 18 Lighthouse
-    // audits) scores every one of its issues higher via the systemic-problem
-    // bonus below, which can fill all 10 display slots with issues that were
-    // never going to be locatable anyway (Lighthouse audits carry no DOM
-    // snippet) and crowd out a real, patchable minority issue entirely.
-    // findFirstPatchableIssue() must search the FULL ranked order instead —
-    // see allRankedIds.
+    // full ranked list so the UI/PR can show more than just the top item
     ranked: ranked.slice(0, 10).map((r) => ({
       id: r.issue.id,
       title: r.issue.title,
@@ -130,7 +110,6 @@ function buildPrioritization(test) {
       score: r.score,
       url: r.issue.url,
     })),
-    allRankedIds: ranked.map((r) => r.issue.id),
   };
 }
 
@@ -347,64 +326,6 @@ function buildGroundedPatch(issue, located) {
     }
   }
 
-  // Scrollable region not keyboard-focusable — axe/Lighthouse's own
-  // remediation for this is exactly tabindex="0" on the scrollable element,
-  // not a guess: it makes the existing element keyboard-reachable without
-  // changing what it does. JSX/TSX requires the camelCase DOM-property name
-  // (tabIndex={0}) — the literal HTML attribute casing (tabindex="0") is
-  // still accepted by the browser there, but React logs an "unrecognized DOM
-  // property" warning for it in dev, so pick the syntax the file actually needs.
-  if (
-    /scrollable region|keyboard access/i.test(issue.title) &&
-    !/\btabindex\s*=/i.test(original) &&
-    !/\btabIndex\s*=/.test(original)
-  ) {
-    const tag = original.match(/^<[a-zA-Z][^\s/>]*/);
-    if (tag) {
-      const isJsx = /\.(jsx|tsx)$/i.test(located.relPath || "");
-      const attr = isJsx ? ' tabIndex={0}' : ' tabindex="0"';
-      const patched = original.replace(tag[0], `${tag[0]}${attr}`);
-      if (patched !== original) return { patched, autoFixable: true };
-    }
-  }
-
-  // Missing HTML Lang Attribute — adding lang="en" is a safe default (never
-  // guesses page-specific content), same mechanical-attribute-add pattern
-  // as the alt-text fix above.
-  if (/html lang/i.test(issue.title) && /<html\b/i.test(original) && !/<html\b[^>]*\blang\s*=/i.test(original)) {
-    const patched = original.replace(/<html\b/i, `<html lang="en"`);
-    if (patched !== original) return { patched, autoFixable: true };
-  }
-
-  // Missing Form Labels — an aria-label doesn't guess the field's purpose
-  // any more than the existing "accessible name" button/link fix does; it's
-  // a mechanical stand-in for a real <label>, same as elsewhere in this file.
-  if (/form label/i.test(issue.title) && /<input\b/i.test(original) && !/\baria-label\s*=/i.test(original) && !/\baria-labelledby\s*=/i.test(original)) {
-    const patched = original.replace(
-      /<input\b([^>]*?)(\/?)>/i,
-      (_m, attrs, selfClose) => `<input${attrs} aria-label="Describe this field"${selfClose ? " /" : ""}>`,
-    );
-    if (patched !== original) return { patched, autoFixable: true };
-  }
-
-  // SEO: canonical — the correct value is never a guess here: it's the
-  // exact URL the scan just checked. Targets a Next.js App Router
-  // `metadata` export (see fileLocator's searchNextMetadataExport) — the
-  // canonical tag itself is <link rel="canonical">, but this codebase
-  // defines it via `alternates.canonical` in that object, not a literal tag.
-  if (
-    /canonical/i.test(issue.title) &&
-    /export const metadata/.test(original) &&
-    !/alternates/.test(original) &&
-    issue.url
-  ) {
-    const patched = original.replace(
-      /\{\s*$/,
-      `{\n  alternates: { canonical: "${issue.url}" },`,
-    );
-    if (patched !== original) return { patched, autoFixable: true };
-  }
-
   if (issue.category === "seo") {
     if (/title/i.test(issue.title) && !/<title>/i.test(original)) {
       const patched = original.replace(
@@ -575,63 +496,6 @@ async function buildFixes(test, prioritization, repoMatch) {
 // ---------------------------------------------------------------------------
 // CI/CD gate — a real validation summary of the actual scan
 // ---------------------------------------------------------------------------
-/**
- * Real pass/fail/skip counts across every automated check this scan
- * actually ran — Lighthouse audits (all of them, not just the top-20
- * failingAudits slice used for issue generation), axe accessibility rules,
- * and SEO checks. Nothing here is estimated: each number comes straight off
- * data the scan already collected and stored on the test record.
- */
-function buildTestCounts(test) {
-  const lh = test.lighthouseAuditCounts || { total: 0, passed: 0, failed: 0 };
-  const a11y = test.accessibility || { passes: 0, violations: [], incomplete: 0 };
-  const seoChecks = test.seo?.checks || [];
-  const seoPassed = seoChecks.filter((c) => c.passed).length;
-  const a11yFailed = a11y.violations?.length || 0;
-  const a11ySkipped = a11y.incomplete || 0;
-
-  return {
-    total: lh.total + a11y.passes + a11yFailed + a11ySkipped + seoChecks.length,
-    passed: lh.passed + a11y.passes + seoPassed,
-    failed: lh.failed + a11yFailed + (seoChecks.length - seoPassed),
-    skipped: a11ySkipped,
-  };
-}
-
-/**
- * A short, customer-facing release-note sentence for one fixed issue. Uses
- * the LLM when configured (grounded in the real issue + whether a code fix
- * was actually generated, so it can't describe a fix that doesn't exist);
- * falls back to a plain template built only from real issue fields — never
- * invents specifics the way a generic "various bugs fixed" line would.
- */
-async function buildReleaseNotes(issue, fixes) {
-  const hasFix = Boolean(
-    fixes?.patched && fixes?.original && fixes.patched !== fixes.original,
-  );
-
-  if (llm.isEnabled()) {
-    const prompt = `Write ONE short, plain-English release-note sentence (max 2 sentences, no markdown, no quotes, no marketing language) describing this fix for end users.
-
-Issue: ${issue.title}
-Category: ${String(issue.category || "").replace(/-/g, " ")}
-Severity: ${issue.severity}
-Details: ${issue.description || "n/a"}
-${hasFix ? "A code fix was applied for this issue." : "No automatic code fix was generated — describe the issue being addressed, not a fix that doesn't exist."}`;
-    const text = await llm.complete({
-      system:
-        "You write terse, factual release notes for a QA/bug-tracking tool. Never invent details not given to you.",
-      prompt,
-      maxTokens: 120,
-      temperature: 0.3,
-    });
-    if (text) return text.trim();
-  }
-
-  const base = `Fixed: ${issue.title}.`;
-  return issue.suggestion ? `${base} ${issue.suggestion}` : base;
-}
-
 function buildCicdSummary(test) {
   const open = (test.issues || []).filter((i) => !i.resolved);
   const blocking = open.filter(
@@ -641,14 +505,12 @@ function buildCicdSummary(test) {
 
   const s = test.scores || {};
   const fmt = (v) => (typeof v === "number" ? `${v}/100` : "n/a");
-  const counts = buildTestCounts(test);
 
   const logs = [
     `[INFO] Validation target: ${test.url}`,
     `[INFO] Pages scanned: ${test.pagesScanned ?? 0}`,
     `[INFO] Overall QA score: ${test.score ?? "n/a"}/100`,
     `[INFO] Lighthouse — perf ${fmt(s.performance)}, a11y ${fmt(s.accessibility)}, seo ${fmt(s.seo)}, best-practices ${fmt(s.bestPractices)}`,
-    `[INFO] Checks run: ${counts.total} (passed ${counts.passed}, failed ${counts.failed}, skipped ${counts.skipped})`,
     `[RUNNING] Evaluating quality gate (block on critical/high)...`,
     `[INFO] Open issues: ${open.length} (blocking: ${blocking.length})`,
     passed
@@ -656,7 +518,7 @@ function buildCicdSummary(test) {
       : `[FAILED] Quality gate failed — ${blocking.length} blocking issue${blocking.length === 1 ? "" : "s"} must be resolved.`,
   ];
 
-  return { status: passed ? "Passed" : "Failed", passed, logs, counts };
+  return { status: passed ? "Passed" : "Failed", passed, logs };
 }
 
 /**
@@ -682,16 +544,9 @@ async function findFirstPatchableIssue(test, prioritization, repoMatch) {
     return { prioritization: null, fixes: null, groundedChecked: 0, totalRanked: 0 };
   }
 
-  // Full priority order, not the top-10-slice `ranked` (that's a display
-  // cap — see the comment on it in buildPrioritization). Falls back to
-  // `ranked`'s ids for callers still passing the older shape (e.g. a
-  // single-issue prioritization from buildPrioritizationForIssue, which has
-  // no allRankedIds and only one candidate anyway).
-  const searchOrder = prioritization.allRankedIds || prioritization.ranked.map((r) => r.id);
-
   let groundedChecked = 0;
-  for (const candidateId of searchOrder) {
-    const issue = (test.issues || []).find((i) => i.id === candidateId);
+  for (const candidate of prioritization.ranked) {
+    const issue = (test.issues || []).find((i) => i.id === candidate.id);
     if (!issue) continue;
 
     const located = repoMatch?.path ? fileLocator.locate(repoMatch.path, issue) : null;
@@ -711,11 +566,11 @@ async function findFirstPatchableIssue(test, prioritization, repoMatch) {
         prioritization: candidatePrioritization,
         fixes,
         groundedChecked,
-        totalRanked: searchOrder.length,
+        totalRanked: prioritization.ranked.length,
       };
     }
   }
-  return { prioritization: null, fixes: null, groundedChecked, totalRanked: searchOrder.length };
+  return { prioritization: null, fixes: null, groundedChecked, totalRanked: prioritization.ranked.length };
 }
 
 // ---------------------------------------------------------------------------
@@ -766,12 +621,7 @@ function buildPrioritizationForIssue(test, issue) {
     }`,
     issueId: issue.id,
     category: issue.category,
-    issueType: issue.issueType || classifyIssueType(issue.category, issue.title, issue.description),
     title: issue.title,
-    description: issue.description || null,
-    suggestion: issue.suggestion || null,
-    selector: issue.selector || null,
-    url: issue.url || null,
     severity: SEVERITY_LABEL[issue.severity] || "Medium",
     score,
     impactSummary,
@@ -995,12 +845,6 @@ async function runAutomation(testId) {
   const repoMatch = repoRegistry.matchRepoForUrl(test.url);
   const fixes = await buildFixes(test, prioritization, repoMatch);
   const cicd = buildCicdSummary(test);
-  const topIssue = (test.issues || []).find(
-    (i) => i.id === prioritization?.issueId,
-  );
-  const releaseNotes = topIssue
-    ? await buildReleaseNotes(topIssue, fixes)
-    : null;
 
   return {
     ready: true,
@@ -1018,7 +862,6 @@ async function runAutomation(testId) {
     rca,
     fixes,
     cicd,
-    releaseNotes,
     pullRequest: null, // filled only when the user explicitly triggers PR creation
   };
 }
@@ -1556,158 +1399,8 @@ async function locateIssueUncached(testId, issueId) {
   };
 }
 
-/**
- * "Affected Component" screenshot for a ticket — a real capture of the
- * page with the actual offending element highlighted, using the selector
- * the scan observed. Returns { available:false, reason } rather than a
- * placeholder image when there's nothing real to show (no selector on this
- * issue, element no longer on the page, etc.).
- */
-async function getAnnotatedScreenshot(testId, issueId) {
-  const test = testsRepo.get(testId);
-  if (!test) return { available: false, reason: "test_not_found" };
-  const issue = (test.issues || []).find((i) => i.id === issueId);
-  if (!issue) return { available: false, reason: "issue_not_found" };
-
-  const browser = await getBrowser();
-  return componentSnapshot.captureAnnotatedComponent(browser, {
-    url: issue.url || test.url,
-    selector: issue.selector,
-    testId,
-    issueId,
-  });
-}
-
-
-/**
- * AI Resolution Verification — re-runs the SPECIFIC real check that
- * originally found this issue (not a full site re-scan) and compares
- * against what's there right now. Never invents a "Partially Resolved" —
- * that verdict only comes back when there's a real, measured before/after
- * (fewer affected elements, or a better Lighthouse severity bucket) to
- * ground it in; otherwise it's a plain resolved/still_failing. Categories
- * with no cheap single-issue recheck (visual-regression, cross-browser,
- * performance-benchmark) honestly report unsupported instead of guessing.
- */
-async function verifyResolution(testId, issueId) {
-  const test = testsRepo.get(testId);
-  if (!test) return { supported: false, reason: "test_not_found" };
-  const issue = (test.issues || []).find((i) => i.id === issueId);
-  if (!issue) return { supported: false, reason: "issue_not_found" };
-
-  const url = issue.url || test.url;
-  const checkedAt = new Date().toISOString();
-
-  try {
-    switch (issue.category) {
-      case "broken-link": {
-        const stillBroken = await checkLinks([url]);
-        const resolved = stillBroken.length === 0;
-        return {
-          supported: true,
-          status: resolved ? "resolved" : "still_failing",
-          checkedAt,
-          evidence: resolved
-            ? `${url} now returns a healthy response.`
-            : `${url} still returns ${stillBroken[0].statusCode || "a failed request"}.`,
-        };
-      }
-
-      case "console-error": {
-        const browser = await getBrowser();
-        const errors = await detectConsoleErrors(browser, url);
-        const stillThere = errors.some(
-          (e) => issue.description && issue.description.includes(e.text),
-        );
-        return {
-          supported: true,
-          status: stillThere ? "still_failing" : "resolved",
-          checkedAt,
-          evidence: stillThere
-            ? "The same console error still fires on reload."
-            : `Reloaded the page — that error no longer appears (${errors.length} console error${errors.length === 1 ? "" : "s"} present now).`,
-        };
-      }
-
-      case "accessibility": {
-        const browser = await getBrowser();
-        const result = await runAccessibilityAudit(browser, url);
-        const match = result.violations.find(
-          (v) => (v.categoryLabel || v.help) === issue.title,
-        );
-        if (!match) {
-          return {
-            supported: true,
-            status: "resolved",
-            checkedAt,
-            evidence: `Re-ran the accessibility audit — "${issue.title}" is no longer flagged.`,
-          };
-        }
-        const originalCountMatch = issue.description?.match(/\((\d+) element/);
-        const originalCount = originalCountMatch ? Number(originalCountMatch[1]) : null;
-        const improved = originalCount !== null && match.nodes < originalCount;
-        return {
-          supported: true,
-          status: improved ? "partial" : "still_failing",
-          checkedAt,
-          evidence: improved
-            ? `"${issue.title}" now affects ${match.nodes} element${match.nodes === 1 ? "" : "s"}, down from ${originalCount} — improved but not fully resolved.`
-            : `"${issue.title}" is still flagged (${match.nodes} element${match.nodes === 1 ? "" : "s"} affected).`,
-        };
-      }
-
-      case "seo": {
-        const browser = await getBrowser();
-        const result = await auditSEO(browser, url);
-        const stillFailing = (result.checks || []).some(
-          (c) => !c.passed && `SEO: ${c.id.replace(/-/g, " ")}` === issue.title,
-        );
-        return {
-          supported: true,
-          status: stillFailing ? "still_failing" : "resolved",
-          checkedAt,
-          evidence: stillFailing
-            ? `"${issue.title}" still fails the SEO audit.`
-            : `Re-ran the SEO audit — "${issue.title}" now passes.`,
-        };
-      }
-
-      case "lighthouse": {
-        const { failingAudits } = await runLighthouseAudit(url);
-        const match = failingAudits.find((a) => a.title === issue.title);
-        if (!match) {
-          return {
-            supported: true,
-            status: "resolved",
-            checkedAt,
-            evidence: `Re-ran Lighthouse — "${issue.title}" is no longer in the failing audits.`,
-          };
-        }
-        const newScore = match.score ?? 0;
-        const newSeverity = newScore < 0.5 ? "high" : newScore < 0.75 ? "medium" : "low";
-        const rank = { high: 3, medium: 2, low: 1 };
-        const improved = (rank[newSeverity] || 0) < (rank[issue.severity] || 0);
-        return {
-          supported: true,
-          status: improved ? "partial" : "still_failing",
-          checkedAt,
-          evidence: `"${issue.title}" still fails Lighthouse — current score ${Math.round(newScore * 100)}/100${improved ? " (improved from the original severity, but not passing yet)" : ""}.`,
-        };
-      }
-
-      default:
-        return { supported: false, reason: "category_not_supported", checkedAt };
-    }
-  } catch (err) {
-    logger.error("aiAutomation", `Verification failed for issue ${issueId}: ${err.message}`);
-    return { supported: false, reason: "check_failed", error: err.message, checkedAt };
-  }
-}
-
 module.exports = {
   runAutomation,
-  getAnnotatedScreenshot,
-  verifyResolution,
   createPullRequest,
   runCicd,
   latestCompletedTest,

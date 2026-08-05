@@ -114,44 +114,6 @@ async function locate(req, res, next) {
 }
 
 /**
- * GET /api/ai-automation/annotated-screenshot?testId=...&issueId=...
- * Real screenshot of the page with the actual offending element
- * highlighted, using the selector the scan observed. Cached to disk after
- * the first capture. Returns { available:false, reason } rather than a
- * placeholder when there's nothing real to show.
- */
-async function annotatedScreenshot(req, res, next) {
-  try {
-    const { testId, issueId } = req.query;
-    if (!testId || !issueId) {
-      return res.status(400).json({ error: "testId and issueId are required" });
-    }
-    const result = await aiAutomation.getAnnotatedScreenshot(testId, issueId);
-    res.json(result);
-  } catch (err) {
-    next(err);
-  }
-}
-
-/**
- * POST /api/ai-automation/verify   body: { testId, issueId }
- * AI Resolution Verification: re-runs the specific real check that found
- * this issue and reports whether it's still failing now.
- */
-async function verify(req, res, next) {
-  try {
-    const { testId, issueId } = req.body || {};
-    if (!testId || !issueId) {
-      return res.status(400).json({ error: "testId and issueId are required" });
-    }
-    const result = await aiAutomation.verifyResolution(testId, issueId);
-    res.json(result);
-  } catch (err) {
-    next(err);
-  }
-}
-
-/**
  * POST /api/ai-automation/review-code   body: { code, language? }
  * Paste-a-snippet code review: detects hardcoded values, line-specific bugs,
  * and CSS problems, and returns a fully corrected version of the snippet.
@@ -171,15 +133,4 @@ async function reviewCode(req, res, next) {
   }
 }
 
-module.exports = {
-  getStatus,
-  run,
-  createPr,
-  cicd,
-  merge,
-  analyzeIssue,
-  locate,
-  annotatedScreenshot,
-  verify,
-  reviewCode,
-};
+module.exports = { getStatus, run, createPr, cicd, merge, analyzeIssue, locate, reviewCode };
