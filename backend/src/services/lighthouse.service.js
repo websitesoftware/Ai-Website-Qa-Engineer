@@ -100,7 +100,20 @@ async function runLighthouseAudit(url) {
         };
       });
 
-    return { scores, metrics, failingAudits };
+    // Real pass/fail counts across EVERY scoreable audit (not just the
+    // top-20 slice above, which is intentionally capped so failingAudits
+    // doesn't explode the issue list) — used for the CI/CD test summary,
+    // where "how many checks ran" should reflect all of them.
+    const scoreableAudits = Object.values(lhr.audits).filter(
+      (a) => a.score !== null && a.scoreDisplayMode !== "manual",
+    );
+    const auditCounts = {
+      total: scoreableAudits.length,
+      passed: scoreableAudits.filter((a) => a.score >= 0.9).length,
+      failed: scoreableAudits.filter((a) => a.score < 0.9).length,
+    };
+
+    return { scores, metrics, failingAudits, auditCounts };
   } catch (err) {
     logger.error("lighthouse", `Audit failed for ${url}: ${err.message}`);
     return {
@@ -119,6 +132,7 @@ async function runLighthouseAudit(url) {
         timeToInteractive: null,
       },
       failingAudits: [],
+      auditCounts: { total: 0, passed: 0, failed: 0 },
       error: err.message,
     };
   } finally {

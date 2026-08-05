@@ -34,3 +34,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# generated docs manifest (rebuilt by `npm run docs` / `npm run docs:build`)
+/docs/data.json

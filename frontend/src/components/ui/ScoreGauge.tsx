@@ -86,14 +86,14 @@ export const ScoreGauge: React.FC<ScoreGaugeProps> = ({
 
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span
-          className="font-bold text-slate-900"
+          className="font-bold text-slate-900 dark:text-slate-100"
           style={{ fontSize: size <= 70 ? 16 : 24 }}
         >
           {safeScore}
         </span>
 
         {label && (
-          <span className="text-[10px] text-slate-500 font-medium mt-1">
+          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-1">
             {label}
           </span>
         )}
