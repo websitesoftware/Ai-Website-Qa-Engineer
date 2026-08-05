@@ -272,6 +272,28 @@ export const AIAutomationPage: React.FC = () => {
     }
   }, [pr?.prNumber, pr?.repo]);
 
+  // Manual correction / removal of the AI-detected top issue. Both re-run
+  // the whole pipeline afterwards so prioritization, RCA and the suggested
+  // fix reflect the change (or move on to the next-ranked issue on delete).
+  // Same narrow-deps rationale as createPr/mergePr above.
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
+  const editTopIssue = useCallback(async (fields: { title: string; severity: string; category: string }) => {
+    if (!resp?.testId || !resp?.prioritization?.issueId) return;
+    await api.editIssue(resp.testId, resp.prioritization.issueId, {
+      title: fields.title,
+      severity: fields.severity.toLowerCase(),
+      category: fields.category,
+    });
+    await fetchAutomation();
+  }, [resp?.testId, resp?.prioritization?.issueId, fetchAutomation]);
+
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
+  const deleteTopIssue = useCallback(async () => {
+    if (!resp?.testId || !resp?.prioritization?.issueId) return;
+    await api.deleteIssue(resp.testId, resp.prioritization.issueId);
+    await fetchAutomation();
+  }, [resp?.testId, resp?.prioritization?.issueId, fetchAutomation]);
+
   const stageIndex = STAGE_ORDER.indexOf(stage);
   const progressPct = stage === 'idle' ? 0 : Math.round(((stageIndex + 1) / STAGE_ORDER.length) * 100);
 
@@ -396,7 +418,7 @@ export const AIAutomationPage: React.FC = () => {
               <AnimatePresence mode="wait">
                 {showPrio && resp.prioritization && (
                   <motion.div key="prio" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-                    <BugPrioritization data={resp.prioritization} />
+                    <BugPrioritization data={resp.prioritization} onEdit={editTopIssue} onDelete={deleteTopIssue} />
                   </motion.div>
                 )}
               </AnimatePresence>

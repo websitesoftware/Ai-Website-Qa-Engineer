@@ -113,6 +113,20 @@ export const api = {
       true
     ),
 
+  editIssue: (
+    testId: string,
+    issueId: string,
+    fields: { title?: string; description?: string; severity?: string; category?: string }
+  ) =>
+    request<BackendIssue>(
+      `/tests/${testId}/issues/${issueId}`,
+      { method: 'PATCH', body: JSON.stringify(fields) },
+      true
+    ),
+
+  deleteIssue: (testId: string, issueId: string) =>
+    request<void>(`/tests/${testId}/issues/${issueId}`, { method: 'DELETE' }, true),
+
   addIssueComment: (testId: string, issueId: string, text: string) =>
     request<BackendIssue>(
       `/tests/${testId}/issues/${issueId}/comments`,

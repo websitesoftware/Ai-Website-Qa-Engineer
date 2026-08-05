@@ -13,6 +13,17 @@ const VALID_MODULES = [
   "performance-benchmark",
 ];
 
+const VALID_SEVERITIES = ["critical", "high", "medium", "low"];
+const VALID_ISSUE_CATEGORIES = [
+  "broken-link",
+  "console-error",
+  "cross-browser",
+  "accessibility",
+  "lighthouse",
+  "visual-regression",
+  "seo",
+];
+
 function isValidUrl(str) {
   try {
     const u = new URL(str);
@@ -96,8 +107,42 @@ async function updateIssue(req, res) {
     issue.assigneeIds = req.body.assigneeIds.filter((id) => validIds.has(id));
   }
 
+  // Manual correction of what the AI/scan detected — e.g. re-titling,
+  // reclassifying the category/severity, or rewriting the description —
+  // used by the AI Automation page's "Edit issue" action.
+  if (typeof req.body.title === "string" && req.body.title.trim()) {
+    issue.title = req.body.title.trim();
+  }
+  if (typeof req.body.description === "string") {
+    issue.description = req.body.description.trim();
+  }
+  if (typeof req.body.severity === "string" && VALID_SEVERITIES.includes(req.body.severity)) {
+    issue.severity = req.body.severity;
+  }
+  if (typeof req.body.category === "string" && VALID_ISSUE_CATEGORIES.includes(req.body.category)) {
+    issue.category = req.body.category;
+  }
+
   const updated = await testsRepo.update(test.id, { issues: test.issues });
   res.json(updated.issues.find((i) => i.id === req.params.issueId));
+}
+
+/**
+ * Permanently removes an issue from the test (not just marking it resolved)
+ * — used by the AI Automation page's "Delete issue" action when the AI
+ * misdetected something and the user wants it gone from prioritization
+ * entirely, not just dismissed.
+ */
+async function deleteIssue(req, res) {
+  const test = testsRepo.get(req.params.id);
+  if (!test) return res.status(404).json({ error: "Test not found" });
+
+  const exists = (test.issues || []).some((i) => i.id === req.params.issueId);
+  if (!exists) return res.status(404).json({ error: "Issue not found" });
+
+  const issues = (test.issues || []).filter((i) => i.id !== req.params.issueId);
+  await testsRepo.update(test.id, { issues });
+  res.status(204).send();
 }
 
 async function addIssueComment(req, res) {
@@ -149,6 +194,7 @@ module.exports = {
   remove,
   getIssues,
   updateIssue,
+  deleteIssue,
   addIssueComment,
   rerun,
 };
