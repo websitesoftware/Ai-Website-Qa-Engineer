@@ -1,6 +1,47 @@
 
 const { v4: uuidv4 } = require("uuid");
 
+// ---------------------------------------------------------------------------
+// Issue type taxonomy — the coarse `category` field (broken-link,
+// console-error, lighthouse, accessibility, seo, visual-regression,
+// cross-browser) is what drives internal logic (fix patterns, locators), but
+// it's an implementation detail, not what a QA/dev reads on a ticket. This
+// maps to the familiar bug-tracker vocabulary instead: UI, API, Accessibility,
+// CSS, Functional, SEO, Performance, Security. Lighthouse in particular
+// spans several of these (it audits performance, a11y, SEO, and security
+// best-practices all under one "lighthouse" category), so those are
+// sub-classified by keyword from the audit's own title/description — no
+// guessing, just reading what the audit itself already says it's about.
+// ---------------------------------------------------------------------------
+const SECURITY_KEYWORDS = /https|vulnerabilit|csp|content security policy|mixed content|clickjack|cross-origin|cve\b|insecure|deprecated api/i;
+const ACCESSIBILITY_KEYWORDS = /accessib|aria|contrast|alt text|screen reader|wcag|\bfocus\b|keyboard|tabindex|\blabel\b|discernible/i;
+const SEO_KEYWORDS = /\bseo\b|meta description|crawlable|indexable|canonical|structured data|robots\.txt|sitemap|hreflang/i;
+const API_KEYWORDS = /\b(api|fetch|xhr|ajax|cors|endpoint)\b|\b4\d{2}\b|\b5\d{2}\b/i;
+
+function classifyIssueType(category, title, description) {
+  const text = `${title || ""} ${description || ""}`;
+  switch (category) {
+    case "accessibility":
+      return "Accessibility";
+    case "seo":
+      return "SEO";
+    case "visual-regression":
+      return "UI";
+    case "broken-link":
+    case "cross-browser":
+      return "Functional";
+    case "console-error":
+      return API_KEYWORDS.test(text) ? "API" : "Functional";
+    case "lighthouse":
+      if (SECURITY_KEYWORDS.test(text)) return "Security";
+      if (ACCESSIBILITY_KEYWORDS.test(text)) return "Accessibility";
+      if (SEO_KEYWORDS.test(text)) return "SEO";
+      return "Performance";
+    default:
+      return "Functional";
+  }
+}
+
 function makeIssue({
   category,
   severity,
@@ -15,6 +56,7 @@ function makeIssue({
   return {
     id: uuidv4(),
     category,
+    issueType: classifyIssueType(category, title, description),
     severity,
     title,
     description: description || "",
@@ -205,4 +247,4 @@ function buildIssuesAndScore({
   return { issues, score };
 }
 
-module.exports = { buildIssuesAndScore, makeIssue };
+module.exports = { buildIssuesAndScore, makeIssue, classifyIssueType };

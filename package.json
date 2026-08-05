@@ -1,0 +1,8 @@
+{
+  "name": "ai-website-qa-engineer",
+  "private": true,
+  "scripts": {
+    "docs": "node docs/generate.js && node docs/server.js",
+    "docs:build": "node docs/generate.js"
+  }
+}
