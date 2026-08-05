@@ -34,8 +34,6 @@ router.post("/ai-automation/merge", aiAutomationController.merge);
 router.post("/ai-automation/analyze-issue", aiAutomationController.analyzeIssue);
 router.post("/ai-automation/review-code", aiAutomationController.reviewCode);
 router.get("/ai-automation/locate", aiAutomationController.locate);
-router.get("/ai-automation/annotated-screenshot", aiAutomationController.annotatedScreenshot);
-router.post("/ai-automation/verify", aiAutomationController.verify);
 
 router.get("/health", (req, res) =>
   res.json({ status: "ok", uptime: process.uptime() }),

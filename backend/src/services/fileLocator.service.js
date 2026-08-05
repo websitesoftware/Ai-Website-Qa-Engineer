@@ -302,28 +302,6 @@ function searchByAttribute(files, attrName, attrValue) {
   return null;
 }
 
-/**
- * Find a Next.js App Router `export const metadata = {...}` (or `:
- * Metadata =`) declaration — the real location document-level SEO fields
- * (canonical, openGraph, etc.) belong in this codebase, instead of the
- * literal `<meta>`/`<link>` tags a plain HTML/older-React site would use.
- */
-function searchNextMetadataExport(files) {
-  const re = /export const metadata(?:\s*:\s*Metadata)?\s*=\s*\{/;
-  for (const absPath of files) {
-    const content = readFileSafe(absPath);
-    if (!content) continue;
-    const m = re.exec(content);
-    if (!m) continue;
-    return {
-      absPath,
-      line: lineOf(content, m.index),
-      original: m[0],
-    };
-  }
-  return null;
-}
-
 /** Try to resolve a browser-reported script URL directly onto a repo file (dev-server source paths). */
 function resolveSourceLocationFile(repoPath, sourceLocation) {
   if (!sourceLocation?.url) return null;
@@ -403,15 +381,6 @@ function locate(repoPath, issue) {
       const byAttr = searchByAttribute(files, "src", srcMatch[1]);
       if (byAttr) return toResult(repoPath, byAttr);
     }
-  }
-
-  // Document-level SEO checks (canonical, open graph, ...) have no element
-  // snippet at all — a Next.js App Router site declares these in a
-  // `metadata` export object, not literal <meta>/<link> tags, so there's
-  // nothing in the DOM for the scan to have captured a snippet of.
-  if (issue.category === "seo") {
-    const metaExport = searchNextMetadataExport(files);
-    if (metaExport) return toResult(repoPath, metaExport);
   }
 
   if (issue.category === "broken-link" && issue.url) {
