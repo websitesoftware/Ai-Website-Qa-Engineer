@@ -345,6 +345,7 @@ export const AIAutomationPage: React.FC = () => {
                 suggestedFix={suggestedFixText}
               />
               <AffectedComponentCard
+                key={`${resp.testId}-${p.issueId}`}
                 testId={resp.testId}
                 issueId={p.issueId}
                 selector={p.selector}

@@ -23,8 +23,6 @@ export const AffectedComponentCard: React.FC<AffectedComponentProps> = ({ testId
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setResult(null);
     fetch(`${API_BASE_URL}/ai-automation/annotated-screenshot?testId=${encodeURIComponent(testId)}&issueId=${encodeURIComponent(issueId)}`)
       .then((res) => res.json())
       .then((json: AnnotatedResult) => {

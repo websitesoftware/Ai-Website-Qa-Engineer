@@ -87,7 +87,7 @@ export const ResolutionVerificationCard: React.FC<Props> = ({ testId, issueId, i
           <AnimatePresence mode="wait">
             {!result && !loading && (
               <motion.p key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-sm text-slate-400 dark:text-slate-500">
-                Not verified yet — click "Re-scan &amp; Verify" to re-run the real check that found this issue and confirm it's actually fixed.
+                Not verified yet — click &ldquo;Re-scan &amp; Verify&rdquo; to re-run the real check that found this issue and confirm it&apos;s actually fixed.
               </motion.p>
             )}
             {loading && (
