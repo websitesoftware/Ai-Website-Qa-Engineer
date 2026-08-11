@@ -219,7 +219,7 @@ app.post("/api/generate-playwright-code", async (req, res) => {
     await browser.close();
     browser = null;
 
-    console.log("[Studio API] Compiling step matrix via Claude...");
+    console.log("[Studio API] Compiling step matrix via Gemini...");
 
     const { steps, error } = await autoDiscoverAndGenerateSteps(url, sections);
 

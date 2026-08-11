@@ -45,13 +45,14 @@ function createTest({ url, name, options = {}, createdBy = null, createdByName =
     visualRegression: [],
     crossBrowser: [],
     performanceBenchmark: null,
+    functionalTesting: [],
     policyResult: null,
 
     options: {
       maxPages: options.maxPages,
       maxDepth: options.maxDepth,
       device: options.device || "all",
-      // e.g. ["accessibility","seo","visual-regression","cross-browser","performance-benchmark"]
+      // e.g. ["accessibility","seo","visual-regression","cross-browser","performance-benchmark","functional-testing"]
       modules: options.modules || [],
       policyId: options.policyId || null,
     },

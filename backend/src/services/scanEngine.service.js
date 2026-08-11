@@ -17,6 +17,7 @@ const { auditSEO } = require("./seo.service");
 const { runVisualRegression } = require("./visualRegression.service");
 const { runCrossBrowserCheck } = require("./crossBrowser.service");
 const { benchmarkPerformance } = require("./performanceBenchmark.service");
+const { runFunctionalTesting } = require("./functionalTesting.service");
 const { buildIssuesAndScore } = require("./issueDetector.service");
 
 const REPORTS_DIR = path.join(__dirname, "..", "..", config.storage.reportsDir);
@@ -135,6 +136,15 @@ async function runScan(testId) {
       performanceBenchmark = benchmarkPerformance(test.url, metrics, testId);
     }
 
+    // ---- Phase 3 (opt-in): scans the page into components, classifies
+    // each one's real functionality, generates real executable steps, and
+    // actually runs them via Playwright. ----
+    let functionalTestingResults = [];
+    if (hasModule(test, "functional-testing")) {
+      await updateStage(testId, "functional-testing", 92);
+      functionalTestingResults = await runFunctionalTesting(test.url, testId);
+    }
+
     // ---- Aggregate ----
     await updateStage(testId, "aggregating", 95);
     const { issues, score } = buildIssuesAndScore({
@@ -147,6 +157,7 @@ async function runScan(testId) {
       seoChecks: seoResult.checks,
       visualRegressionResults,
       crossBrowserResults,
+      functionalTestingResults,
     });
 
     const completedAt = new Date().toISOString();
@@ -184,6 +195,7 @@ async function runScan(testId) {
       visualRegression: visualRegressionResults,
       crossBrowser: crossBrowserResults,
       performanceBenchmark,
+      functionalTesting: functionalTestingResults,
       policyResult,
     };
 
@@ -210,6 +222,7 @@ async function runScan(testId) {
       visualRegression: visualRegressionResults,
       crossBrowser: crossBrowserResults,
       performanceBenchmark,
+      functionalTesting: functionalTestingResults,
       policyResult,
       completedAt,
     });

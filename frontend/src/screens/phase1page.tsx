@@ -1,8 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { api } from '../lib/api';
 import { fetchLogoAsset, fitLogoBox } from '../lib/exportReport';
+import { useQAData } from '../context/QADataContext';
+import { BackendTest } from '../lib/types';
+import { EmptyState } from '../components/ui/EmptyState';
+import { Skeleton } from '../components/ui/Skeleton';
 
 // --- Types ---
 interface StatCardProps {
@@ -25,30 +29,50 @@ interface IssueRowProps {
   severity: 'high' | 'med' | 'low';
 }
 
+function formatDuration(startedAt: string | null, completedAt: string | null): string {
+  if (!startedAt) return '-';
+  const end = completedAt ? new Date(completedAt).getTime() : Date.now();
+  const totalSec = Math.max(0, Math.floor((end - new Date(startedAt).getTime()) / 1000));
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  return min > 0 ? `${min}m ${sec}s` : `${sec}s`;
+}
+
 export default function ScanlinePhase1Report() {
-  const [pagesCrawled, setPagesCrawled] = useState(24);
-  const [issuesFound, setIssuesFound] = useState(4);
-  const [isScanning, setIsScanning] = useState(true);
+  const { tests, loading } = useQAData();
   const [isExporting, setIsExporting] = useState(false);
 
   const reportRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPagesCrawled((prev) => {
-        if (prev >= 142) {
-          setIsScanning(false);
-          clearInterval(interval);
-          return 142;
-        }
-        return prev + Math.floor(Math.random() * 15) + 5;
-      });
+  const test: BackendTest | null = useMemo(
+    () =>
+      [...tests].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] || null,
+    [tests]
+  );
 
-      setIssuesFound((prev) => (prev >= 37 ? 37 : prev + Math.floor(Math.random() * 3)));
-    }, 800);
+  if (loading && !test) {
+    return <Skeleton className="h-[70vh] rounded-xl" />;
+  }
 
-    return () => clearInterval(interval);
-  }, []);
+  if (!test) {
+    return (
+      <EmptyState
+        icon="ph-sparkle"
+        title="No scans yet"
+        description="Run a new test to see the Phase 1 foundation report here."
+      />
+    );
+  }
+
+  const isScanning = test.status === 'queued' || test.status === 'running';
+  const pagesCrawled = test.pagesScanned;
+  const issuesFound = test.issues.length;
+  const brokenLinks = test.brokenLinks;
+  const consoleErrors = test.consoleErrors;
+  const scores = test.scores;
+  const avgLighthouse = [scores.performance, scores.accessibility, scores.seo, scores.bestPractices]
+    .filter((v): v is number => v != null)
+    .reduce((sum, v, _i, arr) => sum + v / arr.length, 0);
 
   /**
    * BLOCK-AWARE PDF EXPORT
@@ -178,7 +202,9 @@ export default function ScanlinePhase1Report() {
         }
       }
 
-      pdf.save('Scanline_Report_0891.pdf');
+      const domain = test.url.replace(/^https?:\/\//, '').replace(/\/$/, '').replace(/[^a-zA-Z0-9.-]/g, '_');
+      const dateStamp = new Date(test.createdAt).toISOString().slice(0, 10);
+      pdf.save(`Scanline_Report_${domain}_${dateStamp}.pdf`);
     } catch (err) {
       console.error('[Scanline] PDF export failed:', err);
       alert('PDF export failed. Check the console for details.');
@@ -221,10 +247,10 @@ export default function ScanlinePhase1Report() {
           data-pdf-block
           className="flex flex-wrap gap-x-6 gap-y-2 items-baseline mb-6 font-mono text-sm border-b border-slate-200/70 dark:border-slate-800 pb-4"
         >
-          <div className="text-[#1C56C9] dark:text-blue-400 font-semibold">scan → yourdomain.com</div>
+          <div className="text-[#1C56C9] dark:text-blue-400 font-semibold">scan → {test.url}</div>
           <div className="text-slate-500 dark:text-slate-400 text-xs"><b>{pagesCrawled}</b> pages crawled</div>
-          <div className="text-slate-500 dark:text-slate-400 text-xs"><b>4m 12s</b> duration</div>
-          <div className="text-slate-500 dark:text-slate-400 text-xs ml-auto">run <b>#0891</b> · Jul 09, 2026, 14:22</div>
+          <div className="text-slate-500 dark:text-slate-400 text-xs"><b>{formatDuration(test.startedAt, test.completedAt)}</b> duration</div>
+          <div className="text-slate-500 dark:text-slate-400 text-xs ml-auto">run <b>#{test.id.slice(-4)}</b> · {new Date(test.createdAt).toLocaleString('en-US', { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
         </div>
 
         {/* BLOCK 2: stat cards */}
@@ -235,23 +261,23 @@ export default function ScanlinePhase1Report() {
           <StatCard
             label="Pages Crawled"
             value={pagesCrawled}
-            subtext={isScanning ? 'Crawling map tree...' : '6 unreachable'}
+            subtext={isScanning ? 'Crawling map tree...' : `${test.screenshots.filter((s) => s.error).length} unreachable`}
           />
           <StatCard
             label="Issues Found"
             value={issuesFound}
-            subtext="↑ 9 vs last scan"
-            subType="down"
+            subtext={`${test.issues.filter((i) => i.severity === 'critical' || i.severity === 'high').length} high/critical`}
+            subType={issuesFound > 0 ? 'down' : 'neutral'}
           />
           <StatCard
             label="Broken Links"
-            value={isScanning ? Math.floor(issuesFound * 0.3) : 11}
-            subtext="3 are 500s"
+            value={brokenLinks.length}
+            subtext={`${brokenLinks.filter((b) => b.statusCode >= 500).length} are 500s`}
           />
           <StatCard
             label="Avg Lighthouse"
-            value={isScanning ? '--' : 78}
-            subtext="↑ 4 vs last scan"
+            value={isScanning ? '--' : Math.round(avgLighthouse)}
+            subtext={scores.performance != null ? `Performance: ${scores.performance}` : 'Pending'}
             subType="up"
           />
         </div>
@@ -269,10 +295,10 @@ export default function ScanlinePhase1Report() {
               <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">avg across {pagesCrawled} pages</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
-              <Gauge label="Performance" value={71} color="text-orange-500" />
-              <Gauge label="Accessibility" value={88} color="text-emerald-500" />
-              <Gauge label="Best Practices" value={82} color="text-emerald-500" />
-              <Gauge label="SEO" value={74} color="text-orange-500" />
+              <Gauge label="Performance" value={scores.performance ?? 0} color={(scores.performance ?? 0) >= 80 ? 'text-emerald-500' : 'text-orange-500'} />
+              <Gauge label="Accessibility" value={scores.accessibility ?? 0} color={(scores.accessibility ?? 0) >= 80 ? 'text-emerald-500' : 'text-orange-500'} />
+              <Gauge label="Best Practices" value={scores.bestPractices ?? 0} color={(scores.bestPractices ?? 0) >= 80 ? 'text-emerald-500' : 'text-orange-500'} />
+              <Gauge label="SEO" value={scores.seo ?? 0} color={(scores.seo ?? 0) >= 80 ? 'text-emerald-500' : 'text-orange-500'} />
             </div>
           </section>
 
@@ -282,21 +308,34 @@ export default function ScanlinePhase1Report() {
                 <h2 className="font-display text-[13px] font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                   <span className="bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 text-[9.5px] font-extrabold px-1.5 py-0.5 rounded">02</span> Viewport Testing
                 </h2>
-                <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">/pricing</span>
+                <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">{test.options?.device || 'multi-device'}</span>
               </div>
               <div className="space-y-2.5">
-                <div className="flex items-center justify-between py-2.5 border-b border-slate-100 dark:border-slate-800 text-xs">
-                  <div><span className="font-semibold text-slate-700 dark:text-slate-300">Desktop</span> <span className="text-[11px] text-slate-400 dark:text-slate-500">1440×900</span></div>
-                  <span className="px-2.5 py-1 text-[10px] font-extrabold bg-emerald-50 text-emerald-700 rounded-md dark:bg-emerald-950/40 dark:text-emerald-400">PASS</span>
-                </div>
-                <div className="flex items-center justify-between py-2.5 border-b border-slate-100 dark:border-slate-800 text-xs">
-                  <div><span className="font-semibold text-slate-700 dark:text-slate-300">Tablet</span> <span className="text-[11px] text-slate-400 dark:text-slate-500">768×1024</span></div>
-                  <span className="px-2.5 py-1 text-[10px] font-extrabold bg-orange-50 text-orange-700 rounded-md dark:bg-orange-950/40 dark:text-orange-400">ISSUE</span>
-                </div>
-                <div className="flex items-center justify-between py-2.5 text-xs">
-                  <div><span className="font-semibold text-slate-700 dark:text-slate-300">Mobile</span> <span className="text-[11px] text-slate-400 dark:text-slate-500">375×812</span></div>
-                  <span className="px-2.5 py-1 text-[10px] font-extrabold bg-red-50 text-red-700 rounded-md dark:bg-red-950/40 dark:text-red-400">OVERFLOW</span>
-                </div>
+                {test.screenshots.length === 0 && (
+                  <p className="text-xs text-slate-400 dark:text-slate-500 py-2">No viewport captures yet.</p>
+                )}
+                {test.screenshots.map((shot, i) => (
+                  <div
+                    key={`${shot.viewport}-${i}`}
+                    className={`flex items-center justify-between py-2.5 text-xs ${i < test.screenshots.length - 1 ? 'border-b border-slate-100 dark:border-slate-800' : ''}`}
+                  >
+                    <div>
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">{shot.viewport}</span>{' '}
+                      {shot.width && shot.height && (
+                        <span className="text-[11px] text-slate-400 dark:text-slate-500">{shot.width}×{shot.height}</span>
+                      )}
+                    </div>
+                    <span
+                      className={`px-2.5 py-1 text-[10px] font-extrabold rounded-md ${
+                        shot.error
+                          ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400'
+                          : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                      }`}
+                    >
+                      {shot.error ? 'ISSUE' : 'PASS'}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
           </section>
@@ -311,7 +350,7 @@ export default function ScanlinePhase1Report() {
             <h2 className="font-display text-[13px] font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <span className="bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 text-[9.5px] font-extrabold px-1.5 py-0.5 rounded">03</span> Broken Links Detected
             </h2>
-            <span className="text-[11px] font-mono text-red-500 dark:text-red-400 font-semibold bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900 px-2 py-0.5 rounded">11 total exceptions</span>
+            <span className="text-[11px] font-mono text-red-500 dark:text-red-400 font-semibold bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900 px-2 py-0.5 rounded">{brokenLinks.length} total exceptions</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
@@ -319,29 +358,35 @@ export default function ScanlinePhase1Report() {
                 <tr className="text-slate-400 dark:text-slate-500 uppercase tracking-wider font-mono text-[10px] bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
                   <th className="py-2.5 px-3">Target URL</th>
                   <th className="py-2.5 px-3">Status Code</th>
-                  <th className="py-2.5 px-3">Referrer Origin</th>
                   <th className="py-2.5 px-3 text-right">Exception Type</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
-                <tr>
-                  <td className="py-3 px-3 text-slate-700 dark:text-slate-300 font-medium">/checkout/confirm</td>
-                  <td className="py-3 px-3 text-red-600 dark:text-red-400 font-bold">500</td>
-                  <td className="py-3 px-3 text-slate-500 dark:text-slate-400">/checkout</td>
-                  <td className="py-3 px-3 text-right"><span className="bg-red-50 border border-red-200 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold dark:bg-red-950/40 dark:border-red-900 dark:text-red-400">Server Error</span></td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-3 text-slate-700 dark:text-slate-300 font-medium">/assets/img/hero-old.png</td>
-                  <td className="py-3 px-3 text-red-500 dark:text-red-400 font-bold">404</td>
-                  <td className="py-3 px-3 text-slate-500 dark:text-slate-400">/</td>
-                  <td className="py-3 px-3 text-right"><span className="bg-red-50 border border-red-200 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold dark:bg-red-950/40 dark:border-red-900 dark:text-red-400">Not Found</span></td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-3 text-slate-700 dark:text-slate-300 font-medium">/blog/2023/black-friday</td>
-                  <td className="py-3 px-3 text-orange-600 dark:text-orange-400 font-bold">301</td>
-                  <td className="py-3 px-3 text-slate-500 dark:text-slate-400">/blog</td>
-                  <td className="py-3 px-3 text-right"><span className="bg-orange-50 border border-orange-200 text-orange-700 px-2 py-0.5 rounded text-[10px] font-bold dark:bg-orange-950/40 dark:border-orange-900 dark:text-orange-400">Redirect Loop</span></td>
-                </tr>
+                {brokenLinks.length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="py-4 px-3 text-center text-slate-400 dark:text-slate-500">No broken links detected.</td>
+                  </tr>
+                )}
+                {brokenLinks.map((link, i) => {
+                  const isServerError = link.statusCode >= 500;
+                  const isRedirect = link.statusCode >= 300 && link.statusCode < 400;
+                  const exceptionType = link.error || (isServerError ? 'Server Error' : isRedirect ? 'Redirect' : 'Not Found');
+                  const colorClasses = isServerError
+                    ? 'text-red-600 dark:text-red-400'
+                    : isRedirect
+                    ? 'text-orange-600 dark:text-orange-400'
+                    : 'text-red-500 dark:text-red-400';
+                  const badgeClasses = isRedirect
+                    ? 'bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-950/40 dark:border-orange-900 dark:text-orange-400'
+                    : 'bg-red-50 border-red-200 text-red-700 dark:bg-red-950/40 dark:border-red-900 dark:text-red-400';
+                  return (
+                    <tr key={`${link.url}-${i}`}>
+                      <td className="py-3 px-3 text-slate-700 dark:text-slate-300 font-medium">{link.url}</td>
+                      <td className={`py-3 px-3 font-bold ${colorClasses}`}>{link.statusCode}</td>
+                      <td className="py-3 px-3 text-right"><span className={`border px-2 py-0.5 rounded text-[10px] font-bold ${badgeClasses}`}>{exceptionType}</span></td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -359,18 +404,33 @@ export default function ScanlinePhase1Report() {
             <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">Captured in pipeline</span>
           </div>
           <div className="divide-y divide-slate-100 dark:divide-slate-800 font-mono text-xs">
-            <div className="py-2.5 flex items-start gap-4">
-              <span className="text-red-500 dark:text-red-400 font-bold bg-red-50 border border-red-100 dark:bg-red-950/40 dark:border-red-900 w-5 h-5 flex items-center justify-center rounded-md text-[10px]">✕</span>
-              <span className="text-slate-400 dark:text-slate-500 text-[11px]">14:22:03</span>
-              <span className="text-slate-800 dark:text-slate-200 flex-1">Uncaught TypeError: cannot read properties of undefined (reading &apos;map&apos;)</span>
-              <span className="text-slate-400 dark:text-slate-500 text-right text-[11px]">cart.bundle.js:88</span>
-            </div>
-            <div className="py-2.5 flex items-start gap-4">
-              <span className="text-orange-600 dark:text-orange-400 font-bold bg-orange-50 border border-orange-100 dark:bg-orange-950/40 dark:border-orange-900 w-5 h-5 flex items-center justify-center rounded-md text-[10px]">!</span>
-              <span className="text-slate-400 dark:text-slate-500 text-[11px]">14:22:05</span>
-              <span className="text-slate-800 dark:text-slate-200 flex-1">Failed to load resource: net::ERR_CONNECTION_REFUSED</span>
-              <span className="text-slate-400 dark:text-slate-500 text-right text-[11px]">analytics.js:12</span>
-            </div>
+            {consoleErrors.length === 0 && (
+              <p className="py-3 text-slate-400 dark:text-slate-500">No console exceptions captured.</p>
+            )}
+            {consoleErrors.map((err, i) => {
+              const isError = err.type === 'error';
+              const location =
+                typeof err.location === 'string'
+                  ? err.location
+                  : err.location && typeof err.location === 'object'
+                  ? JSON.stringify(err.location)
+                  : '-';
+              return (
+                <div key={i} className="py-2.5 flex items-start gap-4">
+                  <span
+                    className={`font-bold w-5 h-5 flex items-center justify-center rounded-md text-[10px] border ${
+                      isError
+                        ? 'text-red-500 dark:text-red-400 bg-red-50 border-red-100 dark:bg-red-950/40 dark:border-red-900'
+                        : 'text-orange-600 dark:text-orange-400 bg-orange-50 border-orange-100 dark:bg-orange-950/40 dark:border-orange-900'
+                    }`}
+                  >
+                    {isError ? '✕' : '!'}
+                  </span>
+                  <span className="text-slate-800 dark:text-slate-200 flex-1">{err.text}</span>
+                  <span className="text-slate-400 dark:text-slate-500 text-right text-[11px]">{location}</span>
+                </div>
+              );
+            })}
           </div>
         </section>
 
@@ -405,30 +465,21 @@ export default function ScanlinePhase1Report() {
           the current page, or it moves to the next page in one piece.
         */}
         <div className="space-y-3">
-          <div data-pdf-block className="bg-white/85 dark:bg-slate-800 backdrop-blur-md rounded-xl">
-            <IssueRow
-              title="Checkout confirmation throws 500 on submit"
-              fix="Null-check the order payload stack context before rendering the confirmation DOM tree."
-              category="FUNCTIONAL"
-              severity="high"
-            />
-          </div>
-          <div data-pdf-block className="bg-white/85 dark:bg-slate-800 backdrop-blur-md rounded-xl">
-            <IssueRow
-              title="Pricing table overflows viewport on mobile (375px)"
-              fix="Switch the standard grid element structure layout parameters down to single stacked view configurations below 480px thresholds."
-              category="RESPONSIVE"
-              severity="high"
-            />
-          </div>
-          <div data-pdf-block className="bg-white/85 dark:bg-slate-800 backdrop-blur-md rounded-xl">
-            <IssueRow
-              title="Hero images missing alt attributes on 34 static page routes"
-              fix="Inject explicit alternative metadata definitions to element matrices."
-              category="ACCESSIBILITY"
-              severity="med"
-            />
-          </div>
+          {test.issues.length === 0 && (
+            <div data-pdf-block className="bg-white/85 dark:bg-slate-800 backdrop-blur-md rounded-xl p-4 text-sm text-slate-400 dark:text-slate-500 text-center">
+              No open issues on this scan.
+            </div>
+          )}
+          {test.issues.map((issue) => (
+            <div key={issue.id} data-pdf-block className="bg-white/85 dark:bg-slate-800 backdrop-blur-md rounded-xl">
+              <IssueRow
+                title={issue.title}
+                fix={issue.suggestion || issue.description}
+                category={issue.category.replace(/-/g, ' ').toUpperCase()}
+                severity={issue.severity === 'critical' || issue.severity === 'high' ? 'high' : issue.severity === 'medium' ? 'med' : 'low'}
+              />
+            </div>
+          ))}
         </div>
 
       </main>
