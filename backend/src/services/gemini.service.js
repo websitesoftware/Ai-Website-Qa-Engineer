@@ -82,7 +82,8 @@ async function completeJSON(args) {
       if (json) return json;
       logger.warn(
         "gemini",
-        `Attempt ${attempt} returned no usable JSON` + (attempt === 1 ? " — retrying once" : ""),
+        `Attempt ${attempt} returned no usable JSON (${raw.length} chars, likely truncated by maxTokens)` +
+          (attempt === 1 ? " — retrying once" : ""),
       );
     } catch (err) {
       logger.warn(

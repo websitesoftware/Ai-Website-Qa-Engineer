@@ -6,31 +6,43 @@ import { useQAData } from '../../context/QADataContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useContent } from '../../context/ContentContext';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
+import { BackendTest } from '../../lib/types';
 
-// Function jo present date ke hisab se pichle dino ke dynamic dates generate karega
-const generateDynamicTrendData = () => {
-  const data = [];
+function coverageFromTest(test: BackendTest): number | null {
+  const scores = [test.scores.performance, test.scores.accessibility, test.scores.seo, test.scores.bestPractices].filter(
+    (v): v is number => v != null
+  );
+  return scores.length ? scores.reduce((sum, v) => sum + v, 0) / scores.length : null;
+}
+
+// Buckets completed tests into 6 rolling 3-day windows and averages their
+// scores, so the trend reflects actual scan history instead of mock data.
+const buildTrendData = (tests: BackendTest[]) => {
   const today = new Date();
+  const scored = tests.filter((t) => t.score != null && t.completedAt);
 
-  // Pichle 5 intervals (har 3 din pehle ki date) generate karne ke liye
+  const data = [];
   for (let i = 5; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(today.getDate() - (i * 3));
+    const windowEnd = new Date(today);
+    windowEnd.setDate(today.getDate() - i * 3);
+    const windowStart = new Date(windowEnd);
+    windowStart.setDate(windowEnd.getDate() - 3);
 
-    const formattedDate = d.toLocaleDateString('en-US', {
-      month: 'short',
-      day: '2-digit',
+    const inWindow = scored.filter((t) => {
+      const completed = new Date(t.completedAt as string);
+      return completed > windowStart && completed <= windowEnd;
     });
 
-    // Dynamic mock values jo aapki image ke graph paths se match karti hain
-    // Real project mein aap ise backend API data se replace kar sakte hain
-    const qualityScores = [75, 78, 85, 95, 82, 91];
-    const coverageScores = [65, 70, 72, 88, 80, 85];
+    const quality = inWindow.length
+      ? inWindow.reduce((sum, t) => sum + (t.score as number), 0) / inWindow.length
+      : null;
+    const coverageValues = inWindow.map(coverageFromTest).filter((v): v is number => v != null);
+    const coverage = coverageValues.length ? coverageValues.reduce((sum, v) => sum + v, 0) / coverageValues.length : null;
 
     data.push({
-      name: formattedDate,
-      quality: qualityScores[5 - i] || 85,
-      coverage: coverageScores[5 - i] || 80,
+      name: windowEnd.toLocaleDateString('en-US', { month: 'short', day: '2-digit' }),
+      quality: quality != null ? Math.round(quality) : null,
+      coverage: coverage != null ? Math.round(coverage) : null,
     });
   }
   return data;
@@ -64,7 +76,7 @@ const CustomTooltip = ({
 };
 
 export const TrendsAndSeverity: React.FC = () => {
-  const { stats } = useQAData();
+  const { stats, tests } = useQAData();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
   const [activeMetric, setActiveMetric] = useState<'quality' | 'coverage'>('quality');
@@ -79,8 +91,8 @@ export const TrendsAndSeverity: React.FC = () => {
     text: 'Categorized breakdown of existing unresolved bug logs',
   });
 
-  // useMemo use kiya taaki har render par dates change na hon aur present date stable rahe
-  const dynamicTrendData = useMemo(() => generateDynamicTrendData(), []);
+  // useMemo so the rolling date windows don't recompute (and jitter) on every render
+  const dynamicTrendData = useMemo(() => buildTrendData(tests), [tests]);
 
   const sev = stats?.issuesBySeverity ?? { critical: 0, high: 0, medium: 0, low: 0 };
 
@@ -93,6 +105,7 @@ export const TrendsAndSeverity: React.FC = () => {
 
   const metricLabel = activeMetric === 'quality' ? qualityToggle.text : coverageToggle.text;
   const totalIssues = rows.reduce((sum, row) => sum + row.count, 0);
+  const siteCount = new Set(tests.map((t) => t.url)).size;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -193,7 +206,7 @@ export const TrendsAndSeverity: React.FC = () => {
         </div>
 
         <div className="text-xs text-slate-400 dark:text-slate-500 text-center border-t border-slate-100 dark:border-slate-800 pt-3">
-          Total open tickets: <span className="font-bold text-slate-700 dark:text-slate-300">155</span> across 4 sites
+          Total open tickets: <span className="font-bold text-slate-700 dark:text-slate-300">{stats?.unresolvedIssues ?? 0}</span> across {siteCount} site{siteCount === 1 ? '' : 's'}
         </div>
       </div>
 

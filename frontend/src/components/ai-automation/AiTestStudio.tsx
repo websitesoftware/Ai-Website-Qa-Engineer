@@ -1,6 +1,7 @@
 
 'use client';
 import React, { useState } from 'react';
+import { API_BASE_URL } from '../../lib/api';
 
 interface TestStepRow {
   section?: string;
@@ -98,7 +99,7 @@ export const AiTestStudio: React.FC = () => {
     setPageTitle('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/generate-playwright-code', {
+      const response = await fetch(`${API_BASE_URL}/generate-playwright-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url })
@@ -118,7 +119,7 @@ export const AiTestStudio: React.FC = () => {
         setPageTitle(data.pageTitle || '');
         setShowDownloads(true);
       } else {
-        alert('AI returned no test steps for this page. Try a different URL or check your ANTHROPIC_API_KEY.');
+        alert('AI returned no test steps for this page. Try a different URL or check your GEMINI_API_KEY.');
       }
     } catch (error) {
       console.error('Studio Matrix Compilation Failure Trace:', error);

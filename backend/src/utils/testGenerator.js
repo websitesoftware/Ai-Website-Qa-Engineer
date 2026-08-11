@@ -1,9 +1,4 @@
-const Anthropic = require("@anthropic-ai/sdk");
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-// Falls back to a solid default if ANTHROPIC_MODEL isn't set in .env
-const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-8";
+const gemini = require("../services/gemini.service");
 
 /**
  * @param {string} url
@@ -17,9 +12,13 @@ async function autoDiscoverAndGenerateSteps(url, sections) {
 
   const sectionNames = sections.map((s) => `"${s.name}"`).join(", ");
 
+  const system =
+    "You are an Expert Manual QA Engineer writing a professional manual test pack, " +
+    "in the exact style used by real QA teams. Always respond with a single JSON " +
+    "object only — no markdown fences, no commentary, no preamble.";
+
   const prompt = `
-    You are an Expert Manual QA Engineer writing a professional manual test pack, in the
-    exact style used by real QA teams, for this live website: "${url}"
+    Live website: "${url}"
 
     The page has been broken into the following sections, listed in real top-to-bottom
     page order:
@@ -56,36 +55,40 @@ async function autoDiscoverAndGenerateSteps(url, sections) {
     only on what is actually present in that section's HTML. Skip a section entirely if
     nothing meaningfully testable is present.
 
-    Output ONLY a raw JSON array (no markdown fences, no commentary, no preamble) of
-    Test Case objects with this exact shape:
-    [
-      {
-        "section": "one of: ${sectionNames}",
-        "title": "short Test Case title, e.g. 'Website availability and Log in'",
-        "steps": [
-          { "action": "string", "expected": "string" }
-        ]
-      }
-    ]
+    Output a JSON object with this exact shape:
+    {
+      "testCases": [
+        {
+          "section": "one of: ${sectionNames}",
+          "title": "short Test Case title, e.g. 'Website availability and Log in'",
+          "steps": [
+            { "action": "string", "expected": "string" }
+          ]
+        }
+      ]
+    }
 
-    Keep the array ordered section-by-section, top to bottom, matching the order the
-    sections were given above.
+    Keep the "testCases" array ordered section-by-section, top to bottom, matching the
+    order the sections were given above.
   `;
 
   try {
-    const response = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: 4096,
-      messages: [{ role: "user", content: prompt }],
-    });
+    if (!gemini.isEnabled()) {
+      throw new Error(
+        "Gemini is not configured — set GEMINI_API_KEY in the backend .env",
+      );
+    }
 
-    const textBlock = response.content.find((block) => block.type === "text");
-    const cleanText =
-      textBlock?.text?.replace(/```json|```/g, "").trim() || "[]";
-    const parsedCases = JSON.parse(cleanText);
+    const parsed = await gemini.completeJSON({
+      system,
+      prompt,
+      maxTokens: 16384,
+      temperature: 0.2,
+    });
+    const parsedCases = parsed?.testCases;
 
     if (!Array.isArray(parsedCases) || parsedCases.length === 0) {
-      throw new Error("Claude returned empty or non-array output");
+      throw new Error("Gemini returned empty or non-array output");
     }
 
     const validNames = new Set(sections.map((s) => s.name));
@@ -114,7 +117,7 @@ async function autoDiscoverAndGenerateSteps(url, sections) {
     });
 
     if (steps.length === 0) {
-      throw new Error("Claude returned Test Cases with no usable steps");
+      throw new Error("Gemini returned Test Cases with no usable steps");
     }
 
     return { steps, error: null };
