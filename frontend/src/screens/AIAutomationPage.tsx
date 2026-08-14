@@ -61,6 +61,8 @@ interface PullRequest {
   error?: string;
   reason?: string;
   noCodeChange?: boolean;
+  filesChanged?: string[];
+  fixesApplied?: number;
 }
 interface MergeResult {
   configured?: boolean;
@@ -450,6 +452,8 @@ export const AIAutomationPage: React.FC = () => {
                       repo: pr.repo,
                       repoMatch: pr.repoMatch,
                       filePath: resp.fixes?.filePath,
+                      filesChanged: pr.filesChanged,
+                      fixesApplied: pr.fixesApplied,
                     }}
                     onMerge={mergePr}
                     merge={{

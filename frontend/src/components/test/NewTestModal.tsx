@@ -2,7 +2,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { PHASE2_MODULES, PHASE3_MODULES, BackendPolicy } from '../../lib/types';
+import { PHASE2_MODULES, BackendPolicy } from '../../lib/types';
 import { api } from '../../lib/api';
 import { useContent } from '../../context/ContentContext';
 
@@ -151,36 +151,6 @@ export const NewTestModal: React.FC<NewTestModalProps> = ({ isOpen, onClose, onS
                                 checked={checked}
                                 onChange={() => toggleModule(mod.id)}
                                 className="mt-1 w-4 h-4 text-blue-500 border-slate-300 dark:border-slate-700 rounded focus:ring-blue-500"
-                              />
-                              <div>
-                                <p className="font-medium text-sm text-slate-800 dark:text-slate-200">{mod.label}</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{mod.description}</p>
-                              </div>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Phase 3 modules — opt-in */}
-                    <div className="pt-1">
-                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
-                        Phase 3: Functional Testing (optional)
-                      </p>
-                      <div className="space-y-2">
-                        {PHASE3_MODULES.map((mod) => {
-                          const checked = selectedModules.includes(mod.id);
-                          return (
-                            <label
-                              key={mod.id}
-                              className={`flex items-start gap-3 p-3 border rounded-xl cursor-pointer transition-colors ${checked ? 'border-purple-400 dark:border-purple-500 bg-purple-50/40 dark:bg-purple-950/30' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/60'
-                                }`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => toggleModule(mod.id)}
-                                className="mt-1 w-4 h-4 text-purple-500 border-slate-300 dark:border-slate-700 rounded focus:ring-purple-500"
                               />
                               <div>
                                 <p className="font-medium text-sm text-slate-800 dark:text-slate-200">{mod.label}</p>

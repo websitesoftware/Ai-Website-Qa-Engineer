@@ -164,25 +164,6 @@ function fromCrossBrowser(results, pageUrl) {
     );
 }
 
-// ---- Phase 3 issue builder ----
-
-function fromFunctionalTesting(components, pageUrl) {
-  return components
-    .filter((c) => c.execution?.status === "failed")
-    .map((c) => {
-      const failedStep = c.execution.stepsLog.find((s) => s.status === "failed");
-      return makeIssue({
-        category: "functional",
-        severity: "high",
-        title: `${c.functionality} failed on "${c.name}"`,
-        description: failedStep ? `${failedStep.description} — ${failedStep.error}` : "One or more steps failed.",
-        url: pageUrl,
-        suggestion: "Manually verify this component's functionality still works as expected.",
-        selector: c.selector,
-      });
-    });
-}
-
 /**
  * Combines everything into one issue list and computes an overall 0-100
  * QA score. Phase 2 arrays are optional so old callers keep working.
@@ -197,7 +178,6 @@ function buildIssuesAndScore({
   seoChecks = [],
   visualRegressionResults = [],
   crossBrowserResults = [],
-  functionalTestingResults = [],
 }) {
   const issues = [
     ...fromBrokenLinks(brokenLinks),
@@ -207,7 +187,6 @@ function buildIssuesAndScore({
     ...fromSEO(seoChecks, pageUrl),
     ...fromVisualRegression(visualRegressionResults, pageUrl),
     ...fromCrossBrowser(crossBrowserResults, pageUrl),
-    ...fromFunctionalTesting(functionalTestingResults, pageUrl),
   ];
 
   // Overall score is the average of the four Lighthouse-style category

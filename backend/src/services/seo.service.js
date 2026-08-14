@@ -95,6 +95,7 @@ async function auditSEO(browser, url) {
     message: canonical
       ? `Canonical URL set: ${canonical}`
       : "Missing canonical link tag",
+    snippet: canonical ? null : headSnippet,
   });
 
   const viewport = $('meta[name="viewport"]').attr("content");
@@ -104,6 +105,7 @@ async function auditSEO(browser, url) {
     message: viewport
       ? "Viewport meta tag present"
       : "Missing viewport meta tag (hurts mobile SEO)",
+    snippet: viewport ? null : headSnippet,
   });
 
   const robotsMeta = $('meta[name="robots"]').attr("content") || "";
@@ -113,6 +115,7 @@ async function auditSEO(browser, url) {
     message: robotsMeta.includes("noindex")
       ? "Page is set to noindex — won't appear in search results"
       : "Page is indexable",
+    snippet: robotsMeta.includes("noindex") ? headSnippet : null,
   });
 
   const ogTags = $('meta[property^="og:"]').length;
@@ -123,6 +126,7 @@ async function auditSEO(browser, url) {
       ogTags > 0
         ? `${ogTags} Open Graph tags found`
         : "No Open Graph tags found (hurts social sharing)",
+    snippet: ogTags > 0 ? null : headSnippet,
   });
 
   const structuredData = $('script[type="application/ld+json"]').length;
@@ -133,6 +137,7 @@ async function auditSEO(browser, url) {
       structuredData > 0
         ? "Structured data (JSON-LD) found"
         : "No structured data found",
+    snippet: structuredData > 0 ? null : headSnippet,
   });
 
   const passedCount = checks.filter((c) => c.passed).length;

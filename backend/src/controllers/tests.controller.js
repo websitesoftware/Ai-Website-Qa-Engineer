@@ -11,7 +11,6 @@ const VALID_MODULES = [
   "visual-regression",
   "cross-browser",
   "performance-benchmark",
-  "functional-testing",
 ];
 
 const VALID_SEVERITIES = ["critical", "high", "medium", "low"];
@@ -23,7 +22,6 @@ const VALID_ISSUE_CATEGORIES = [
   "lighthouse",
   "visual-regression",
   "seo",
-  "functional",
 ];
 
 function isValidUrl(str) {
