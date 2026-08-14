@@ -225,6 +225,17 @@ function deterministicFix(issue) {
           patched:
             "<body>\n  <h1>One descriptive H1 that states the page's purpose</h1>\n</body>",
         };
+      if (/charset/i.test(issue.title))
+        return {
+          original: "<head>\n  <!-- no charset declared -->\n</head>",
+          patched: '<head>\n  <meta charset="utf-8" />\n</head>',
+        };
+      if (/viewport/i.test(issue.title))
+        return {
+          original: "<head>\n  <!-- no viewport meta tag -->\n</head>",
+          patched:
+            '<head>\n  <meta name="viewport" content="width=device-width, initial-scale=1" />\n</head>',
+        };
       return {
         original: "<!-- SEO gap: " + issue.title + " -->",
         patched:
@@ -236,6 +247,21 @@ function deterministicFix(issue) {
       };
 
     case "accessibility":
+      if (/missing html lang attribute/i.test(issue.title))
+        return {
+          original: "<html>",
+          patched: '<html lang="en">',
+        };
+      if (/zoom\/responsive accessibility issues/i.test(issue.title))
+        return {
+          original: '<meta name="viewport" content="width=device-width, user-scalable=no">',
+          patched: '<meta name="viewport" content="width=device-width, initial-scale=1">',
+        };
+      if (/empty buttons\/links/i.test(issue.title))
+        return {
+          original: "<button></button>",
+          patched: '<button aria-label="Describe this button\'s action"></button>',
+        };
       return {
         original:
           '<img src="banner.png" alt="Describe the image\'s content or purpose">',
@@ -267,6 +293,17 @@ function deterministicFix(issue) {
       };
 
     case "lighthouse":
+      if (/noopener|cross-origin destinations are unsafe/i.test(issue.title))
+        return {
+          original: '<a href="https://example.com" target="_blank">link</a>',
+          patched: '<a href="https://example.com" target="_blank" rel="noopener noreferrer">link</a>',
+        };
+      if (/viewport/i.test(issue.title))
+        return {
+          original: "<head>\n  <!-- no viewport meta tag -->\n</head>",
+          patched:
+            '<head>\n  <meta name="viewport" content="width=device-width, initial-scale=1" />\n</head>',
+        };
       return {
         original: "// Lighthouse: " + issue.title,
         patched:
@@ -301,7 +338,7 @@ function buildGroundedPatch(issue, located) {
   // "accessibility" or Lighthouse reported it as a "lighthouse" audit: add
   // an aria-label rather than guess at visible text content.
   if (
-    /discernible (text|name)|accessible name/i.test(issue.title) &&
+    /discernible (text|name)|accessible name|empty buttons\/links/i.test(issue.title) &&
     !/\baria-label\s*=/i.test(original) &&
     !/\baria-labelledby\s*=/i.test(original)
   ) {
@@ -326,7 +363,7 @@ function buildGroundedPatch(issue, located) {
     }
   }
 
-  if (issue.category === "seo") {
+  if (issue.category === "seo" || /missing page title|missing h1/i.test(issue.title)) {
     if (/title/i.test(issue.title) && !/<title>/i.test(original)) {
       const patched = original.replace(
         /(<head[^>]*>)/i,
@@ -351,6 +388,64 @@ function buildGroundedPatch(issue, located) {
       );
       if (patched !== original) return { patched, autoFixable: true };
     }
+    if (/charset/i.test(issue.title) && !/<meta\s+charset/i.test(original)) {
+      const patched = original.replace(
+        /(<head[^>]*>)/i,
+        `$1\n  <meta charset="utf-8" />`,
+      );
+      if (patched !== original) return { patched, autoFixable: true };
+    }
+  }
+
+  // Missing/misconfigured viewport meta tag — Lighthouse ("viewport" audit,
+  // category "lighthouse") flags it entirely missing; axe's "meta-viewport"
+  // rule (category "accessibility", title "Zoom/Responsive Accessibility
+  // Issues") flags one that disables user zoom. Both are safe, standard,
+  // non-guessing fixes.
+  if (/viewport/i.test(issue.title)) {
+    if (!/name=["']viewport["']/i.test(original) && /<head[^>]*>/i.test(original)) {
+      const patched = original.replace(
+        /(<head[^>]*>)/i,
+        `$1\n  <meta name="viewport" content="width=device-width, initial-scale=1" />`,
+      );
+      if (patched !== original) return { patched, autoFixable: true };
+    }
+    const viewportMeta = original.match(/<meta\b[^>]*name=["']viewport["'][^>]*>/i);
+    if (viewportMeta && /user-scalable\s*=\s*["']?no["']?|maximum-scale\s*=\s*["']?[01](\.\d+)?["']?/i.test(viewportMeta[0])) {
+      const fixedTag = viewportMeta[0].replace(
+        /content=["'][^"']*["']/i,
+        `content="width=device-width, initial-scale=1"`,
+      );
+      const patched = original.replace(viewportMeta[0], fixedTag);
+      if (patched !== original) return { patched, autoFixable: true };
+    }
+  }
+
+  // Missing HTML lang attribute (axe "html-has-lang" family) — "en" is the
+  // conventional safe default when the actual language can't be observed;
+  // never overwrites an existing (even if invalid) lang value.
+  if (/missing html lang attribute/i.test(issue.title) && /<html\b/i.test(original) && !/\blang\s*=/i.test(original)) {
+    const patched = original.replace(/<html\b/i, `<html lang="en"`);
+    if (patched !== original) return { patched, autoFixable: true };
+  }
+
+  // target="_blank" links missing rel="noopener" — a same-origin-safe fix
+  // (adds a security/perf attribute, never touches visible content or the
+  // link's destination) commonly flagged by Lighthouse best-practices.
+  if (/noopener|cross-origin destinations are unsafe/i.test(issue.title)) {
+    const anchor = original.match(/<a\b[^>]*target=["']_blank["'][^>]*>/i);
+    if (anchor && !/\brel\s*=\s*["'][^"']*noopener/i.test(anchor[0])) {
+      let fixedTag;
+      if (/\brel\s*=\s*["']([^"']*)["']/i.test(anchor[0])) {
+        fixedTag = anchor[0].replace(/\brel\s*=\s*["']([^"']*)["']/i, (_m, val) =>
+          `rel="${(val + " noopener noreferrer").trim()}"`,
+        );
+      } else {
+        fixedTag = anchor[0].replace(/<a\b/i, `<a rel="noopener noreferrer"`);
+      }
+      const patched = original.replace(anchor[0], fixedTag);
+      if (patched !== original) return { patched, autoFixable: true };
+    }
   }
 
   return { patched: original, autoFixable: false };
@@ -364,7 +459,7 @@ async function buildFixes(test, prioritization, repoMatch) {
   if (!issue) return null;
 
   const located = repoMatch?.path
-    ? fileLocator.locate(repoMatch.path, issue)
+    ? await fileLocator.locate(repoMatch.path, issue)
     : null;
 
   if (located) {
@@ -521,35 +616,42 @@ function buildCicdSummary(test) {
   return { status: passed ? "Passed" : "Failed", passed, logs };
 }
 
+// A single PR bundling many small fixes at once is more useful than one PR
+// per issue, but an unbounded bundle risks one giant, hard-to-review diff —
+// cap how many issues one "Generate Pull Request" click will bundle.
+const MAX_FIXES_PER_PR = 5;
+
 /**
- * Try each open issue in priority order and return the fix for the first one
- * that's actually grounded + auto-fixable — so a single un-patchable
- * top-priority issue (e.g. a Lighthouse metric, which is never a one-line
- * code fix) doesn't block PR generation for a lower-ranked issue that IS
- * safely patchable (e.g. a missing alt attribute).
+ * Walks open issues in priority order and collects the fix for every one
+ * that's actually grounded + auto-fixable (up to `maxFixes`) — so a single
+ * un-patchable top-priority issue (e.g. a Lighthouse metric, which is never
+ * a one-line code fix) doesn't block PR generation for a lower-ranked issue
+ * that IS safely patchable (e.g. a missing alt attribute), and so multiple
+ * safe fixes land in one PR instead of requiring a separate click each.
  *
  * Cheaply pre-filters with fileLocator.locate() (local, no LLM call) before
  * ever calling the full buildFixes() — which may hit the LLM to tailor a
  * patch — so this doesn't fire off an API call for every ranked issue when
  * most of them were never going to be groundable in the repo at all.
  *
- * Returns `{ prioritization, fixes, groundedChecked, totalRanked }` for the
- * winning issue, or `{ prioritization: null, fixes: null, groundedChecked,
- * totalRanked }` if none could be safely grounded + patched — the two counts
- * let the caller report an honest, specific reason instead of a generic
- * "nothing found" message.
+ * Returns `{ results, groundedChecked, totalRanked }` where `results` is
+ * `{ prioritization, fixes }[]` (possibly empty) — the two counts let the
+ * caller report an honest, specific reason instead of a generic "nothing
+ * found" message when `results` is empty.
  */
-async function findFirstPatchableIssue(test, prioritization, repoMatch) {
+async function findPatchableIssues(test, prioritization, repoMatch, maxFixes = MAX_FIXES_PER_PR) {
   if (!prioritization) {
-    return { prioritization: null, fixes: null, groundedChecked: 0, totalRanked: 0 };
+    return { results: [], groundedChecked: 0, totalRanked: 0 };
   }
 
   let groundedChecked = 0;
+  const results = [];
   for (const candidate of prioritization.ranked) {
+    if (results.length >= maxFixes) break;
     const issue = (test.issues || []).find((i) => i.id === candidate.id);
     if (!issue) continue;
 
-    const located = repoMatch?.path ? fileLocator.locate(repoMatch.path, issue) : null;
+    const located = repoMatch?.path ? await fileLocator.locate(repoMatch.path, issue) : null;
     if (!located) continue; // never auto-fixable without a real located snippet
     groundedChecked += 1;
 
@@ -557,38 +659,51 @@ async function findFirstPatchableIssue(test, prioritization, repoMatch) {
       issue.id === prioritization.issueId
         ? prioritization
         : buildPrioritizationForIssue(test, issue);
-    // eslint-disable-next-line no-await-in-loop -- must try candidates in
-    // priority order and stop at the first success, so this can't be
-    // parallelized without changing which issue "wins".
+    // eslint-disable-next-line no-await-in-loop -- must walk candidates in
+    // priority order and stop once maxFixes is reached, so this can't be
+    // parallelized without changing which issues "win" a slot.
     const fixes = await buildFixes(test, candidatePrioritization, repoMatch);
     if (fixes?.grounded && fixes?.autoFixable && fixes?.filePath) {
-      return {
-        prioritization: candidatePrioritization,
-        fixes,
-        groundedChecked,
-        totalRanked: prioritization.ranked.length,
-      };
+      results.push({ prioritization: candidatePrioritization, fixes });
     }
   }
-  return { prioritization: null, fixes: null, groundedChecked, totalRanked: prioritization.ranked.length };
+  return { results, groundedChecked, totalRanked: prioritization.ranked.length };
 }
 
 // ---------------------------------------------------------------------------
 // PR description (metadata on the PR itself — never a file committed into
-// the repo). Only ever called once we already have a real, grounded,
+// the repo). Only ever called once we already have >=1 real, grounded,
 // auto-fixable patch — so it always has a genuine diff, never a guess.
 // ---------------------------------------------------------------------------
-function buildPrBody(prioritization, fixes) {
-  const lines = [];
-  lines.push(`## ${prioritization.title} — \`${fixes.filePath}\``);
-  lines.push(
-    `**Severity:** ${prioritization.severity}  |  **Priority score:** ${prioritization.score}/100`,
-  );
-  lines.push("");
-  lines.push("```diff");
-  lines.push("- " + fixes.original.split("\n").join("\n- "));
-  lines.push("+ " + fixes.patched.split("\n").join("\n+ "));
-  lines.push("```");
+function buildPrBody(items) {
+  if (items.length === 1) {
+    const { prioritization, fixes } = items[0];
+    const lines = [];
+    lines.push(`## ${prioritization.title} — \`${fixes.filePath}\``);
+    lines.push(
+      `**Severity:** ${prioritization.severity}  |  **Priority score:** ${prioritization.score}/100`,
+    );
+    lines.push("");
+    lines.push("```diff");
+    lines.push("- " + fixes.original.split("\n").join("\n- "));
+    lines.push("+ " + fixes.patched.split("\n").join("\n+ "));
+    lines.push("```");
+    return lines.join("\n");
+  }
+
+  const lines = [`## AI QA Automation — ${items.length} fixes bundled in this PR`, ""];
+  for (const { prioritization, fixes } of items) {
+    lines.push(`### ${prioritization.title} — \`${fixes.filePath}\``);
+    lines.push(
+      `**Severity:** ${prioritization.severity}  |  **Priority score:** ${prioritization.score}/100`,
+    );
+    lines.push("");
+    lines.push("```diff");
+    lines.push("- " + fixes.original.split("\n").join("\n- "));
+    lines.push("+ " + fixes.patched.split("\n").join("\n+ "));
+    lines.push("```");
+    lines.push("");
+  }
   return lines.join("\n");
 }
 
@@ -765,7 +880,7 @@ async function analyzePastedIssue(pastedText) {
   const short = issue.id.replace(/[^a-z0-9]/gi, "").slice(0, 8) || "issue";
   const branchName = `ai-qa/paste-${short}`;
   const prTitle = `fix(qa): ${prioritization.title} (QA-${short.toUpperCase()})`;
-  const prBody = buildPrBody(prioritization, fixes);
+  const prBody = buildPrBody([{ prioritization, fixes }]);
 
   try {
     const pr = await github.applyRemediation({
@@ -893,14 +1008,17 @@ function describeRepoMatchFailure(match, url) {
 
 /**
  * Open a real PR on the configured GitHub repo that patches the actual
- * source file for the first issue (in priority order) that's actually
- * safe to auto-patch — not just the single top-priority one. A high-severity
- * issue like a Lighthouse metric is often never a one-line code fix, so
- * stopping there would refuse a PR even when a lower-ranked issue (e.g. a
- * missing alt attribute) is genuinely patchable. Returns { configured:false }
- * if GitHub isn't set up, and refuses to open a PR at all — rather than a
- * hollow "report" one — when NONE of the open issues have an auto-fixable
- * code change.
+ * source file(s) for every open issue (in priority order, up to
+ * MAX_FIXES_PER_PR) that's actually safe to auto-patch — not just the single
+ * top-priority one, and not just one file at a time. A high-severity issue
+ * like a Lighthouse metric is often never a one-line code fix, so stopping
+ * at the first candidate would refuse a PR even when a lower-ranked issue
+ * (e.g. a missing alt attribute) is genuinely patchable; bundling every
+ * patchable issue found into one PR (even across different files) means
+ * fewer, more useful PRs instead of one per issue. Returns
+ * { configured:false } if GitHub isn't set up, and refuses to open a PR at
+ * all — rather than a hollow "report" one — when NONE of the open issues
+ * have an auto-fixable code change.
  */
 async function createPullRequest(testId) {
   if (!github.isConfigured()) {
@@ -928,12 +1046,12 @@ async function createPullRequest(testId) {
   }
 
   const topPrioritization = buildPrioritization(test);
-  const { prioritization, fixes, groundedChecked, totalRanked } = await findFirstPatchableIssue(
+  const { results, groundedChecked, totalRanked } = await findPatchableIssues(
     test,
     topPrioritization,
     match,
   );
-  if (!prioritization || !fixes) {
+  if (!results.length) {
     let error;
     if (totalRanked === 0) {
       error = "No open issues to check — nothing to open a PR for.";
@@ -950,11 +1068,20 @@ async function createPullRequest(testId) {
     return { configured: true, noCodeChange: true, error, repoMatch };
   }
 
+  const primary = results[0];
   const testShort = test.id.slice(0, 8);
-  const issueShort = prioritization.issueId.replace(/[^a-z0-9]/gi, "").slice(0, 8);
+  const issueShort = primary.prioritization.issueId.replace(/[^a-z0-9]/gi, "").slice(0, 8);
   const branchName = `ai-qa/fix-${testShort}-${issueShort}`;
-  const prTitle = `fix(qa): ${prioritization.title} (QA-${issueShort.toUpperCase()})`;
-  const prBody = buildPrBody(prioritization, fixes);
+  const prTitle =
+    results.length === 1
+      ? `fix(qa): ${primary.prioritization.title} (QA-${issueShort.toUpperCase()})`
+      : `fix(qa): ${results.length} issues bundled (QA-${issueShort.toUpperCase()} +${results.length - 1} more)`;
+  const prBody = buildPrBody(results);
+  const filePatches = results.map(({ fixes }) => ({
+    path: fixes.filePath,
+    original: fixes.original,
+    patched: fixes.patched,
+  }));
 
   try {
     const pr = await github.applyRemediation({
@@ -962,37 +1089,43 @@ async function createPullRequest(testId) {
       prTitle,
       prBody,
       repo: match.githubRepo,
-      filePatch: {
-        path: fixes.filePath,
-        original: fixes.original,
-        patched: fixes.patched,
-      },
+      filePatches,
     });
     logger.success(
       "aiAutomation",
-      `Opened PR ${pr.prUrl} (repo: ${match.githubRepo}, matched by ${match.matchedBy}, patched ${fixes.filePath}, issue ${prioritization.issueId})`,
+      `Opened PR ${pr.prUrl} (repo: ${match.githubRepo}, matched by ${match.matchedBy}, ` +
+        `patched ${pr.filesChanged.length} file(s) for ${results.length} issue(s))`,
     );
-    await recordAppliedFix(test, prioritization.issueId, {
-      fixes,
-      pr,
+    for (const { prioritization, fixes } of results) {
+      // eslint-disable-next-line no-await-in-loop -- small, bounded (<= MAX_FIXES_PER_PR) sequential writes to the same test record
+      await recordAppliedFix(test, prioritization.issueId, {
+        fixes,
+        pr,
+        repo: match.githubRepo,
+      });
+    }
+    return {
+      configured: true,
+      ...pr,
       repo: match.githubRepo,
-    });
-    return { configured: true, ...pr, repo: match.githubRepo, repoMatch };
+      repoMatch,
+      fixesApplied: results.length,
+    };
   } catch (err) {
-    // A branch with no diff from base almost always means this exact fix
+    // A branch with no diff from base almost always means these exact fixes
     // already landed on base (typically merged directly on GitHub, missed
-    // by reconcileMergedFixes above because this issue predates
+    // by reconcileMergedFixes above because the issue predates
     // recordAppliedFix or its appliedFix data was lost) — treat that as
     // "already fixed," not a failure.
     if (/No commits between/i.test(err.message)) {
-      const issue = (test.issues || []).find((i) => i.id === prioritization.issueId);
-      if (issue) {
-        issue.resolved = true;
-        await testsRepo.update(test.id, { issues: test.issues });
+      for (const { prioritization } of results) {
+        const issue = (test.issues || []).find((i) => i.id === prioritization.issueId);
+        if (issue) issue.resolved = true;
       }
+      await testsRepo.update(test.id, { issues: test.issues });
       logger.success(
         "aiAutomation",
-        `Issue ${prioritization.issueId} already fixed on ${require("../config/config").github.baseBranch} — marking resolved instead of erroring`,
+        `${results.length} issue(s) already fixed on ${require("../config/config").github.baseBranch} — marking resolved instead of erroring`,
       );
       return {
         configured: true,
@@ -1360,7 +1493,7 @@ async function locateIssueUncached(testId, issueId) {
   if (!issue) return { grounded: false };
 
   const repoMatch = repoRegistry.matchRepoForUrl(issue.url || test.url);
-  const located = repoMatch?.path ? fileLocator.locate(repoMatch.path, issue) : null;
+  const located = repoMatch?.path ? await fileLocator.locate(repoMatch.path, issue) : null;
   const aiGuess = !located && repoMatch?.path ? await aiLocate(repoMatch.path, issue) : null;
 
   if (located) {

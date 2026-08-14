@@ -150,50 +150,6 @@ export const PHASE2_MODULES = [
 
 export type Phase2ModuleId = (typeof PHASE2_MODULES)[number]['id'];
 
-export const PHASE3_MODULES = [
-  {
-    id: 'functional-testing',
-    label: 'Functional Testing',
-    description: 'Detects each page component\'s real functionality and actually runs it (fill/click/assert).',
-  },
-] as const;
-
-export type Phase3ModuleId = (typeof PHASE3_MODULES)[number]['id'];
-
-export type FunctionalStepAction = 'fill' | 'click' | 'select' | 'assert_visible';
-
-export interface FunctionalStep {
-  action: FunctionalStepAction;
-  selector: string;
-  value: string;
-  expected: string;
-  nav?: boolean;
-}
-
-export interface FunctionalStepLog {
-  description: string;
-  status: 'ok' | 'failed';
-  error: string | null;
-}
-
-export interface FunctionalExecution {
-  status: 'passed' | 'failed' | 'skipped';
-  stepsLog: FunctionalStepLog[];
-  afterScreenshotPath: string | null;
-  executedAt: string;
-}
-
-export interface FunctionalComponent {
-  componentId: string;
-  selector: string;
-  name: string;
-  functionality: string;
-  description: string;
-  screenshotPath: string | null;
-  steps: FunctionalStep[];
-  execution: FunctionalExecution | null;
-}
-
 export interface BackendTest {
   id: string;
   name: string;
@@ -214,7 +170,6 @@ export interface BackendTest {
   visualRegression?: BackendVisualRegressionResult[];
   crossBrowser?: BackendCrossBrowserResult[];
   performanceBenchmark?: BackendPerformanceBenchmark | null;
-  functionalTesting?: FunctionalComponent[];
   options: { maxPages?: number; maxDepth?: number; device?: string; modules?: string[]; policyId?: string | null };
   createdBy?: string | null;
   createdByName?: string | null;

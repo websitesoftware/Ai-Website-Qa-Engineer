@@ -3,24 +3,21 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ScanlinePhase1Report from './phase1page';
 import { Phase2ResultsPage } from './Phase2ResultsPage';
-import { Phase3ResultsPage } from './Phase3ResultsPage';
 import { DeviceLabPage } from './DeviceLabPage';
 import { useContent } from '../context/ContentContext';
 
-type ResultsTab = 'phase1' | 'phase2' | 'phase3' | 'device-lab';
+type ResultsTab = 'phase1' | 'phase2' | 'device-lab';
 
 export const ScanResultsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ResultsTab>('phase1');
 
   const phase1Tab = useContent('scanResults.tab.phase1', { text: 'Phase 1 · Foundation', icon: 'ph-sparkle' });
   const phase2Tab = useContent('scanResults.tab.phase2', { text: 'Phase 2 · Intelligent QA', icon: 'ph-sparkle' });
-  const phase3Tab = useContent('scanResults.tab.phase3', { text: 'Phase 3 · Functional Testing', icon: 'ph-play-circle' });
   const deviceLabTab = useContent('scanResults.tab.deviceLab', { text: 'Device Lab', icon: 'ph-device-mobile' });
 
   const TABS: { id: ResultsTab; label: string; icon: string }[] = [
     { id: 'phase1', label: phase1Tab.text, icon: phase1Tab.icon },
     { id: 'phase2', label: phase2Tab.text, icon: phase2Tab.icon },
-    { id: 'phase3', label: phase3Tab.text, icon: phase3Tab.icon },
     { id: 'device-lab', label: deviceLabTab.text, icon: deviceLabTab.icon },
   ];
 
@@ -62,7 +59,6 @@ export const ScanResultsPage: React.FC = () => {
         >
           {activeTab === 'phase1' && <ScanlinePhase1Report />}
           {activeTab === 'phase2' && <Phase2ResultsPage />}
-          {activeTab === 'phase3' && <Phase3ResultsPage />}
           {activeTab === 'device-lab' && <DeviceLabPage />}
         </motion.div>
       </AnimatePresence>

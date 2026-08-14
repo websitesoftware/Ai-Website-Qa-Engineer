@@ -152,16 +152,18 @@ class NoCodeChangeError extends Error {
 }
 
 /**
- * Create a branch, patch a real source file on it (only if its current
- * GitHub content still contains `filePatch.original` verbatim — otherwise
- * throws FileDriftedError rather than risk corrupting the file), and open
- * the PR against that actual code change. There is no fallback "just write
- * a report file" mode — a PR with no real code change is refused
- * (NoCodeChangeError) rather than opened with nothing but commentary.
+ * Create a branch, patch one or more real source files on it (only ever
+ * committing a file whose current GitHub content still contains that file's
+ * `original` snippet verbatim — files that drifted are skipped rather than
+ * risking corruption), and open the PR against those actual code changes.
+ * There is no fallback "just write a report file" mode — a PR with no real
+ * code change on ANY file is refused (NoCodeChangeError) rather than opened
+ * with nothing but commentary.
  *
  * @param {object} args
- * @param {{path:string, original:string, patched:string}} args.filePatch
- * @returns {Promise<{branchName, prTitle, prUrl, prNumber, status}>}
+ * @param {{path:string, original:string, patched:string}} [args.filePatch] Single-file shorthand.
+ * @param {Array<{path:string, original:string, patched:string}>} [args.filePatches] One or more edits — multiple entries targeting the same `path` are applied to that file in one commit.
+ * @returns {Promise<{branchName, prTitle, prUrl, prNumber, status, filesChanged, filesSkipped}>}
  */
 async function applyRemediation({
   branchName,
@@ -169,39 +171,71 @@ async function applyRemediation({
   prBody,
   repo: repoOverride,
   filePatch,
+  filePatches,
 }) {
-  if (!filePatch) throw new NoCodeChangeError();
+  const edits = filePatches && filePatches.length ? filePatches : filePatch ? [filePatch] : null;
+  if (!edits || !edits.length) throw new NoCodeChangeError();
 
   const { owner, repo } = repoParts(repoOverride);
   const base = config.github.baseBranch;
 
   await ensureBranch(owner, repo, branchName, base);
 
-  const existing = await gh(
-    `/repos/${owner}/${repo}/contents/${encodeURIComponent(filePatch.path)}?ref=${branchName}`,
-  );
-  const currentContent = Buffer.from(existing.content, "base64").toString("utf-8");
-  const alreadyApplied = currentContent.includes(filePatch.patched);
-  if (!alreadyApplied && !currentContent.includes(filePatch.original)) {
-    throw new FileDriftedError(filePatch.path);
+  const byPath = new Map();
+  for (const edit of edits) {
+    if (!byPath.has(edit.path)) byPath.set(edit.path, []);
+    byPath.get(edit.path).push(edit);
   }
-  // A previous run against this same branch may have already committed this
-  // exact patch (e.g. the button UI was re-triggered after already opening
-  // the PR) — re-diffing original->original would be a no-op commit, and
-  // the "original" text is gone from the branch precisely because the fix
-  // already landed there. Skip straight to (re)finding the PR instead of
-  // treating that as drift.
-  if (!alreadyApplied) {
-    const updatedContent = currentContent.replace(filePatch.original, filePatch.patched);
-    await gh(`/repos/${owner}/${repo}/contents/${encodeURIComponent(filePatch.path)}`, {
-      method: "PUT",
-      body: JSON.stringify({
-        message: prTitle,
-        content: toBase64(updatedContent),
-        branch: branchName,
-        sha: existing.sha,
-      }),
-    });
+
+  const filesChanged = [];
+  const filesSkipped = [];
+
+  for (const [filePath, fileEdits] of byPath) {
+    let existing;
+    try {
+      existing = await gh(
+        `/repos/${owner}/${repo}/contents/${encodeURIComponent(filePath)}?ref=${branchName}`,
+      );
+    } catch (err) {
+      filesSkipped.push({ path: filePath, reason: err.message });
+      continue;
+    }
+    let content = Buffer.from(existing.content, "base64").toString("utf-8");
+    let changed = false;
+    let drifted = false;
+
+    for (const edit of fileEdits) {
+      // A previous run against this same branch may have already committed
+      // this exact patch — re-diffing original->original would be a no-op
+      // commit, and "original" is gone from the branch precisely because
+      // the fix already landed there. Treat that as success, not drift.
+      if (content.includes(edit.patched)) continue;
+      if (!content.includes(edit.original)) {
+        drifted = true;
+        continue;
+      }
+      content = content.replace(edit.original, edit.patched);
+      changed = true;
+    }
+
+    if (changed) {
+      await gh(`/repos/${owner}/${repo}/contents/${encodeURIComponent(filePath)}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          message: prTitle,
+          content: toBase64(content),
+          branch: branchName,
+          sha: existing.sha,
+        }),
+      });
+      filesChanged.push(filePath);
+    } else if (drifted) {
+      filesSkipped.push({ path: filePath, reason: "drifted" });
+    }
+  }
+
+  if (!filesChanged.length && filesSkipped.some((s) => s.reason === "drifted")) {
+    throw new FileDriftedError(filesSkipped.map((s) => s.path).join(", "));
   }
 
   const { prUrl, prNumber } = await openOrFindPR(owner, repo, {
@@ -211,7 +245,7 @@ async function applyRemediation({
     prBody,
   });
 
-  return { branchName, prTitle, prUrl, prNumber, status: "Open" };
+  return { branchName, prTitle, prUrl, prNumber, status: "Open", filesChanged, filesSkipped };
 }
 
 /** Dispatch a workflow_dispatch run. Requires config.github.workflow. */

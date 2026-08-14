@@ -27,6 +27,22 @@ export const metadata: Metadata = {
   alternates: { canonical: "http://localhost:3000/" },
   title: "AI Website QA Engineer",
   description: "AI Website QA Dashboard",
+  openGraph: {
+    title: "AI Website QA Engineer",
+    description: "AI Website QA Dashboard",
+    url: "http://localhost:3000/",
+    siteName: "AI Website QA Engineer",
+    type: "website",
+  },
+};
+
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "AI Website QA Engineer",
+  description: "AI Website QA Dashboard",
+  applicationCategory: "DeveloperApplication",
+  operatingSystem: "Web",
 };
 
 export const viewport: Viewport = {
@@ -49,6 +65,10 @@ export default function RootLayout({
         <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.2/src/regular/style.css" />
         <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.2/src/bold/style.css" />
         <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.2/src/fill/style.css" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
       </head>
       <body>
         <Providers> <ThemeProvider>

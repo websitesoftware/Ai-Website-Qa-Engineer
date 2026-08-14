@@ -13,6 +13,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const sourceMapService = require("./sourceMap.service");
 
 const EXCLUDED_DIRS = new Set([
   "node_modules",
@@ -303,8 +304,7 @@ function searchByAttribute(files, attrName, attrValue) {
 }
 
 /** Try to resolve a browser-reported script URL directly onto a repo file (dev-server source paths). */
-function resolveSourceLocationFile(repoPath, sourceLocation) {
-  if (!sourceLocation?.url) return null;
+function resolveSourceLocationFileDirect(repoPath, sourceLocation) {
   let urlPath;
   try {
     urlPath = new URL(sourceLocation.url).pathname;
@@ -340,6 +340,48 @@ function resolveSourceLocationFile(repoPath, sourceLocation) {
   return null;
 }
 
+/**
+ * Source-map fallback for when the direct path guess above fails — the
+ * common case for a production build, where the browser only ever sees a
+ * minified/bundled URL (e.g. `/_next/static/chunks/pages/_app-8f2c1a.js`)
+ * that has no resemblance to any real file on disk. Decodes the bundle's
+ * real source map to recover the original file + line, then matches that
+ * onto the repo the same way the direct path guess does.
+ */
+async function resolveSourceLocationFileViaSourceMap(repoPath, sourceLocation) {
+  const mapped = await sourceMapService.resolveOriginalPosition(
+    sourceLocation.url,
+    sourceLocation.lineNumber != null ? Number(sourceLocation.lineNumber) + 1 : null,
+    sourceLocation.columnNumber,
+  );
+  if (!mapped) return null;
+  const cleanRel = sourceMapService.cleanSourcePath(mapped.source);
+  if (!cleanRel) return null;
+
+  for (const prefix of ["", "src", "app", "pages", "frontend/src", "frontend/pages", "frontend"]) {
+    const abs = path.join(repoPath, prefix, cleanRel);
+    const content = readFileSafe(abs);
+    if (!content) continue;
+    const lineNumber = mapped.line || 1;
+    const lines = content.split("\n");
+    const from = Math.max(0, lineNumber - 2);
+    const to = Math.min(lines.length, lineNumber + 1);
+    return {
+      absPath: abs,
+      line: lineNumber,
+      original: lines.slice(from, to).join("\n").trim(),
+    };
+  }
+  return null;
+}
+
+async function resolveSourceLocationFile(repoPath, sourceLocation) {
+  if (!sourceLocation?.url) return null;
+  const direct = resolveSourceLocationFileDirect(repoPath, sourceLocation);
+  if (direct) return direct;
+  return resolveSourceLocationFileViaSourceMap(repoPath, sourceLocation);
+}
+
 function toResult(repoPath, found) {
   if (!found) return null;
   return {
@@ -355,12 +397,12 @@ function toResult(repoPath, found) {
  * `{ absPath, relPath, line, original }` on an exact/confident match, or
  * `null` if nothing in the repo can be tied to this issue.
  */
-function locate(repoPath, issue) {
+async function locate(repoPath, issue) {
   if (!repoPath || !issue) return null;
 
   if (issue.category === "console-error" && issue.sourceLocation) {
-    const direct = resolveSourceLocationFile(repoPath, issue.sourceLocation);
-    if (direct) return toResult(repoPath, direct);
+    const found = await resolveSourceLocationFile(repoPath, issue.sourceLocation);
+    if (found) return toResult(repoPath, found);
     return null; // bundled/served-from-memory paths don't map to a real file — be honest
   }
 
