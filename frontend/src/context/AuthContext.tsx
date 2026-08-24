@@ -67,13 +67,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setReady(true);
       return;
     }
+    // Optimistically restore the cached session immediately so the token is
+    // usable right away — the /me call below only refreshes the user's
+    // profile and revokes the session on an explicit 401 (a genuinely
+    // invalid/expired token). Any other failure (network hiccup, backend
+    // restarting) must NOT log the user out from under them.
+    setUser(saved.user);
+    setToken(saved.token);
+
     fetch(`${AUTH_BASE}/me`, { headers: { Authorization: `Bearer ${saved.token}` } })
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((data) => {
-        setUser(data.user);
-        setToken(saved.token);
+      .then((r) => {
+        if (r.ok) return r.json().then((data) => setUser(data.user));
+        if (r.status === 401) {
+          clearSession();
+          setUser(null);
+          setToken(null);
+        }
+        // Other statuses (e.g. 5xx): keep the optimistically restored session.
       })
-      .catch(() => clearSession())
+      .catch(() => {
+        // Network error — keep the optimistically restored session.
+      })
       .finally(() => setReady(true));
   }, []);
 

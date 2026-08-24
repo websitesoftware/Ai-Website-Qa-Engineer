@@ -1,0 +1,61 @@
+
+> qa-dashboard@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.10 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.10:3000
+- Environments: .env.local
+✓ Ready in 813ms
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\WebsiteSoft\Ai-Website-Qa-Engineer\package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * C:\WebsiteSoft\Ai-Website-Qa-Engineer\frontend\package-lock.json
+
+
+ GET / 200 in 1478ms (next.js: 688ms, application-code: 790ms)
+ GET / 200 in 163ms (next.js: 15ms, application-code: 148ms)
+ GET / 200 in 101ms (next.js: 9ms, application-code: 92ms)
+✓ Compiled in 501ms
+ GET / 200 in 1258ms (next.js: 967ms, application-code: 290ms)
+ GET / 200 in 47ms (next.js: 9ms, application-code: 38ms)
+✓ Compiled in 177ms
+ GET / 200 in 279ms (next.js: 155ms, application-code: 123ms)
+ GET / 200 in 34ms (next.js: 8ms, application-code: 26ms)
+✓ Compiled in 613ms
+ GET / 200 in 359ms (next.js: 216ms, application-code: 143ms)
+ GET / 200 in 32ms (next.js: 7ms, application-code: 25ms)
+✓ Compiled in 204ms
+ GET / 200 in 264ms (next.js: 143ms, application-code: 122ms)
+ GET / 200 in 43ms (next.js: 14ms, application-code: 30ms)
+ GET / 200 in 3.0s (next.js: 7ms, application-code: 3.0s)
+ GET / 200 in 121ms (next.js: 11ms, application-code: 110ms)
+ GET /tickets/e5b1b608-3e53-4fc0-aecc-fbb92df7e7f1/eae446ce-3094-4340-ad55-18d9688a0021 200 in 3.4s (next.js: 2.9s, application-code: 552ms)
+ GET / 200 in 140ms (next.js: 8ms, application-code: 132ms)
+✓ Compiled in 393ms
+ GET /tickets/e5b1b608-3e53-4fc0-aecc-fbb92df7e7f1/eae446ce-3094-4340-ad55-18d9688a0021 200 in 320ms (next.js: 177ms, application-code: 143ms)
+ GET / 200 in 244ms (next.js: 170ms, application-code: 73ms)
+✓ Compiled in 179ms
+ GET / 200 in 654ms (next.js: 197ms, application-code: 457ms)
+ GET /tickets/e5b1b608-3e53-4fc0-aecc-fbb92df7e7f1/eae446ce-3094-4340-ad55-18d9688a0021 200 in 234ms (next.js: 154ms, application-code: 80ms)
+✓ Compiled in 220ms
+ GET / 200 in 306ms (next.js: 265ms, application-code: 41ms)
+ GET /tickets/e5b1b608-3e53-4fc0-aecc-fbb92df7e7f1/eae446ce-3094-4340-ad55-18d9688a0021 200 in 309ms (next.js: 161ms, application-code: 148ms)
+✓ Compiled in 110ms
+ GET / 200 in 451ms (next.js: 98ms, application-code: 353ms)
+ GET /tickets/e5b1b608-3e53-4fc0-aecc-fbb92df7e7f1/eae446ce-3094-4340-ad55-18d9688a0021 200 in 291ms (next.js: 200ms, application-code: 91ms)
+✓ Compiled in 168ms
+ GET / 200 in 236ms (next.js: 130ms, application-code: 106ms)
+ GET /tickets/e5b1b608-3e53-4fc0-aecc-fbb92df7e7f1/eae446ce-3094-4340-ad55-18d9688a0021 200 in 283ms (next.js: 198ms, application-code: 86ms)
+✓ Compiled in 103ms
+ GET / 200 in 473ms (next.js: 106ms, application-code: 367ms)
+ GET /tickets/e5b1b608-3e53-4fc0-aecc-fbb92df7e7f1/eae446ce-3094-4340-ad55-18d9688a0021 200 in 304ms (next.js: 197ms, application-code: 107ms)
+ GET / 200 in 2.2s (next.js: 26ms, application-code: 2.2s)
+ GET /tickets/e5b1b608-3e53-4fc0-aecc-fbb92df7e7f1/dd9c25b5-ba38-4957-92e2-65c193b508b7 200 in 409ms (next.js: 39ms, application-code: 371ms)
+ GET /tickets/e5b1b608-3e53-4fc0-aecc-fbb92df7e7f1/dd9c25b5-ba38-4957-92e2-65c193b508b7 200 in 230ms (next.js: 50ms, application-code: 180ms)
+ GET /tickets/e5b1b608-3e53-4fc0-aecc-fbb92df7e7f1/1749c93d-1574-4f6f-9dd3-241729ea28d1 200 in 247ms (next.js: 47ms, application-code: 200ms)
+ GET /tickets/e5b1b608-3e53-4fc0-aecc-fbb92df7e7f1/1749c93d-1574-4f6f-9dd3-241729ea28d1 200 in 144ms (next.js: 29ms, application-code: 114ms)
+ GET /tickets/e5b1b608-3e53-4fc0-aecc-fbb92df7e7f1/1749c93d-1574-4f6f-9dd3-241729ea28d1 200 in 129ms (next.js: 9ms, application-code: 120ms)
+ GET / 200 in 552ms (next.js: 153ms, application-code: 399ms)

@@ -106,11 +106,21 @@ export const api = {
       true
     ),
 
+  // Full-replace of assignees — works with no login, same as assignIssueByEmail below.
   assignIssue: (testId: string, issueId: string, assigneeIds: string[]) =>
     request<BackendIssue>(
-      `/tests/${testId}/issues/${issueId}`,
-      { method: 'PATCH', body: JSON.stringify({ assigneeIds }) },
-      true
+      `/tests/${testId}/issues/${issueId}/assignees`,
+      { method: 'PATCH', body: JSON.stringify({ assigneeIds }) }
+    ),
+
+  // Assign by email directly — works even when nobody is logged in in this
+  // tab. The backend reuses the account if that email is already
+  // registered, otherwise creates a pending-invite stub so the ticket has a
+  // real assignee.
+  assignIssueByEmail: (testId: string, issueId: string, assigneeEmail: string) =>
+    request<BackendIssue>(
+      `/tests/${testId}/issues/${issueId}/assign-by-email`,
+      { method: 'PATCH', body: JSON.stringify({ assigneeEmail }) }
     ),
 
   editIssue: (
@@ -127,11 +137,12 @@ export const api = {
   deleteIssue: (testId: string, issueId: string) =>
     request<void>(`/tests/${testId}/issues/${issueId}`, { method: 'DELETE' }, true),
 
-  addIssueComment: (testId: string, issueId: string, text: string) =>
+  // Works with no login — an anonymous commenter identifies themselves by
+  // email, which is shown next to their comment on the ticket.
+  addIssueComment: (testId: string, issueId: string, text: string, authorEmail?: string) =>
     request<BackendIssue>(
       `/tests/${testId}/issues/${issueId}/comments`,
-      { method: 'POST', body: JSON.stringify({ text }) },
-      true
+      { method: 'POST', body: JSON.stringify({ text, authorEmail }) }
     ),
 
   locateIssue: (testId: string, issueId: string) =>
@@ -177,7 +188,7 @@ export const api = {
   },
 
   team: {
-    listMembers: () => request<BackendTeamMember[]>('/team/members', undefined, true),
+    listMembers: () => request<BackendTeamMember[]>('/team/members'),
     invite: (email: string, role?: TeamRole) =>
       request<BackendTeamMember & { emailSent: boolean; devInviteLink?: string }>(
         '/team/invite',

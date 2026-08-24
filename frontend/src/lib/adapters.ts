@@ -15,6 +15,7 @@ export interface IssueRow {
   resolved: boolean;
   detectedAt: string;
   appliedFix?: BackendAppliedFix | null;
+  lineNumber: number | null;
   assigneeIds: string[];
   comments: BackendIssueComment[];
   // First available page screenshot from the scan this issue came from — a
@@ -44,6 +45,7 @@ export function buildIssueRows(tests: BackendTest[]): IssueRow[] {
         resolved: issue.resolved,
         detectedAt: issue.detectedAt,
         appliedFix: issue.appliedFix,
+        lineNumber: issue.sourceLocation?.lineNumber ?? null,
         assigneeIds: issue.assigneeIds || [],
         comments: issue.comments || [],
         screenshotPath,

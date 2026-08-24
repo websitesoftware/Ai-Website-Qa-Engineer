@@ -37,18 +37,26 @@ interface LocatedFile {
 
 export default function TicketPage() {
   const params = useParams<{ testId: string; issueId: string }>();
-  const { tests, loading, updateIssue, assignIssue, addIssueComment, rerunTest } = useQAData();
+  const { tests, loading, updateIssue, assignIssue, assignIssueByEmail, addIssueComment, rerunTest } = useQAData();
   const { showToast } = useToast();
 
   const [teamMembers, setTeamMembers] = useState<BackendTeamMember[]>([]);
+  const refreshTeamMembers = () => api.team.listMembers().then(setTeamMembers).catch(() => setTeamMembers([]));
   useEffect(() => {
-    api.team.listMembers().then(setTeamMembers).catch(() => setTeamMembers([]));
+    refreshTeamMembers();
   }, []);
   const memberById = useMemo(() => new Map(teamMembers.map((m) => [m.id, m])), [teamMembers]);
 
   const [assignOpen, setAssignOpen] = useState(false);
+  const [assignEmail, setAssignEmail] = useState('');
   const [comment, setComment] = useState('');
   const [posting, setPosting] = useState(false);
+  // Remembered locally (not tied to login) so a repeat commenter doesn't
+  // have to retype their email every time on this device.
+  const [commentEmail, setCommentEmail] = useState('');
+  useEffect(() => {
+    setCommentEmail(localStorage.getItem('qa_comment_email') || '');
+  }, []);
 
   const row = useMemo(() => {
     const rows = buildIssueRows(tests);
@@ -187,6 +195,29 @@ export default function TicketPage() {
     }
   };
 
+  const [assigningByEmail, setAssigningByEmail] = useState(false);
+
+  // Assigns straight from an email — no team-admin rights needed. The
+  // backend reuses the account if that email already exists, otherwise
+  // creates a pending-invite stub so the ticket has a real assignee.
+  const handleAssignByEmail = async () => {
+    if (!row) return;
+    const email = assignEmail.trim().toLowerCase();
+    if (!email) return;
+
+    setAssigningByEmail(true);
+    try {
+      await assignIssueByEmail(row.testId, row.id, email);
+      showToast(`Assigned to ${email}`, 'success');
+      setAssignEmail('');
+      refreshTeamMembers();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not assign that email', 'error');
+    } finally {
+      setAssigningByEmail(false);
+    }
+  };
+
   const handleResolveToggle = async () => {
     if (!row) return;
     try {
@@ -199,9 +230,15 @@ export default function TicketPage() {
 
   const handleAddComment = async () => {
     if (!row || !comment.trim()) return;
+    const email = commentEmail.trim().toLowerCase();
+    if (!email) {
+      showToast('Enter your email so others know who commented', 'error');
+      return;
+    }
     setPosting(true);
     try {
-      await addIssueComment(row.testId, row.id, comment.trim());
+      await addIssueComment(row.testId, row.id, comment.trim(), email);
+      localStorage.setItem('qa_comment_email', email);
       setComment('');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Could not add comment', 'error');
@@ -250,6 +287,17 @@ export default function TicketPage() {
                   </span>
                 )}
                 <span className="text-xs font-mono font-bold opacity-70">{row.repId}</span>
+                {row.assigneeIds.length > 0 && (
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded border border-current/30 bg-white/40 dark:bg-black/20">
+                    <UserPlus className="w-3 h-3" />
+                    {row.assigneeIds
+                      .map((id) => {
+                        const m = memberById.get(id);
+                        return m?.name || m?.email || 'Former team member';
+                      })
+                      .join(', ')}
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -390,7 +438,10 @@ export default function TicketPage() {
               <div className="flex items-center justify-between gap-2 mb-3">
                 <h2 className="font-bold text-sm text-slate-900 dark:text-slate-100">Assigned To</h2>
                 <button
-                  onClick={() => setAssignOpen((v) => !v)}
+                  onClick={() => {
+                    setAssignOpen((v) => !v);
+                    setAssignEmail('');
+                  }}
                   className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 px-2.5 py-1.5 rounded-lg cursor-pointer"
                 >
                   {assignOpen ? <X className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
@@ -406,11 +457,18 @@ export default function TicketPage() {
                   {row.assigneeIds.map((id) => {
                     const m = memberById.get(id);
                     return (
-                      <li key={id} className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-full pl-1 pr-3 py-1">
+                      <li key={id} className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-full pl-1 pr-1.5 py-1">
                         <span className="w-6 h-6 rounded-full bg-blue-500 text-white text-[10px] font-bold flex items-center justify-center">
                           {initials(m?.name, m?.email || '?')}
                         </span>
-                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{m?.name || 'Former team member'}</span>
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{m?.name || m?.email || 'Former team member'}</span>
+                        <button
+                          onClick={() => handleToggleAssignee(id)}
+                          title="Remove assignee"
+                          className="w-4 h-4 rounded-full flex items-center justify-center text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer shrink-0"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
                       </li>
                     );
                   })}
@@ -418,31 +476,53 @@ export default function TicketPage() {
               )}
 
               {assignOpen && (
-                <div className="mt-2 border border-slate-200 dark:border-slate-700 rounded-lg divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden">
-                  {teamMembers.length === 0 && (
-                    <p className="text-xs text-slate-400 p-3">No team members yet — invite one from Settings → Team.</p>
+                <div className="mt-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="email"
+                      value={assignEmail}
+                      onChange={(e) => setAssignEmail(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && assignEmail.trim() && !assigningByEmail) handleAssignByEmail();
+                      }}
+                      placeholder="Paste a teammate's email…"
+                      autoFocus
+                      className="flex-1 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-950 text-slate-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"
+                    />
+                    <button
+                      onClick={handleAssignByEmail}
+                      disabled={!assignEmail.trim() || assigningByEmail}
+                      className="shrink-0 px-3.5 py-2 rounded-lg font-bold text-xs text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 dark:disabled:bg-blue-900 cursor-pointer"
+                    >
+                      {assigningByEmail ? 'Assigning…' : 'Assign'}
+                    </button>
+                  </div>
+
+                  {teamMembers.length > 0 && (
+                    <div className="mt-3 border border-slate-200 dark:border-slate-700 rounded-lg divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden">
+                      {teamMembers.map((m) => {
+                        const isAssigned = row.assigneeIds.includes(m.id);
+                        return (
+                          <button
+                            key={m.id}
+                            onClick={() => handleToggleAssignee(m.id)}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 text-left cursor-pointer transition-colors ${
+                              isAssigned ? 'bg-blue-50 dark:bg-blue-950/40' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                            }`}
+                          >
+                            <span className="w-7 h-7 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center shrink-0">
+                              {initials(m.name, m.email)}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{m.name || m.email}</p>
+                              <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{m.email} · {m.role}</p>
+                            </div>
+                            {isAssigned && <Check className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
                   )}
-                  {teamMembers.map((m) => {
-                    const isAssigned = row.assigneeIds.includes(m.id);
-                    return (
-                      <button
-                        key={m.id}
-                        onClick={() => handleToggleAssignee(m.id)}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 text-left cursor-pointer transition-colors ${
-                          isAssigned ? 'bg-blue-50 dark:bg-blue-950/40' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
-                        }`}
-                      >
-                        <span className="w-7 h-7 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center shrink-0">
-                          {initials(m.name, m.email)}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{m.name || m.email}</p>
-                          <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{m.email} · {m.role}</p>
-                        </div>
-                        {isAssigned && <Check className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />}
-                      </button>
-                    );
-                  })}
                 </div>
               )}
             </div>
@@ -459,7 +539,12 @@ export default function TicketPage() {
                     </span>
                     <div className="min-w-0 flex-1 bg-slate-50 dark:bg-slate-800/60 rounded-lg px-3.5 py-2.5">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{c.authorName}</span>
+                        <div className="min-w-0">
+                          <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{c.authorName}</span>
+                          {c.authorEmail && c.authorEmail !== c.authorName && (
+                            <span className="text-[11px] text-slate-400 dark:text-slate-500 ml-1.5">{c.authorEmail}</span>
+                          )}
+                        </div>
                         <span className="text-[11px] text-slate-400 dark:text-slate-500 shrink-0">{timeAgo(c.createdAt)}</span>
                       </div>
                       <p className="text-sm text-slate-700 dark:text-slate-300 mt-0.5 whitespace-pre-wrap wrap-break-word">{c.text}</p>
@@ -468,6 +553,13 @@ export default function TicketPage() {
                 ))}
               </div>
 
+              <input
+                type="email"
+                value={commentEmail}
+                onChange={(e) => setCommentEmail(e.target.value)}
+                placeholder="Your email (shown next to your comment)…"
+                className="w-full mb-2 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-950 text-slate-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"
+              />
               <div className="flex items-start gap-2.5">
                 <textarea
                   value={comment}
@@ -478,7 +570,7 @@ export default function TicketPage() {
                 />
                 <button
                   onClick={handleAddComment}
-                  disabled={posting || !comment.trim()}
+                  disabled={posting || !comment.trim() || !commentEmail.trim()}
                   className="shrink-0 p-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 dark:disabled:bg-blue-900 text-white cursor-pointer"
                   title="Add comment"
                 >

@@ -21,6 +21,7 @@ export interface BackendIssueComment {
   id: string;
   authorId: string | null;
   authorName: string;
+  authorEmail?: string | null;
   text: string;
   createdAt: string;
 }

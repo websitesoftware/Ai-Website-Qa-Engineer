@@ -20,7 +20,8 @@ interface QADataContextValue {
   deleteTest: (id: string) => Promise<void>;
   updateIssue: (testId: string, issueId: string, resolved: boolean) => Promise<void>;
   assignIssue: (testId: string, issueId: string, assigneeIds: string[]) => Promise<void>;
-  addIssueComment: (testId: string, issueId: string, text: string) => Promise<void>;
+  assignIssueByEmail: (testId: string, issueId: string, email: string) => Promise<void>;
+  addIssueComment: (testId: string, issueId: string, text: string, authorEmail?: string) => Promise<void>;
 }
 
 const QADataContext = createContext<QADataContextValue | undefined>(undefined);
@@ -102,9 +103,17 @@ export const QADataProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     [fetchAll]
   );
 
+  const assignIssueByEmail = useCallback(
+    async (testId: string, issueId: string, email: string) => {
+      await api.assignIssueByEmail(testId, issueId, email);
+      await fetchAll();
+    },
+    [fetchAll]
+  );
+
   const addIssueComment = useCallback(
-    async (testId: string, issueId: string, text: string) => {
-      await api.addIssueComment(testId, issueId, text);
+    async (testId: string, issueId: string, text: string, authorEmail?: string) => {
+      await api.addIssueComment(testId, issueId, text, authorEmail);
       await fetchAll();
     },
     [fetchAll]
@@ -124,6 +133,7 @@ export const QADataProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         deleteTest,
         updateIssue,
         assignIssue,
+        assignIssueByEmail,
         addIssueComment,
       }}
     >

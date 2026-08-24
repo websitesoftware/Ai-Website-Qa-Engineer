@@ -15,6 +15,7 @@ import {
   FilePdf,
   FileCsv,
   FileDoc,
+  UsersThree,
 } from '@phosphor-icons/react';
 import { useQAData } from '../context/QADataContext';
 import { useToast } from '../context/ToastContext';
@@ -25,7 +26,14 @@ import { getPhase, getEffort, PHASES, PHASE_ORDER, PhaseId, severityBadge, sever
 import { getDynamicFixCode } from '../lib/fixTemplates'; // <- move your 200-line
 import { api } from '../lib/api';
 import { BackendTeamMember } from '../lib/types';
-import { exportTicketListCSV, exportTicketListPDF, exportTicketListDocx, TicketExportRow } from '../lib/exportReport';
+import {
+  exportTicketListCSV,
+  exportTicketListPDF,
+  exportTicketListDocx,
+  exportAssignedTicketsXLSX,
+  TicketExportRow,
+  AssignedTicketExportRow,
+} from '../lib/exportReport';
 
 /** Parse once, not on every render pass of every filter. */
 const hostOf = (url: string): string => {
@@ -351,6 +359,8 @@ export const IssuesPage: React.FC = () => {
               className="pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-800 rounded-lg focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-sm w-full sm:w-64 bg-white dark:bg-slate-950 dark:text-white transition-all shadow-sm"
             />
           </div>
+
+          <AssignedTicketsButton rows={allRows} memberById={memberById} />
         </div>
       </div>
 
@@ -570,6 +580,57 @@ export const IssuesPage: React.FC = () => {
         </div>
       )}
     </div>
+  );
+};
+
+/** One-click Excel export of every currently-assigned ticket — description, source line, and who owns it — across all sites, regardless of the phase/site filters above. */
+const AssignedTicketsButton: React.FC<{
+  rows: (IssueRow & { host: string })[];
+  memberById: Map<string, BackendTeamMember>;
+}> = ({ rows, memberById }) => {
+  const { showToast } = useToast();
+  const assignedRows = rows.filter((r) => r.assigneeIds.length > 0);
+
+  const handleClick = async () => {
+    if (assignedRows.length === 0) {
+      showToast('No tickets are assigned yet', 'info');
+      return;
+    }
+    let sNo = 0;
+    const origin = window.location.origin;
+    const exportRows: AssignedTicketExportRow[] = assignedRows.flatMap((r) =>
+      r.assigneeIds.map((id) => ({
+        sNo: ++sNo,
+        website: r.host,
+        repId: r.repId,
+        ticketUrl: `${origin}/tickets/${r.testId}/${r.id}`,
+        title: r.title,
+        assignedTo: memberById.get(id)?.name || memberById.get(id)?.email || 'Unknown',
+        severity: r.severity,
+        status: r.resolved ? 'Resolved' : 'Open',
+      }))
+    );
+    // Per-ticket (not per-assignee) so a ticket with 2 assignees isn't
+    // double-counted in the priority pie chart.
+    const priorityCounts: Record<string, number> = {};
+    assignedRows.forEach((r) => {
+      priorityCounts[r.severity] = (priorityCounts[r.severity] || 0) + 1;
+    });
+    try {
+      await exportAssignedTicketsXLSX(exportRows, priorityCounts, 'All Sites');
+    } catch {
+      showToast('Could not export assigned tickets', 'error');
+    }
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      className="flex items-center gap-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded-lg transition-colors cursor-pointer shadow-sm"
+      title="Export a Bug Tracker Dashboard (.xlsx) of every assigned ticket, with a priority summary and charts"
+    >
+      <UsersThree className="w-4 h-4" /> Assigned Tickets
+    </button>
   );
 };
 

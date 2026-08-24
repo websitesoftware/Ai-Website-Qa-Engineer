@@ -692,6 +692,345 @@ export async function exportTicketListPDF(rows: TicketExportRow[], scopeLabel: s
   doc.save(`tickets-${slug(scopeLabel)}.pdf`);
 }
 
+// ---------------------------------------------------------------------------
+// Assigned tickets — one row per assignee (a ticket with two assignees
+// appears twice) so "who owns line 42" is a straight lookup, not a CSV cell
+// with a comma-joined list to parse.
+// ---------------------------------------------------------------------------
+export interface AssignedTicketExportRow {
+  sNo: number;
+  website: string;
+  repId: string; // Bug ID
+  ticketUrl: string; // deep link back into the app for the "Ticket Link" hyperlink column
+  title: string;
+  assignedTo: string;
+  severity: string; // 'critical' | 'high' | 'medium' | 'low'
+  status: string; // 'Open' | 'Resolved'
+}
+
+/**
+ * Renders a plain pie chart to a PNG buffer via <canvas> — exceljs (used for
+ * the styled Excel export below) can't create native Excel chart objects in
+ * the browser, only embed images, so the "graph" is a picture, not a live
+ * chart. Good enough for a report; not editable in Excel afterward.
+ */
+function drawPieChartPNG(
+  slices: { label: string; value: number; color: string }[],
+  size = 340
+): Promise<ArrayBuffer> {
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  ctx.clearRect(0, 0, size, size);
+
+  const total = slices.reduce((s, d) => s + d.value, 0) || 1;
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = size / 2 - 12;
+  let start = -Math.PI / 2;
+
+  slices.forEach((s) => {
+    const angle = (s.value / total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, start, start + angle);
+    ctx.closePath();
+    ctx.fillStyle = s.color;
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    start += angle;
+  });
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) return reject(new Error('chart render failed'));
+      blob.arrayBuffer().then(resolve).catch(reject);
+    }, 'image/png');
+  });
+}
+
+/** Simple vertical bar chart with y-axis gridlines/ticks and x-axis labels — same "picture, not a live chart" caveat as drawPieChartPNG. */
+function drawBarChartPNG(bars: { label: string; value: number; color: string }[], width = 380, height = 260): Promise<ArrayBuffer> {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d')!;
+  ctx.clearRect(0, 0, width, height);
+
+  const padL = 34;
+  const padB = 24;
+  const padT = 10;
+  const padR = 10;
+  const plotW = width - padL - padR;
+  const plotH = height - padT - padB;
+  const maxVal = Math.max(1, ...bars.map((b) => b.value));
+  const niceMax = Math.ceil(maxVal / 5) * 5 || 5;
+
+  // Gridlines + y-axis ticks
+  ctx.strokeStyle = '#E5E7EB';
+  ctx.fillStyle = '#6B7280';
+  ctx.font = '10px Arial';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i <= 5; i++) {
+    const val = (niceMax / 5) * i;
+    const y = padT + plotH - (val / niceMax) * plotH;
+    ctx.beginPath();
+    ctx.moveTo(padL, y);
+    ctx.lineTo(width - padR, y);
+    ctx.stroke();
+    ctx.fillText(String(Math.round(val)), padL - 6, y);
+  }
+
+  // Axes
+  ctx.strokeStyle = '#9CA3AF';
+  ctx.beginPath();
+  ctx.moveTo(padL, padT);
+  ctx.lineTo(padL, padT + plotH);
+  ctx.lineTo(width - padR, padT + plotH);
+  ctx.stroke();
+
+  // Bars
+  const slot = plotW / bars.length;
+  const barW = slot * 0.5;
+  ctx.textAlign = 'center';
+  bars.forEach((b, i) => {
+    const barH = (b.value / niceMax) * plotH;
+    const x = padL + i * slot + (slot - barW) / 2;
+    const y = padT + plotH - barH;
+    ctx.fillStyle = b.color;
+    ctx.fillRect(x, y, barW, barH);
+    ctx.fillStyle = '#374151';
+    ctx.font = 'bold 10px Arial';
+    ctx.fillText(b.label, x + barW / 2, padT + plotH + 14);
+  });
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) return reject(new Error('chart render failed'));
+      blob.arrayBuffer().then(resolve).catch(reject);
+    }, 'image/png');
+  });
+}
+
+export async function exportAssignedTicketsCSV(rows: AssignedTicketExportRow[], scopeLabel: string) {
+  const branding = await fetchBrandingSafe();
+  const esc = (v: unknown) => `"${String(v ?? '-').replace(/"/g, '""')}"`;
+  const lines: string[] = [];
+
+  lines.push(`${branding.headerText} - Bug Tracker (${scopeLabel})`);
+  lines.push(`Generated,${new Date().toLocaleString()}`);
+  lines.push(`Total Assigned,${rows.length}`);
+  lines.push('');
+  lines.push('S.No,Website,Bug ID,Ticket Link,Bug Title,Assigned To,Priority,Status');
+  rows.forEach((r) => {
+    lines.push(
+      [esc(r.sNo), esc(r.website), esc(r.repId), esc(r.ticketUrl), esc(r.title), esc(r.assignedTo), esc(PRIORITY_LABEL[r.severity] || r.severity), esc(r.status)].join(',')
+    );
+  });
+  lines.push('');
+  lines.push(branding.footerText);
+
+  downloadText(lines.join('\n'), `bug-tracker-${slug(scopeLabel)}.csv`, 'text/csv');
+}
+
+const PRIORITY_ORDER = ['critical', 'high', 'medium', 'low'];
+const PRIORITY_LABEL: Record<string, string> = { critical: 'P1', high: 'P2', medium: 'P3', low: 'P4' };
+const PRIORITY_MEANING: Record<string, string> = {
+  critical: 'Critical — fix immediately',
+  high: 'High — fix soon',
+  medium: 'Medium — normal queue',
+  low: 'Low — minor/cosmetic',
+};
+const STATUS_FILL: Record<string, string> = { Open: 'FFC00000', Resolved: 'FF70AD47' };
+const PRIORITY_FILL: Record<string, string> = {
+  critical: 'FFC00000',
+  high: 'FFED7D31',
+  medium: 'FFFFC000',
+  low: 'FF70AD47',
+};
+
+/**
+ * Styled Excel workbook modeled on a classic "Bug Tracker Dashboard" template
+ * — plain white sheet, navy table header, colored Priority/Status badges, a
+ * Priority Summary table, and bar + pie charts of the priority breakdown.
+ * exceljs can't create native Excel chart objects in the browser (only embed
+ * images), so both charts are pictures, not live/editable Excel charts.
+ *
+ * `priorityCounts` is passed in rather than derived from `rows` because
+ * `rows` has one line per assignee (a ticket with 2 assignees appears
+ * twice) — counting severities off it would double-count tickets in the
+ * charts. The caller has the pre-flatMap ticket list, so it computes the
+ * per-ticket distribution itself.
+ */
+export async function exportAssignedTicketsXLSX(
+  rows: AssignedTicketExportRow[],
+  priorityCounts: Record<string, number>,
+  scopeLabel: string
+) {
+  const ExcelJS = (await import('exceljs')).default;
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'AI QA Engineer';
+
+  const ws = wb.addWorksheet('Bug Tracker');
+  ws.columns = [
+    { width: 6 }, // A S.No
+    { width: 20 }, // B Website
+    { width: 14 }, // C Bug ID
+    { width: 22 }, // D Ticket Link
+    { width: 42 }, // E Bug Title
+    { width: 18 }, // F Assigned To
+    { width: 10 }, // G Priority
+    { width: 12 }, // H Status
+  ];
+  const LAST_COL = 8;
+
+  // ---- Title ----
+  ws.getCell(1, 1).value = '🐞 Bug Tracker Dashboard';
+  ws.getCell(1, 1).font = { bold: true, size: 16, color: { argb: 'FF1F2937' } };
+  ws.getCell(2, 1).value = `Sorted by Priority (P1 = highest) · Generated ${new Date().toLocaleString()} · ${scopeLabel} · ${rows.length} bug${rows.length === 1 ? '' : 's'}`;
+  ws.getCell(2, 1).font = { italic: true, size: 9, color: { argb: 'FF6B7280' } };
+
+  // ---- Main table ----
+  const tableHeaderRow = 4;
+  const headers = ['S.No', 'Website Name', 'Bug ID', 'Ticket Link', 'Bug Title / Description', 'Assigned To', 'Priority', 'Status'];
+  headers.forEach((h, i) => {
+    const cell = ws.getCell(tableHeaderRow, i + 1);
+    cell.value = h;
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F3864' } };
+    cell.alignment = { vertical: 'middle' };
+  });
+  ws.getRow(tableHeaderRow).height = 20;
+
+  rows.forEach((r, i) => {
+    const row = tableHeaderRow + 1 + i;
+    ws.getCell(row, 1).value = r.sNo;
+    ws.getCell(row, 1).alignment = { horizontal: 'center' };
+    ws.getCell(row, 2).value = r.website;
+    ws.getCell(row, 3).value = r.repId;
+
+    const linkCell = ws.getCell(row, 4);
+    linkCell.value = { text: 'Open Ticket ↗', hyperlink: r.ticketUrl };
+    linkCell.font = { color: { argb: 'FF2563EB' }, underline: true, size: 10 };
+
+    ws.getCell(row, 5).value = r.title;
+
+    ws.getCell(row, 6).value = r.assignedTo;
+
+    const priorityCell = ws.getCell(row, 7);
+    priorityCell.value = PRIORITY_LABEL[r.severity] || r.severity;
+    priorityCell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    priorityCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIORITY_FILL[r.severity] || 'FF9CA3AF' } };
+    priorityCell.alignment = { horizontal: 'center' };
+
+    const statusCell = ws.getCell(row, 8);
+    statusCell.value = r.status === 'Resolved' ? 'Closed' : 'Open';
+    statusCell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: STATUS_FILL[r.status] || 'FF9CA3AF' } };
+    statusCell.alignment = { horizontal: 'center' };
+
+    if (i % 2 === 1) {
+      [1, 2, 3, 5, 6].forEach((c) => {
+        ws.getCell(row, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
+      });
+    }
+    for (let c = 1; c <= LAST_COL; c++) {
+      ws.getCell(row, c).border = { bottom: { style: 'hair', color: { argb: 'FFE5E7EB' } } };
+    }
+  });
+
+  // ---- Priority Summary table ----
+  const summaryHeaderRow = tableHeaderRow + rows.length + 3;
+  ws.getCell(summaryHeaderRow - 1, 1).value = '📋 Priority Summary';
+  ws.getCell(summaryHeaderRow - 1, 1).font = { bold: true, size: 12, color: { argb: 'FF1F2937' } };
+
+  ['Priority', 'Meaning', 'Bug Count', '% of Total'].forEach((h, i) => {
+    const cell = ws.getCell(summaryHeaderRow, i + 1);
+    cell.value = h;
+    cell.font = { bold: true };
+    cell.border = { bottom: { style: 'thin', color: { argb: 'FF9CA3AF' } } };
+  });
+
+  const activePriorities = PRIORITY_ORDER.filter((p) => (priorityCounts[p] || 0) > 0);
+  const totalTickets = activePriorities.reduce((s, p) => s + priorityCounts[p], 0) || 1;
+  activePriorities.forEach((p, i) => {
+    const row = summaryHeaderRow + 1 + i;
+    const badge = ws.getCell(row, 1);
+    badge.value = PRIORITY_LABEL[p];
+    badge.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    badge.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIORITY_FILL[p] } };
+    badge.alignment = { horizontal: 'center' };
+    ws.getCell(row, 2).value = PRIORITY_MEANING[p];
+    ws.getCell(row, 3).value = priorityCounts[p];
+    ws.getCell(row, 3).alignment = { horizontal: 'center' };
+    ws.getCell(row, 4).value = `${Math.round((priorityCounts[p] / totalTickets) * 100)}%`;
+    ws.getCell(row, 4).alignment = { horizontal: 'center' };
+  });
+  const totalRow = summaryHeaderRow + 1 + activePriorities.length;
+  ws.getCell(totalRow, 1).value = 'Total';
+  ws.getCell(totalRow, 1).font = { bold: true };
+  ws.getCell(totalRow, 3).value = totalTickets;
+  ws.getCell(totalRow, 3).font = { bold: true };
+  ws.getCell(totalRow, 3).alignment = { horizontal: 'center' };
+
+  // ---- Charts (embedded images, placed beside the summary table) ----
+  if (activePriorities.length) {
+    const barSeries = activePriorities.map((p) => ({ label: PRIORITY_LABEL[p], value: priorityCounts[p], color: `#${PRIORITY_FILL[p].slice(2)}` }));
+    const pieSeries = activePriorities.map((p) => ({ label: PRIORITY_LABEL[p], value: priorityCounts[p], color: `#${PRIORITY_FILL[p].slice(2)}` }));
+
+    ws.getCell(summaryHeaderRow - 1, 6).value = 'Bug Count by Priority';
+    ws.getCell(summaryHeaderRow - 1, 6).font = { bold: true, size: 11, color: { argb: 'FF1F2937' } };
+    const barBuffer = await drawBarChartPNG(barSeries, 320, 220);
+    const barImageId = wb.addImage({ buffer: barBuffer, extension: 'png' });
+    ws.addImage(barImageId, { tl: { col: 5, row: summaryHeaderRow - 0.3 }, ext: { width: 320, height: 220 } });
+
+    ws.getCell(summaryHeaderRow - 1, 10).value = 'Priority Distribution (%)';
+    ws.getCell(summaryHeaderRow - 1, 10).font = { bold: true, size: 11, color: { argb: 'FF1F2937' } };
+    const pieBuffer = await drawPieChartPNG(pieSeries, 220);
+    const pieImageId = wb.addImage({ buffer: pieBuffer, extension: 'png' });
+    ws.addImage(pieImageId, { tl: { col: 9, row: summaryHeaderRow - 0.3 }, ext: { width: 220, height: 220 } });
+  }
+
+  // ---- Second tab: focused Priority Summary view ----
+  const ws2 = wb.addWorksheet('Priority Summary');
+  ws2.columns = [{ width: 12 }, { width: 30 }, { width: 12 }, { width: 12 }];
+  ws2.getCell(1, 1).value = '📋 Priority Summary';
+  ws2.getCell(1, 1).font = { bold: true, size: 14, color: { argb: 'FF1F2937' } };
+  ['Priority', 'Meaning', 'Bug Count', '% of Total'].forEach((h, i) => {
+    const cell = ws2.getCell(3, i + 1);
+    cell.value = h;
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F3864' } };
+  });
+  activePriorities.forEach((p, i) => {
+    const row = 4 + i;
+    const badge = ws2.getCell(row, 1);
+    badge.value = PRIORITY_LABEL[p];
+    badge.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    badge.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIORITY_FILL[p] } };
+    badge.alignment = { horizontal: 'center' };
+    ws2.getCell(row, 2).value = PRIORITY_MEANING[p];
+    ws2.getCell(row, 3).value = priorityCounts[p];
+    ws2.getCell(row, 3).alignment = { horizontal: 'center' };
+    ws2.getCell(row, 4).value = `${Math.round((priorityCounts[p] / totalTickets) * 100)}%`;
+    ws2.getCell(row, 4).alignment = { horizontal: 'center' };
+  });
+  ws2.getCell(4 + activePriorities.length, 1).value = 'Total';
+  ws2.getCell(4 + activePriorities.length, 1).font = { bold: true };
+  ws2.getCell(4 + activePriorities.length, 3).value = totalTickets;
+  ws2.getCell(4 + activePriorities.length, 3).font = { bold: true };
+
+  const buf = await wb.xlsx.writeBuffer();
+  downloadBlobObject(
+    new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+    `bug-tracker-${slug(scopeLabel)}.xlsx`
+  );
+}
+
 export async function exportTicketListDocx(rows: TicketExportRow[], scopeLabel: string) {
   const branding = await fetchBrandingSafe();
   const logo = await fetchLogoAsset(branding.logoUrl);
