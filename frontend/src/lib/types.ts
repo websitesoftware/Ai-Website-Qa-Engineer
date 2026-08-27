@@ -1,6 +1,24 @@
 
 export type TestStatus = 'queued' | 'running' | 'passed' | 'failed' | 'error';
 
+export interface NvdaElement {
+  tab_order: number;
+  element_type: 'heading' | 'link' | 'button' | 'input' | 'image';
+  nvda_speech: string;
+  component_theory: string;
+  rect: { x: number; y: number; width: number; height: number };
+}
+
+export interface NvdaScanResult {
+  url: string;
+  scannedAt: string;
+  count: number;
+  pageWidth: number;
+  pageHeight: number;
+  screenshot: string; // data: URL
+  elements: NvdaElement[];
+}
+
 export interface BackendAppliedFix {
   filePath: string | null;
   fileFullPath?: string | null;

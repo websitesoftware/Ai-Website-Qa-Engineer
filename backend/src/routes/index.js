@@ -13,6 +13,7 @@ const deviceLabRoutes = require("./deviceLab.routes");
 const statsController = require("../controllers/stats.controller");
 const pipelineController = require("../controllers/pipeline.controller");
 const aiAutomationController = require("../controllers/aiAutomation.controller");
+const nvdaAgentController = require("../controllers/nvdaAgent.controller");
 
 router.use("/auth", authRoutes);
 router.use("/tests", testsRoutes);
@@ -34,6 +35,10 @@ router.post("/ai-automation/merge", aiAutomationController.merge);
 router.post("/ai-automation/analyze-issue", aiAutomationController.analyzeIssue);
 router.post("/ai-automation/review-code", aiAutomationController.reviewCode);
 router.get("/ai-automation/locate", aiAutomationController.locate);
+
+// ---- NVDA Screen Reader Agent ----
+router.post("/nvda-agent/scan", nvdaAgentController.scan);
+router.get("/nvda-agent/proxy", nvdaAgentController.proxy);
 
 router.get("/health", (req, res) =>
   res.json({ status: "ok", uptime: process.uptime() }),

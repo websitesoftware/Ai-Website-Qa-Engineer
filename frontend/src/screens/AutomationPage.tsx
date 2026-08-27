@@ -11,7 +11,7 @@ export const AutomationPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AutomationTab>('issues');
 
   const issuesTab = useContent('automation.tab.issues', { text: 'Issue Tracker', icon: 'ph-flag' });
-  const aiFixesTab = useContent('automation.tab.aiFixes', { text: 'AI Fixes', icon: 'ph-robot' });
+  const aiFixesTab = useContent('automation.tab.aiFixes', { text: 'Screen Reader', icon: 'ph-robot' });
 
   const TABS: { id: AutomationTab; label: string; icon: string }[] = [
     { id: 'issues', label: issuesTab.text, icon: issuesTab.icon },

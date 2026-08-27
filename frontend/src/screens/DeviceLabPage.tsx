@@ -6,6 +6,7 @@ import { api, DeviceLabDevice } from '../lib/api';
 import { DeviceFrame, DEVICE_FRAME_CHROME_HEIGHT, DeviceFrameHandlers } from '../components/devicelab/DeviceFrame';
 import { DevToolsPanel } from '../components/devicelab/DevToolsPanel';
 import { useDeviceLabSession } from '../hooks/useDeviceLabSession';
+import { useContent } from '../context/ContentContext';
 
 const FRAME_PANEL_PADDING = 64; // matches the p-8 padding around the viewer panel
 const BEZEL_EXTRA = 24; // phone bezel adds ~12px padding on each side (p-3)
@@ -67,10 +68,38 @@ function getOsVersion(device: DeviceLabDevice): string | null {
 }
 
 export const DeviceLabPage: React.FC = () => {
+  const sidebarTitle = useContent('deviceLab.sidebar.title', { text: 'Device Lab' });
+  const searchPlaceholder = useContent('deviceLab.search.placeholder', { text: 'Search devices...' });
+  const loadingText = useContent('deviceLab.loading', { text: 'Loading devices…' });
+  const recentTabLabel = useContent('deviceLab.rail.recent', { text: 'Recent Tests' });
+  const favoritesEmpty = useContent('deviceLab.favorites.empty', { text: 'No favourites yet — tap the star on a device to pin it here.' });
+  const recentEmpty = useContent('deviceLab.recent.empty', { text: 'Devices you test on will show up here.' });
+  const urlPlaceholder = useContent('deviceLab.url.placeholder', { text: 'https://your-site.com' });
+  const goLoadingLabel = useContent('deviceLab.go.loading', { text: 'Loading…' });
+  const goIdleLabel = useContent('deviceLab.go.idle', { text: 'Go' });
+  const engineDefault = useContent('deviceLab.engine.default', { text: 'Default engine' });
+  const engineChromium = useContent('deviceLab.engine.chromium', { text: 'Chromium' });
+  const engineWebkit = useContent('deviceLab.engine.webkit', { text: 'WebKit (Safari)' });
+  const engineFirefox = useContent('deviceLab.engine.firefox', { text: 'Firefox' });
+  const hideListTooltip = useContent('deviceLab.toolbar.hideList', { text: 'Hide device list' });
+  const switchDeviceTooltip = useContent('deviceLab.toolbar.switchDevice', { text: 'Switch device' });
+  const rotateTooltip = useContent('deviceLab.toolbar.rotate', { text: 'Rotate device' });
+  const zoomOutTooltip = useContent('deviceLab.toolbar.zoomOut', { text: 'Zoom out' });
+  const zoomInTooltip = useContent('deviceLab.toolbar.zoomIn', { text: 'Zoom in' });
+  const refreshTooltip = useContent('deviceLab.toolbar.refresh', { text: 'Refresh' });
+  const devtoolsTooltip = useContent('deviceLab.toolbar.devtools', { text: 'DevTools' });
+  const fullscreenTooltip = useContent('deviceLab.toolbar.fullscreen', { text: 'Full screen' });
+  const exitFullscreenTooltip = useContent('deviceLab.toolbar.exitFullscreen', { text: 'Exit full screen' });
+  const browserEngineTooltip = useContent('deviceLab.toolbar.browserEngine', { text: 'Browser engine' });
+  const liveStatusSuffix = useContent('deviceLab.status.live', { text: ' · live' });
+  const disconnectedStatusSuffix = useContent('deviceLab.status.disconnected', { text: ' · disconnected' });
+  const devicesFailedToLoad = useContent('deviceLab.devicesFailedToLoad', { text: 'Failed to load devices' });
+
   const [devices, setDevices] = useState<DeviceLabDevice[]>([]);
+  const [search, setSearch] = useState('');
+  const noSearchMatch = useContent('deviceLab.search.noMatch', { text: 'No devices match “{search}”.' }, { search });
   const [devicesLoading, setDevicesLoading] = useState(true);
   const [devicesError, setDevicesError] = useState('');
-  const [search, setSearch] = useState('');
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [railTab, setRailTab] = useState<'favorites' | 'recent' | string>('recent');
@@ -126,7 +155,7 @@ export const DeviceLabPage: React.FC = () => {
         setDevices(res.devices);
         if (res.devices.length > 0) setSelectedDeviceId(res.devices[0].id);
       })
-      .catch((err) => setDevicesError(err instanceof Error ? err.message : 'Failed to load devices'))
+      .catch((err) => setDevicesError(err instanceof Error ? err.message : devicesFailedToLoad.text))
       .finally(() => setDevicesLoading(false));
   }, []);
 
@@ -166,6 +195,7 @@ export const DeviceLabPage: React.FC = () => {
     () => favoriteIds.map((id) => devices.find((d) => d.id === id)).filter((d): d is DeviceLabDevice => !!d),
     [favoriteIds, devices]
   );
+  const favouritesRailLabel = useContent('deviceLab.rail.favourites', { text: 'Favourites ({count})' }, { count: favoriteDevices.length });
 
   const toggleFavorite = (id: string) => {
     setFavoriteIds((prev) => {
@@ -235,6 +265,7 @@ export const DeviceLabPage: React.FC = () => {
 
   const BRAND_PAGE_SIZE = 12;
   const visibleBrandDevices = showAllBrandDevices ? brandDevices : brandDevices.slice(0, BRAND_PAGE_SIZE);
+  const showMoreLabel = useContent('deviceLab.showMore', { text: 'Show {count} More Devices' }, { count: Math.max(0, brandDevices.length - BRAND_PAGE_SIZE) });
 
   const handleRun = async (
     overrideOrientation?: 'portrait' | 'landscape',
@@ -328,12 +359,12 @@ export const DeviceLabPage: React.FC = () => {
           }`}
         >
           <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-            <h2 className="font-bold text-slate-900 dark:text-slate-100 text-sm mb-3">Device Lab</h2>
+            <h2 className="font-bold text-slate-900 dark:text-slate-100 text-sm mb-3">{sidebarTitle.text}</h2>
             <div className="relative">
               <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
               <input
                 type="text"
-                placeholder="Search devices..."
+                placeholder={searchPlaceholder.text}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 border rounded-lg text-xs bg-slate-50 dark:bg-slate-950 border-slate-200/70 dark:border-slate-700 text-slate-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"
@@ -341,12 +372,12 @@ export const DeviceLabPage: React.FC = () => {
             </div>
           </div>
 
-          {devicesLoading && <p className="text-xs text-slate-400 px-4 py-3">Loading devices…</p>}
+          {devicesLoading && <p className="text-xs text-slate-400 px-4 py-3">{loadingText.text}</p>}
           {devicesError && <p className="text-xs text-red-500 px-4 py-3">{devicesError}</p>}
 
           {!devicesLoading && search ? (
             <div className="flex-1 overflow-y-auto p-3 space-y-4">
-              {filteredGroups.length === 0 && <p className="text-xs text-slate-400 px-2">No devices match &ldquo;{search}&rdquo;.</p>}
+              {filteredGroups.length === 0 && <p className="text-xs text-slate-400 px-2">{noSearchMatch.text}</p>}
               {filteredGroups.map(([groupLabel, groupDevices]) => (
                 <div key={groupLabel}>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1">{groupLabel}</p>
@@ -371,13 +402,13 @@ export const DeviceLabPage: React.FC = () => {
                   <RailButton
                     active={railTab === 'favorites'}
                     icon={<Star weight={railTab === 'favorites' ? 'fill' : 'regular'} className="w-4 h-4" />}
-                    label={`Favourites (${favoriteDevices.length})`}
+                    label={favouritesRailLabel.text}
                     onClick={() => setRailTab('favorites')}
                   />
                   <RailButton
                     active={railTab === 'recent'}
                     icon={<ClockCounterClockwise className="w-4 h-4" />}
-                    label="Recent Tests"
+                    label={recentTabLabel.text}
                     onClick={() => setRailTab('recent')}
                   />
                   {osTabs.map((os) => {
@@ -418,7 +449,7 @@ export const DeviceLabPage: React.FC = () => {
                 <div className="flex-1 overflow-y-auto p-2 min-w-0">
                   {railTab === 'favorites' &&
                     (favoriteDevices.length === 0 ? (
-                      <p className="text-xs text-slate-400 px-2 py-3">No favourites yet — tap the star on a device to pin it here.</p>
+                      <p className="text-xs text-slate-400 px-2 py-3">{favoritesEmpty.text}</p>
                     ) : (
                       favoriteDevices.map((d) => (
                         <DeviceRow
@@ -434,7 +465,7 @@ export const DeviceLabPage: React.FC = () => {
 
                   {railTab === 'recent' &&
                     (recentDevices.length === 0 ? (
-                      <p className="text-xs text-slate-400 px-2 py-3">Devices you test on will show up here.</p>
+                      <p className="text-xs text-slate-400 px-2 py-3">{recentEmpty.text}</p>
                     ) : (
                       recentDevices.map((d) => (
                         <DeviceRow
@@ -465,7 +496,7 @@ export const DeviceLabPage: React.FC = () => {
                           onClick={() => setShowAllBrandDevices(true)}
                           className="w-full text-left px-2.5 py-2 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                         >
-                          Show {brandDevices.length - BRAND_PAGE_SIZE} More Devices
+                          {showMoreLabel.text}
                         </button>
                       )}
                     </>
@@ -483,7 +514,7 @@ export const DeviceLabPage: React.FC = () => {
         <div className="bg-white/85 dark:bg-slate-800 backdrop-blur-md border border-slate-200/70 dark:border-slate-700 rounded-xl p-3 mb-4 flex flex-wrap items-center gap-2">
           <button
             onClick={() => setSidebarOpen((v) => !v)}
-            title={sidebarOpen ? 'Hide device list' : 'Switch device'}
+            title={sidebarOpen ? hideListTooltip.text : switchDeviceTooltip.text}
             className={`p-2.5 rounded-xl border shadow-sm flex items-center gap-1.5 text-xs font-bold cursor-pointer shrink-0 ${sidebarOpen
                 ? 'bg-white dark:bg-slate-900 border-slate-200/70 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                 : 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'
@@ -500,7 +531,7 @@ export const DeviceLabPage: React.FC = () => {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleRun()}
-              placeholder="https://your-site.com"
+              placeholder={urlPlaceholder.text}
               className="w-full pl-9 pr-3 py-2.5 rounded-xl text-xs font-mono bg-slate-50 dark:bg-slate-950 border border-slate-200/70 dark:border-slate-700 text-slate-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"
             />
           </div>
@@ -510,7 +541,7 @@ export const DeviceLabPage: React.FC = () => {
             disabled={starting || !selectedDevice}
             className="px-4 py-2 rounded-xl bg-[#1C56C9] hover:bg-[#164aac] disabled:bg-blue-400 dark:bg-blue-600 dark:hover:bg-blue-500 text-white text-xs font-bold shadow-sm cursor-pointer"
           >
-            {starting ? 'Loading…' : 'Go'}
+            {starting ? goLoadingLabel.text : goIdleLabel.text}
           </button>
 
           <select
@@ -523,12 +554,12 @@ export const DeviceLabPage: React.FC = () => {
               if (hasStarted) handleRun(orientation, next);
             }}
             className="px-3 py-2.5 rounded-xl text-xs bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-700 text-slate-700 dark:text-slate-200 shadow-sm cursor-pointer"
-            title="Browser engine"
+            title={browserEngineTooltip.text}
           >
-            <option value="">Default engine</option>
-            <option value="chromium">Chromium</option>
-            <option value="webkit">WebKit (Safari)</option>
-            <option value="firefox">Firefox</option>
+            <option value="">{engineDefault.text}</option>
+            <option value="chromium">{engineChromium.text}</option>
+            <option value="webkit">{engineWebkit.text}</option>
+            <option value="firefox">{engineFirefox.text}</option>
           </select>
 
           <button
@@ -541,18 +572,18 @@ export const DeviceLabPage: React.FC = () => {
               if (hasStarted) handleRun(next);
             }}
             disabled={!selectedDevice?.isMobile}
-            title="Rotate device"
+            title={rotateTooltip.text}
             className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-700 text-slate-500 dark:text-slate-300 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 cursor-pointer"
           >
             <ArrowClockwise className="w-4 h-4" />
           </button>
 
           <div className="flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-700 rounded-xl px-1 shadow-sm">
-            <button onClick={() => setZoom((z) => Math.max(0.25, z - 0.1))} className="p-1.5 text-slate-500 dark:text-slate-300 cursor-pointer" title="Zoom out">
+            <button onClick={() => setZoom((z) => Math.max(0.25, z - 0.1))} className="p-1.5 text-slate-500 dark:text-slate-300 cursor-pointer" title={zoomOutTooltip.text}>
               <Minus className="w-3.5 h-3.5" />
             </button>
             <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-300 w-9 text-center">{Math.round(zoom * 100)}%</span>
-            <button onClick={() => setZoom((z) => Math.min(2, z + 0.1))} className="p-1.5 text-slate-500 dark:text-slate-300 cursor-pointer" title="Zoom in">
+            <button onClick={() => setZoom((z) => Math.min(2, z + 0.1))} className="p-1.5 text-slate-500 dark:text-slate-300 cursor-pointer" title={zoomInTooltip.text}>
               <Plus className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -560,7 +591,7 @@ export const DeviceLabPage: React.FC = () => {
           <button
             onClick={() => sendInput({ type: 'reload' })}
             disabled={starting || !selectedDevice || !hasStarted}
-            title="Refresh"
+            title={refreshTooltip.text}
             className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-700 text-slate-500 dark:text-slate-300 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 cursor-pointer"
           >
             <ArrowsClockwise className={`w-4 h-4 ${starting ? 'animate-spin' : ''}`} />
@@ -569,7 +600,7 @@ export const DeviceLabPage: React.FC = () => {
           <button
             onClick={() => setDevToolsOpen((v) => !v)}
             disabled={!hasStarted}
-            title="DevTools"
+            title={devtoolsTooltip.text}
             className={`p-2.5 rounded-xl border shadow-sm flex items-center gap-1.5 text-xs font-bold cursor-pointer disabled:opacity-40 ${devToolsOpen
                 ? 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'
                 : 'bg-white dark:bg-slate-900 border-slate-200/70 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -580,7 +611,7 @@ export const DeviceLabPage: React.FC = () => {
 
           <button
             onClick={() => setFullscreen((v) => !v)}
-            title={fullscreen ? 'Exit full screen' : 'Full screen'}
+            title={fullscreen ? exitFullscreenTooltip.text : fullscreenTooltip.text}
             className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-700 text-slate-500 dark:text-slate-300 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
           >
             {fullscreen ? <X className="w-4 h-4" /> : <ArrowsOut className="w-4 h-4" />}
@@ -641,7 +672,7 @@ export const DeviceLabPage: React.FC = () => {
               <span>
                 {selectedDevice.name} · {frameWidth}×{frameHeight} · DPR {selectedDevice.deviceScaleFactor} ·{' '}
                 {(browserEngine || selectedDevice.defaultBrowserType).toUpperCase()}
-                {hasStarted && (connected ? ' · live' : ' · disconnected')}
+                {hasStarted && (connected ? liveStatusSuffix.text : disconnectedStatusSuffix.text)}
               </span>
             )}
           </div>
@@ -684,29 +715,33 @@ const DeviceRow: React.FC<{
   favorite: boolean;
   onToggleFavorite: () => void;
   onSelect: () => void;
-}> = ({ device, selected, favorite, onToggleFavorite, onSelect }) => (
-  <div
-    className={`w-full flex items-center gap-1.5 pl-1 pr-2.5 py-2 rounded-lg text-xs transition-colors ${selected
-        ? 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 font-bold'
-        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 font-medium'
-      }`}
-  >
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        onToggleFavorite();
-      }}
-      title={favorite ? 'Remove from favourites' : 'Add to favourites'}
-      className="shrink-0 p-0.5 cursor-pointer text-amber-400 hover:text-amber-500"
+}> = ({ device, selected, favorite, onToggleFavorite, onSelect }) => {
+  const addFavoriteTooltip = useContent('deviceLab.favorite.add', { text: 'Add to favourites' });
+  const removeFavoriteTooltip = useContent('deviceLab.favorite.remove', { text: 'Remove from favourites' });
+  return (
+    <div
+      className={`w-full flex items-center gap-1.5 pl-1 pr-2.5 py-2 rounded-lg text-xs transition-colors ${selected
+          ? 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 font-bold'
+          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 font-medium'
+        }`}
     >
-      <Star weight={favorite ? 'fill' : 'regular'} className="w-3.5 h-3.5" />
-    </button>
-    <button onClick={onSelect} className="flex-1 min-w-0 flex items-center justify-between gap-2 text-left cursor-pointer">
-      <span className="truncate">{device.name}</span>
-      <span className="flex items-center gap-1.5 shrink-0">
-        {getOsVersion(device) && <span className="text-[10px] text-slate-400">{getOsVersion(device)}</span>}
-        <span className="text-[10px] text-slate-400">{device.width}×{device.height}</span>
-      </span>
-    </button>
-  </div>
-);
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleFavorite();
+        }}
+        title={favorite ? removeFavoriteTooltip.text : addFavoriteTooltip.text}
+        className="shrink-0 p-0.5 cursor-pointer text-amber-400 hover:text-amber-500"
+      >
+        <Star weight={favorite ? 'fill' : 'regular'} className="w-3.5 h-3.5" />
+      </button>
+      <button onClick={onSelect} className="flex-1 min-w-0 flex items-center justify-between gap-2 text-left cursor-pointer">
+        <span className="truncate">{device.name}</span>
+        <span className="flex items-center gap-1.5 shrink-0">
+          {getOsVersion(device) && <span className="text-[10px] text-slate-400">{getOsVersion(device)}</span>}
+          <span className="text-[10px] text-slate-400">{device.width}×{device.height}</span>
+        </span>
+      </button>
+    </div>
+  );
+};

@@ -10,6 +10,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { Skeleton } from '../components/ui/Skeleton';
 import { exportReportCSV, exportReportPDF, exportReportDocx } from '../lib/exportReport';
 import { useToast } from '../context/ToastContext';
+import { useContent, getContent } from '../context/ContentContext';
 
 function ranModules(test: BackendTest): string[] {
   return test.options?.modules || [];
@@ -19,13 +20,17 @@ const DownloadMenu: React.FC<{ test: BackendTest }> = ({ test }) => {
   const [open, setOpen] = useState(false);
   const { showToast } = useToast();
   const menuRef = useRef<HTMLDivElement>(null);
+  const downloadReportLabel = useContent('phase2.downloadReport', { text: 'Download Report' });
+  const pdfLabel = useContent('phase2.download.pdf', { text: 'PDF' });
+  const csvLabel = useContent('phase2.download.csv', { text: 'CSV' });
+  const wordLabel = useContent('phase2.download.word', { text: 'Word (.docx)' });
 
   const handle = async (fn: () => void | Promise<void>, label: string) => {
     try {
       await fn();
-      showToast(`Report downloaded as ${label}`, 'success');
+      showToast(getContent('phase2.download.success', { text: 'Report downloaded as {label}' }, { label }).text, 'success');
     } catch {
-      showToast(`Could not generate the ${label} file`, 'error');
+      showToast(getContent('phase2.download.failure', { text: 'Could not generate the {label} file' }, { label }).text, 'error');
     } finally {
       setOpen(false);
     }
@@ -37,7 +42,7 @@ const DownloadMenu: React.FC<{ test: BackendTest }> = ({ test }) => {
         onClick={() => setOpen((o) => !o)}
         className="group flex items-center gap-2 text-xs font-bold text-white bg-[#1C56C9] hover:bg-[#164aac] dark:bg-blue-600 dark:hover:bg-blue-500 px-4.5 py-3 rounded-xl transition-all duration-300 shadow-md shadow-blue-900/25 cursor-pointer"
       >
-        <DownloadSimple className="w-4 h-4 transition-transform duration-300 group-hover:translate-y-0.5" /> Download Report
+        <DownloadSimple className="w-4 h-4 transition-transform duration-300 group-hover:translate-y-0.5" /> {downloadReportLabel.text}
       </button>
       {open && (
         <>
@@ -47,19 +52,19 @@ const DownloadMenu: React.FC<{ test: BackendTest }> = ({ test }) => {
               onClick={() => handle(() => exportReportPDF(test), 'PDF')}
               className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400 transition-colors"
             >
-              <FilePdf className="w-4 h-4 text-red-500" /> PDF
+              <FilePdf className="w-4 h-4 text-red-500" /> {pdfLabel.text}
             </button>
             <button
               onClick={() => handle(() => exportReportCSV(test), 'CSV')}
               className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors border-t border-slate-100 dark:border-slate-800"
             >
-              <FileCsv className="w-4 h-4 text-emerald-600" /> CSV
+              <FileCsv className="w-4 h-4 text-emerald-600" /> {csvLabel.text}
             </button>
             <button
               onClick={() => handle(() => exportReportDocx(test), 'Word')}
               className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:text-blue-600 dark:hover:text-blue-400 transition-colors border-t border-slate-100 dark:border-slate-800"
             >
-              <FileDoc className="w-4 h-4 text-blue-600" /> Word (.docx)
+              <FileDoc className="w-4 h-4 text-blue-600" /> {wordLabel.text}
             </button>
           </div>
         </>
@@ -70,6 +75,18 @@ const DownloadMenu: React.FC<{ test: BackendTest }> = ({ test }) => {
 
 export const Phase2ResultsPage: React.FC = () => {
   const { tests, loading } = useQAData();
+  const heading = useContent('phase2.heading', { text: 'Intelligent QA' });
+  const headingSuffix = useContent('phase2.headingSuffix', { text: '(Phase 2)' });
+  const subtitle = useContent('phase2.subtitle', {
+    text: 'Accessibility, SEO, visual regression, cross-browser, and performance benchmark results across your scans.',
+  });
+  const emptyTitle = useContent('phase2.empty.title', { text: 'No Phase 2 scans yet' });
+  const emptyDescription = useContent('phase2.empty.description', {
+    text: 'Run a new test and select at least one Phase 2 module (Accessibility, SEO, Visual Regression, Cross-Browser, or Performance Benchmark) to see results here.',
+  });
+  const selectPromptText = useContent('phase2.selectPrompt', { text: 'Select a scan from the list to view its Phase 2 results.' });
+  const resultPass = useContent('phase2.result.pass', { text: 'Pass' });
+  const resultFail = useContent('phase2.result.fail', { text: 'Fail' });
 
   const phase2Tests = useMemo(
     () =>
@@ -92,10 +109,10 @@ export const Phase2ResultsPage: React.FC = () => {
           </div>
           <div>
             <h2 className="font-display text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-              Intelligent QA <span className="text-purple-500 dark:text-purple-400">(Phase 2)</span>
+              {heading.text} <span className="text-purple-500 dark:text-purple-400">{headingSuffix.text}</span>
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-              Accessibility, SEO, visual regression, cross-browser, and performance benchmark results across your scans.
+              {subtitle.text}
             </p>
           </div>
         </div>
@@ -114,8 +131,8 @@ export const Phase2ResultsPage: React.FC = () => {
       ) : phase2Tests.length === 0 ? (
         <EmptyState
           icon="ph-sparkle"
-          title="No Phase 2 scans yet"
-          description="Run a new test and select at least one Phase 2 module (Accessibility, SEO, Visual Regression, Cross-Browser, or Performance Benchmark) to see results here."
+          title={emptyTitle.text}
+          description={emptyDescription.text}
         />
       ) : (
         <div
@@ -126,7 +143,7 @@ export const Phase2ResultsPage: React.FC = () => {
           <section className="w-full lg:w-4/12 border-r border-slate-200/70 dark:border-slate-700 overflow-y-auto bg-slate-50/40 dark:bg-slate-900/50 min-w-[300px]">
             <div className="px-5 py-4 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-b border-slate-200/70 dark:border-slate-700 sticky top-0 z-10">
               <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                {phase2Tests.length} scan{phase2Tests.length === 1 ? '' : 's'} with Phase 2 data
+                {getContent('phase2.scanCount', { text: '{count} scan{plural} with Phase 2 data' }, { count: phase2Tests.length, plural: phase2Tests.length === 1 ? '' : 's' }).text}
               </span>
             </div>
             <div className="divide-y divide-slate-100 dark:divide-slate-800 bg-white/85 dark:bg-slate-800 backdrop-blur-md">
@@ -170,7 +187,7 @@ export const Phase2ResultsPage: React.FC = () => {
                     {isActive && (
                       <span className="inline-flex items-center gap-1 mt-2 text-[10px] font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 px-1.5 py-0.5 rounded">
                         <SpinnerGap className="w-2.5 h-2.5 animate-spin" weight="bold" />
-                        Scan in progress — {t.progress}%
+                        {getContent('phase2.scanInProgress', { text: 'Scan in progress — {progress}%' }, { progress: t.progress }).text}
                       </span>
                     )}
                   </div>
@@ -188,7 +205,9 @@ export const Phase2ResultsPage: React.FC = () => {
                     <div className="absolute inset-0 rounded-full bg-blue-400/20 animate-soft-pulse" />
                     <SpinnerGap className="w-14 h-14 text-blue-500 animate-spin relative" weight="bold" />
                   </div>
-                  <p className="font-semibold text-blue-700 dark:text-blue-400">Scan in progress — {activeTest.progress}% complete</p>
+                  <p className="font-semibold text-blue-700 dark:text-blue-400">
+                    {getContent('phase2.scanInProgressComplete', { text: 'Scan in progress — {progress}% complete' }, { progress: activeTest.progress }).text}
+                  </p>
                   <div className="mt-4 h-2 w-full max-w-xs mx-auto bg-blue-100 dark:bg-blue-950/50 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-blue-500 to-violet-500 rounded-full transition-all duration-700 ease-out"
@@ -202,7 +221,7 @@ export const Phase2ResultsPage: React.FC = () => {
                     <ResultLaunchAnimation
                       key={activeTest.status}
                       passed={activeTest.status === 'passed'}
-                      label={activeTest.status === 'passed' ? 'Pass' : 'Fail'}
+                      label={activeTest.status === 'passed' ? resultPass.text : resultFail.text}
                     />
                   )}
                   <Phase2ResultsPanel test={activeTest} />
@@ -210,7 +229,7 @@ export const Phase2ResultsPage: React.FC = () => {
               )
             ) : (
               <div className="h-full w-full flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm font-medium">
-                Select a scan from the list to view its Phase 2 results.
+                {selectPromptText.text}
               </div>
             )}
           </section>
