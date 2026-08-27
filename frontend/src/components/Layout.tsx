@@ -37,6 +37,42 @@ export const Layout: React.FC<LayoutProps> = ({
   const { user, login, register, forgotPassword, logout } = useAuth();
   const sidebarTitle = useContent('global.sidebar.title', { text: 'AI QA Engineer' });
   const sidebarSubtitle = useContent('global.sidebar.subtitle', { text: 'Website Assistant' });
+  const navDashboard = useContent('global.nav.dashboard', { text: 'Dashboard' });
+  const navTests = useContent('global.nav.tests', { text: 'Tests' });
+  const navScanResults = useContent('global.nav.scanResults', { text: 'Scan Results' });
+  const navAutomation = useContent('global.nav.automation', { text: 'Automation' });
+  const navSettings = useContent('global.nav.settings', { text: 'Settings' });
+  const welcomeBack = useContent('global.header.welcomeBack', { text: 'Welcome back, {name} 👋' }, { name: user?.name ?? '' });
+  const welcomeGuestPrefix = useContent('global.header.welcomeGuest', { text: 'Welcome, Guest! Please' });
+  const signInLink = useContent('global.header.signIn', { text: 'Sign In' });
+  const sessionSubtitle = useContent('global.header.sessionSubtitle', { text: 'Authorized Account Session • {email}' }, { email: user?.email ?? '' });
+  const guestSubtitle = useContent('global.header.guestSubtitle', { text: 'Manage operational engine tests and view system analysis diagnostic logs.' });
+  const searchPlaceholder = useContent('global.header.searchPlaceholder', { text: 'Search data metrics...' });
+  const sessionAuthenticatedHeading = useContent('global.auth.sessionAuthenticated', { text: 'Session Authenticated' });
+  const signOutButton = useContent('global.auth.signOut', { text: 'Sign Out Account' });
+  const signInHeading = useContent('global.auth.signInHeading', { text: 'Sign In' });
+  const signInSubtitle = useContent('global.auth.signInSubtitle', { text: 'Access protection parameters data logs' });
+  const emailLabel = useContent('global.auth.emailLabel', { text: 'Email Address' });
+  const emailPlaceholder = useContent('global.auth.emailPlaceholder', { text: 'name@company.com' });
+  const passwordLabel = useContent('global.auth.passwordLabel', { text: 'Password' });
+  const forgotLink = useContent('global.auth.forgot', { text: 'Forgot?' });
+  const passwordPlaceholder = useContent('global.auth.passwordPlaceholder', { text: '••••••••' });
+  const rememberMeLabel = useContent('global.auth.rememberMe', { text: 'Remember this machine' });
+  const authenticatingLabel = useContent('global.auth.authenticating', { text: 'Authenticating...' });
+  const signInAccountLabel = useContent('global.auth.signInAccount', { text: 'Sign In Account' });
+  const noAccountPrompt = useContent('global.auth.noAccount', { text: "Don't have an account?" });
+  const signUpLink = useContent('global.auth.signUp', { text: 'Sign Up' });
+  const backToLoginLabel = useContent('global.auth.backToLogin', { text: 'Back to Login' });
+  const recoverHeading = useContent('global.auth.recoverHeading', { text: 'Recover Password' });
+  const recoverSubtitle = useContent('global.auth.recoverSubtitle', { text: 'We will dispatch a runtime link token payload validation.' });
+  const registeredEmailLabel = useContent('global.auth.registeredEmailLabel', { text: 'Registered Email' });
+  const processingLabel = useContent('global.auth.processing', { text: 'Processing...' });
+  const sendRecoveryLinkLabel = useContent('global.auth.sendRecoveryLink', { text: 'Send Recovery Link' });
+  const createAccountHeading = useContent('global.auth.createAccountHeading', { text: 'Create Account' });
+  const createAccountSubtitle = useContent('global.auth.createAccountSubtitle', { text: 'Setup your operational continuous test suite dashboard profile.' });
+  const createPasswordPlaceholder = useContent('global.auth.createPasswordPlaceholder', { text: 'Create custom password (min 8 chars)' });
+  const initializingLabel = useContent('global.auth.initializing', { text: 'Initializing...' });
+  const registerAndInitializeLabel = useContent('global.auth.registerAndInitialize', { text: 'Register & Initialize' });
 
   // UI Panels Engine States
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -129,12 +165,12 @@ export const Layout: React.FC<LayoutProps> = ({
     setAuthView('LOGIN');
   };
 
-  const navItems = [
-    { label: 'Dashboard' as TabType, icon: 'ph-squares-four' },
-    { label: 'Tests' as TabType, icon: 'ph-check-circle' },
-    { label: 'Scan Results' as TabType, icon: 'ph-sparkle' },
-    { label: 'Automation' as TabType, icon: 'ph-robot' },
-    { label: 'Settings' as TabType, icon: 'ph-gear' },
+  const navItems: { label: TabType; icon: string; displayText: string }[] = [
+    { label: 'Dashboard', icon: 'ph-squares-four', displayText: navDashboard.text },
+    { label: 'Tests', icon: 'ph-check-circle', displayText: navTests.text },
+    { label: 'Scan Results', icon: 'ph-sparkle', displayText: navScanResults.text },
+    { label: 'Automation', icon: 'ph-robot', displayText: navAutomation.text },
+    { label: 'Settings', icon: 'ph-gear', displayText: navSettings.text },
   ];
 
   return (
@@ -197,7 +233,7 @@ export const Layout: React.FC<LayoutProps> = ({
               }`}
             >
               <i className={`ph ${item.icon} text-xl`} />
-              {item.label}
+              {item.displayText}
             </button>
           ))}
         </nav>
@@ -219,13 +255,13 @@ export const Layout: React.FC<LayoutProps> = ({
             <div className="min-w-0">
             <h2 className={`text-xl font-extrabold tracking-tight truncate ${resolvedTheme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
               {user ? (
-                <span>Welcome back, {user.name} 👋</span>
+                <span>{welcomeBack.text}</span>
               ) : (
-                <span>Welcome, Guest! Please <span className="text-blue-600 dark:text-blue-400 underline cursor-pointer hover:text-blue-700" onClick={() => { setAuthView('LOGIN'); setIsLoginOpen(true); }}>Sign In</span></span>
+                <span>{welcomeGuestPrefix.text} <span className="text-blue-600 dark:text-blue-400 underline cursor-pointer hover:text-blue-700" onClick={() => { setAuthView('LOGIN'); setIsLoginOpen(true); }}>{signInLink.text}</span></span>
               )}
             </h2>
             <p className={`text-xs mt-0.5 font-medium ${resolvedTheme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
-              {user ? `Authorized Account Session • ${user.email}` : 'Manage operational engine tests and view system analysis diagnostic logs.'}
+              {user ? sessionSubtitle.text : guestSubtitle.text}
             </p>
             {error && (
               <p className="text-xs mt-1 font-semibold text-red-600 dark:text-red-400">{error}</p>
@@ -240,7 +276,7 @@ export const Layout: React.FC<LayoutProps> = ({
                 <i className="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
                 <input
                   type="text"
-                  placeholder="Search data metrics..."
+                  placeholder={searchPlaceholder.text}
                   value={search}
                   onChange={(e) => onSearchChange(e.target.value)}
                   className={`pl-9 pr-4 py-2 rounded-full text-xs w-56 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all shadow-sm ${
@@ -292,11 +328,11 @@ export const Layout: React.FC<LayoutProps> = ({
                         <LockOpen className="w-5 h-5" weight="fill" />
                       </div>
                       <div>
-                        <h3 className={`font-bold text-sm ${resolvedTheme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Session Authenticated</h3>
+                        <h3 className={`font-bold text-sm ${resolvedTheme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{sessionAuthenticatedHeading.text}</h3>
                         <p className="text-xs text-slate-400 dark:text-slate-500 font-medium truncate mt-0.5">{user.email}</p>
                       </div>
                       <button onClick={handleLogout} className="w-full bg-red-50 dark:bg-red-950/30 hover:bg-red-100 text-red-600 font-bold py-2.5 rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 border border-red-100 dark:border-red-900/20 cursor-pointer">
-                        <SignOut className="w-3.5 h-3.5" /> Sign Out Account
+                        <SignOut className="w-3.5 h-3.5" /> {signOutButton.text}
                       </button>
                     </div>
                   ) : (
@@ -306,27 +342,27 @@ export const Layout: React.FC<LayoutProps> = ({
                       {authView === 'LOGIN' && (
                         <form onSubmit={handleLoginSubmit} className="space-y-4">
                           <div>
-                            <h3 className={`font-bold text-base ${resolvedTheme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Sign In</h3>
-                            <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">Access protection parameters data logs</p>
+                            <h3 className={`font-bold text-base ${resolvedTheme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{signInHeading.text}</h3>
+                            <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">{signInSubtitle.text}</p>
                           </div>
 
                           <div className="space-y-3.5">
                             <div className="space-y-1">
-                              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Email Address</label>
+                              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">{emailLabel.text}</label>
                               <div className="relative flex items-center">
                                 <Envelope className="absolute left-3 text-slate-400 w-4 h-4" />
-                                <input type="email" required placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full pl-9 pr-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-semibold ${resolvedTheme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} />
+                                <input type="email" required placeholder={emailPlaceholder.text} value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full pl-9 pr-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-semibold ${resolvedTheme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} />
                               </div>
                             </div>
 
                             <div className="space-y-1">
                               <div className="flex justify-between items-center">
-                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Password</label>
-                                <button type="button" onClick={() => { setAuthView('FORGOT_PASSWORD'); setApiError(''); }} className="text-[11px] font-bold text-blue-500 hover:underline bg-transparent border-none cursor-pointer">Forgot?</button>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">{passwordLabel.text}</label>
+                                <button type="button" onClick={() => { setAuthView('FORGOT_PASSWORD'); setApiError(''); }} className="text-[11px] font-bold text-blue-500 hover:underline bg-transparent border-none cursor-pointer">{forgotLink.text}</button>
                               </div>
                               <div className="relative flex items-center">
                                 <Key className="absolute left-3 text-slate-400 w-4 h-4" />
-                                <input type={showPassword ? 'text' : 'password'} required placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className={`w-full pl-9 pr-9 py-2 border rounded-xl text-xs focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-semibold ${resolvedTheme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} />
+                                <input type={showPassword ? 'text' : 'password'} required placeholder={passwordPlaceholder.text} value={password} onChange={(e) => setPassword(e.target.value)} className={`w-full pl-9 pr-9 py-2 border rounded-xl text-xs focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-semibold ${resolvedTheme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} />
                                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 text-slate-400 hover:text-slate-500 bg-transparent border-none cursor-pointer">
                                   {showPassword ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>
@@ -335,16 +371,16 @@ export const Layout: React.FC<LayoutProps> = ({
 
                             <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => setRememberMe(!rememberMe)}>
                               {rememberMe ? <CheckSquare className="w-4 h-4 text-blue-500" weight="fill" /> : <Square className="w-4 h-4 text-slate-300" />}
-                              <span className="text-xs text-slate-400 font-semibold">Remember this machine</span>
+                              <span className="text-xs text-slate-400 font-semibold">{rememberMeLabel.text}</span>
                             </div>
                           </div>
 
                           <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold py-2.5 rounded-xl text-xs shadow-sm flex items-center justify-center gap-1.5 cursor-pointer mt-1">
-                            {loading ? 'Authenticating...' : 'Sign In Account'}
+                            {loading ? authenticatingLabel.text : signInAccountLabel.text}
                           </button>
 
                           <div className="text-center pt-2 border-t border-slate-100 dark:border-slate-800/60">
-                            <span className="text-xs text-slate-400 font-medium">Don&apos;t have an account? <button type="button" onClick={() => { setAuthView('REGISTER'); setApiError(''); }} className="text-blue-500 font-bold hover:underline bg-transparent border-none cursor-pointer">Sign Up</button></span>
+                            <span className="text-xs text-slate-400 font-medium">{noAccountPrompt.text} <button type="button" onClick={() => { setAuthView('REGISTER'); setApiError(''); }} className="text-blue-500 font-bold hover:underline bg-transparent border-none cursor-pointer">{signUpLink.text}</button></span>
                           </div>
                         </form>
                       )}
@@ -353,12 +389,12 @@ export const Layout: React.FC<LayoutProps> = ({
                       {authView === 'FORGOT_PASSWORD' && (
                         <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
                           <button type="button" onClick={() => { setAuthView('LOGIN'); setSuccessMessage(''); setApiError(''); }} className="text-xs font-bold text-slate-400 hover:text-slate-600 flex items-center gap-1 bg-transparent border-none cursor-pointer">
-                            <ArrowLeft /> Back to Login
+                            <ArrowLeft /> {backToLoginLabel.text}
                           </button>
 
                           <div>
-                            <h3 className={`font-bold text-base ${resolvedTheme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Recover Password</h3>
-                            <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">We will dispatch a runtime link token payload validation.</p>
+                            <h3 className={`font-bold text-base ${resolvedTheme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{recoverHeading.text}</h3>
+                            <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">{recoverSubtitle.text}</p>
                           </div>
 
                           {successMessage ? (
@@ -368,14 +404,14 @@ export const Layout: React.FC<LayoutProps> = ({
                           ) : (
                             <div className="space-y-3">
                               <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Registered Email</label>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">{registeredEmailLabel.text}</label>
                                 <div className="relative flex items-center">
                                   <Envelope className="absolute left-3 text-slate-400 w-4 h-4" />
-                                  <input type="email" required placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full pl-9 pr-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-semibold ${resolvedTheme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} />
+                                  <input type="email" required placeholder={emailPlaceholder.text} value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full pl-9 pr-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-semibold ${resolvedTheme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} />
                                 </div>
                               </div>
                               <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold py-2.5 rounded-xl text-xs shadow-sm cursor-pointer">
-                                {loading ? 'Processing...' : 'Send Recovery Link'}
+                                {loading ? processingLabel.text : sendRecoveryLinkLabel.text}
                               </button>
                             </div>
                           )}
@@ -386,34 +422,34 @@ export const Layout: React.FC<LayoutProps> = ({
                       {authView === 'REGISTER' && (
                         <form onSubmit={handleRegisterSubmit} className="space-y-4">
                           <button type="button" onClick={() => { setAuthView('LOGIN'); setApiError(''); }} className="text-xs font-bold text-slate-400 hover:text-slate-600 flex items-center gap-1 bg-transparent border-none cursor-pointer">
-                            <ArrowLeft /> Back to Login
+                            <ArrowLeft /> {backToLoginLabel.text}
                           </button>
 
                           <div>
-                            <h3 className={`font-bold text-base ${resolvedTheme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Create Account</h3>
-                            <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">Setup your operational continuous test suite dashboard profile.</p>
+                            <h3 className={`font-bold text-base ${resolvedTheme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{createAccountHeading.text}</h3>
+                            <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">{createAccountSubtitle.text}</p>
                           </div>
 
                           <div className="space-y-3">
                             <div className="space-y-1">
-                              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Email Address</label>
+                              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">{emailLabel.text}</label>
                               <div className="relative flex items-center">
                                 <Envelope className="absolute left-3 text-slate-400 w-4 h-4" />
-                                <input type="email" required placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full pl-9 pr-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-semibold ${resolvedTheme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} />
+                                <input type="email" required placeholder={emailPlaceholder.text} value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full pl-9 pr-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-semibold ${resolvedTheme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} />
                               </div>
                             </div>
 
                             <div className="space-y-1">
-                              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Password</label>
+                              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">{passwordLabel.text}</label>
                               <div className="relative flex items-center">
                                 <Key className="absolute left-3 text-slate-400 w-4 h-4" />
-                                <input type="password" required placeholder="Create custom password (min 8 chars)" value={password} onChange={(e) => setPassword(e.target.value)} className={`w-full pl-9 pr-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-semibold ${resolvedTheme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} />
+                                <input type="password" required placeholder={createPasswordPlaceholder.text} value={password} onChange={(e) => setPassword(e.target.value)} className={`w-full pl-9 pr-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-semibold ${resolvedTheme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} />
                               </div>
                             </div>
                           </div>
 
                           <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold py-2.5 rounded-xl text-xs shadow-sm cursor-pointer mt-1">
-                            {loading ? 'Initializing...' : 'Register & Initialize'}
+                            {loading ? initializingLabel.text : registerAndInitializeLabel.text}
                           </button>
                         </form>
                       )}

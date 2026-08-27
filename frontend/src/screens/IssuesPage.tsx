@@ -19,6 +19,7 @@ import {
 } from '@phosphor-icons/react';
 import { useQAData } from '../context/QADataContext';
 import { useToast } from '../context/ToastContext';
+import { useContent, getContent } from '../context/ContentContext';
 import { buildIssueRows, IssueRow } from '../lib/adapters';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -55,6 +56,19 @@ type PhaseFilter = 'all' | PhaseId;
 
 export const IssuesPage: React.FC = () => {
   const { tests, loading } = useQAData();
+  const headerTitle = useContent('issues.header.title', { text: 'Issue Tracker' });
+  const subtitleAll = useContent('issues.header.subtitleAll', { text: 'Issues ordered by remediation phase — work top to bottom.' });
+  const allPhasesOption = useContent('issues.phaseFilter.all', { text: '🧭 All Phases' });
+  const allSitesOption = useContent('issues.siteFilter.all', { text: '📂 All Scanned Sites' });
+  const searchPlaceholder = useContent('issues.search.placeholder', { text: 'Search target issues...' });
+  const emptyTitle = useContent('issues.empty.title', { text: 'No issues yet' });
+  const emptyDescription = useContent('issues.empty.description', { text: 'Run a scan to start populating the issue tracker.' });
+  const phaseTagAll = useContent('issues.phaseTag.all', { text: 'All phases' });
+  const openTicketLabel = useContent('issues.openTicket', { text: 'Open Ticket' });
+  const effortUnknown = useContent('issues.effort.unknown', { text: 'effort unknown' });
+  const emptyFeedText = useContent('issues.emptyFeed', { text: 'Nothing in this phase for the current filters.' });
+  const allScannedSitesLabel = useContent('issues.detail.allScannedSites', { text: 'All Scanned Sites' });
+  const noTicketsMatchText = useContent('issues.detail.noTicketsMatch', { text: 'No tickets match the current filters.' });
 
   // Team members, for showing who an issue is assigned to (assignment
   // itself only happens on the dedicated ticket page).
@@ -297,12 +311,10 @@ export const IssuesPage: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-5">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
-            <Bug className="text-blue-600 w-7 h-7" /> Issue Tracker
+            <Bug className="text-blue-600 w-7 h-7" /> {headerTitle.text}
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            {selectedPhase === 'all'
-              ? 'Issues ordered by remediation phase — work top to bottom.'
-              : PHASES[selectedPhase].blurb}
+            {selectedPhase === 'all' ? subtitleAll.text : PHASES[selectedPhase].blurb}
           </p>
         </div>
 
@@ -319,7 +331,7 @@ export const IssuesPage: React.FC = () => {
               }}
               className="py-2 bg-transparent text-sm text-slate-700 dark:text-slate-300 font-semibold focus:outline-none pr-6 cursor-pointer"
             >
-              <option value="all">🧭 All Phases</option>
+              <option value="all">{allPhasesOption.text}</option>
               {availablePhases.map((p) => (
                 <option key={p} value={p}>
                   {PHASES[p].label}
@@ -339,10 +351,10 @@ export const IssuesPage: React.FC = () => {
               }}
               className="py-2 bg-transparent text-sm text-slate-700 dark:text-slate-300 font-semibold focus:outline-none pr-6 cursor-pointer"
             >
-              <option value="all">📂 All Scanned Sites</option>
+              <option value="all">{allSitesOption.text}</option>
               {uniqueWebsites.map((site) => (
                 <option key={site} value={site}>
-                  🌐 {site}
+                  {getContent('issues.siteFilter.option', { text: '🌐 {site}' }, { site }).text}
                 </option>
               ))}
             </select>
@@ -353,7 +365,7 @@ export const IssuesPage: React.FC = () => {
             <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 w-4 h-4" />
             <input
               type="text"
-              placeholder="Search target issues..."
+              placeholder={searchPlaceholder.text}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-800 rounded-lg focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-sm w-full sm:w-64 bg-white dark:bg-slate-950 dark:text-white transition-all shadow-sm"
@@ -370,7 +382,7 @@ export const IssuesPage: React.FC = () => {
           <div className="lg:col-span-7"><Skeleton className="h-[72vh] rounded-xl" /></div>
         </div>
       ) : allRows.length === 0 ? (
-        <EmptyState icon="bug-beetle" title="No issues yet" description="Run a scan to start populating the issue tracker." />
+        <EmptyState icon="bug-beetle" title={emptyTitle.text} description={emptyDescription.text} />
       ) : (
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col lg:flex-row" style={{ height: '75vh' }}>
           {/* Left feed */}
@@ -386,13 +398,13 @@ export const IssuesPage: React.FC = () => {
                       className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${currentTab === tab ? 'text-slate-900 bg-white shadow-sm dark:text-slate-100 dark:bg-slate-800' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
                         }`}
                     >
-                      {tab} ({n})
+                      {getContent('issues.tabLabel.count', { text: '{tab} ({n})' }, { tab, n }).text}
                     </button>
                   );
                 })}
               </div>
               <span className="text-[11px] text-slate-400 dark:text-slate-500 font-semibold tracking-wide uppercase">
-                {selectedPhase === 'all' ? 'All phases' : `Phase ${selectedPhase}`}
+                {selectedPhase === 'all' ? phaseTagAll.text : getContent('issues.phaseTag.numbered', { text: 'Phase {phase}' }, { phase: selectedPhase }).text}
               </span>
             </div>
 
@@ -415,7 +427,7 @@ export const IssuesPage: React.FC = () => {
                             {PHASES[row.phase].label}
                           </span>
                           <span className="ml-2 text-[11px] text-slate-400 dark:text-slate-500 font-medium">
-                            {visibleRows.filter((r) => r.phase === row.phase).length} issue(s)
+                            {getContent('issues.group.issueCount', { text: '{count} issue(s)' }, { count: visibleRows.filter((r) => r.phase === row.phase).length }).text}
                           </span>
                         </div>
                       )}
@@ -464,13 +476,13 @@ export const IssuesPage: React.FC = () => {
                                 title="Open this ticket in a new tab"
                                 className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 px-2 py-1 rounded-lg cursor-pointer"
                               >
-                                Open Ticket <ArrowSquareOut className="w-3 h-3" />
+                                {openTicketLabel.text} <ArrowSquareOut className="w-3 h-3" />
                               </a>
                             </div>
                             <div className="flex items-center gap-2 mt-2 text-[11px] font-medium text-slate-500 dark:text-slate-400 flex-wrap">
                               <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-600 dark:text-slate-400">{row.category}</span>
                               <span>•</span>
-                              <span className="text-slate-400 dark:text-slate-500">{row.effort ? `${row.effort} effort` : 'effort unknown'}</span>
+                              <span className="text-slate-400 dark:text-slate-500">{row.effort ? getContent('issues.effort.known', { text: '{effort} effort' }, { effort: row.effort }).text : effortUnknown.text}</span>
                               <span>•</span>
                               <span className="truncate max-w-35 font-mono text-slate-400 dark:text-slate-500">{row.host}</span>
                               {row.assigneeIds.length > 0 && (
@@ -506,7 +518,11 @@ export const IssuesPage: React.FC = () => {
                                 if (rowEditorUrl) window.location.href = rowEditorUrl;
                               }}
                               disabled={!rowEditorUrl}
-                              title={rowEditorUrl ? `Open ${rowLabel} in VS Code` : 'No local source file matched for this issue yet'}
+                              title={
+                                rowEditorUrl
+                                  ? getContent('issues.fileLocator.openInVSCode', { text: 'Open {label} in VS Code' }, { label: rowLabel ?? '' }).text
+                                  : getContent('issues.fileLocator.noSourceMatched', { text: 'No local source file matched for this issue yet' }).text
+                              }
                               className={`mt-3 inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-colors max-w-full ${rowEditorUrl
                                   ? 'text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 cursor-pointer'
                                   : 'text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30 cursor-not-allowed'
@@ -514,7 +530,11 @@ export const IssuesPage: React.FC = () => {
                             >
                               <Folder className="w-3.5 h-3.5 shrink-0" />
                               <span className="truncate">
-                                {rowEditorUrl ? rowLabel : stillLocating ? 'Locating file…' : 'No matching file found'}
+                                {rowEditorUrl
+                                  ? rowLabel
+                                  : stillLocating
+                                    ? getContent('issues.fileLocator.locating', { text: 'Locating file…' }).text
+                                    : getContent('issues.fileLocator.noneFound', { text: 'No matching file found' }).text}
                               </span>
                             </button>
                           );
@@ -527,7 +547,7 @@ export const IssuesPage: React.FC = () => {
 
               {visibleRows.length === 0 && (
                 <div className="p-12 text-center text-sm font-medium text-slate-400 dark:text-slate-500 bg-slate-50/50 dark:bg-slate-900/30 h-full flex flex-col items-center justify-center gap-2">
-                  <span>Nothing in this phase for the current filters.</span>
+                  <span>{emptyFeedText.text}</span>
                 </div>
               )}
             </div>
@@ -538,10 +558,10 @@ export const IssuesPage: React.FC = () => {
               <div className="min-w-0">
                 <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm flex items-center gap-2 truncate">
                   <Ticket className="w-4 h-4 text-blue-500 shrink-0" />
-                  Tickets — {selectedWebsite === 'all' ? 'All Scanned Sites' : selectedWebsite}
+                  {getContent('issues.detail.ticketsHeading', { text: 'Tickets — {scope}' }, { scope: selectedWebsite === 'all' ? allScannedSitesLabel.text : selectedWebsite }).text}
                 </h3>
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                  {visibleRows.length} ticket{visibleRows.length === 1 ? '' : 's'} in this view
+                  {getContent('issues.detail.ticketCount', { text: '{count} ticket{plural} in this view' }, { count: visibleRows.length, plural: visibleRows.length === 1 ? '' : 's' }).text}
                 </p>
               </div>
               <TicketDownloadMenu
@@ -554,7 +574,7 @@ export const IssuesPage: React.FC = () => {
             <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
               {visibleRows.length === 0 && (
                 <div className="p-12 text-center text-sm font-medium text-slate-400 dark:text-slate-500">
-                  No tickets match the current filters.
+                  {noTicketsMatchText.text}
                 </div>
               )}
               {visibleRows.map((row) => (
@@ -589,11 +609,17 @@ const AssignedTicketsButton: React.FC<{
   memberById: Map<string, BackendTeamMember>;
 }> = ({ rows, memberById }) => {
   const { showToast } = useToast();
+  const buttonLabel = useContent('issues.assignedTickets.button', { text: 'Assigned Tickets' });
+  const buttonTooltip = useContent('issues.assignedTickets.tooltip', {
+    text: 'Export a Bug Tracker Dashboard (.xlsx) of every assigned ticket, with a priority summary and charts',
+  });
+  const noneAssignedToast = useContent('issues.assignedTickets.noneToast', { text: 'No tickets are assigned yet' });
+  const exportErrorToast = useContent('issues.assignedTickets.exportError', { text: 'Could not export assigned tickets' });
   const assignedRows = rows.filter((r) => r.assigneeIds.length > 0);
 
   const handleClick = async () => {
     if (assignedRows.length === 0) {
-      showToast('No tickets are assigned yet', 'info');
+      showToast(noneAssignedToast.text, 'info');
       return;
     }
     let sNo = 0;
@@ -619,7 +645,7 @@ const AssignedTicketsButton: React.FC<{
     try {
       await exportAssignedTicketsXLSX(exportRows, priorityCounts, 'All Sites');
     } catch {
-      showToast('Could not export assigned tickets', 'error');
+      showToast(exportErrorToast.text, 'error');
     }
   };
 
@@ -627,9 +653,9 @@ const AssignedTicketsButton: React.FC<{
     <button
       onClick={handleClick}
       className="flex items-center gap-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded-lg transition-colors cursor-pointer shadow-sm"
-      title="Export a Bug Tracker Dashboard (.xlsx) of every assigned ticket, with a priority summary and charts"
+      title={buttonTooltip.text}
     >
-      <UsersThree className="w-4 h-4" /> Assigned Tickets
+      <UsersThree className="w-4 h-4" /> {buttonLabel.text}
     </button>
   );
 };
@@ -643,6 +669,10 @@ const TicketDownloadMenu: React.FC<{
   const [open, setOpen] = useState(false);
   const { showToast } = useToast();
   const menuRef = React.useRef<HTMLDivElement>(null);
+  const downloadButtonLabel = useContent('issues.download.button', { text: 'Download' });
+  const pdfLabel = useContent('issues.download.pdf', { text: 'PDF' });
+  const excelLabel = useContent('issues.download.excel', { text: 'Excel (.csv)' });
+  const wordLabel = useContent('issues.download.word', { text: 'Word (.docx)' });
 
   const exportRows: TicketExportRow[] = rows.map((r) => ({
     repId: r.repId,
@@ -661,7 +691,7 @@ const TicketDownloadMenu: React.FC<{
       await fn();
       setOpen(false);
     } catch {
-      showToast(`Could not export ${label}`, 'error');
+      showToast(getContent('issues.download.error', { text: 'Could not export {label}' }, { label }).text, 'error');
     }
   };
 
@@ -672,7 +702,7 @@ const TicketDownloadMenu: React.FC<{
         disabled={rows.length === 0}
         className="flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 dark:disabled:bg-blue-900 px-3 py-2 rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed"
       >
-        <DownloadSimple className="w-4 h-4" /> Download
+        <DownloadSimple className="w-4 h-4" /> {downloadButtonLabel.text}
       </button>
       {open && (
         <>
@@ -682,19 +712,19 @@ const TicketDownloadMenu: React.FC<{
               onClick={() => handle(() => exportTicketListPDF(exportRows, scopeLabel), 'PDF')}
               className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400 transition-colors cursor-pointer"
             >
-              <FilePdf className="w-4 h-4 text-red-500" /> PDF
+              <FilePdf className="w-4 h-4 text-red-500" /> {pdfLabel.text}
             </button>
             <button
               onClick={() => handle(() => exportTicketListCSV(exportRows, scopeLabel), 'Excel')}
               className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors border-t border-slate-100 dark:border-slate-800 cursor-pointer"
             >
-              <FileCsv className="w-4 h-4 text-emerald-600" /> Excel (.csv)
+              <FileCsv className="w-4 h-4 text-emerald-600" /> {excelLabel.text}
             </button>
             <button
               onClick={() => handle(() => exportTicketListDocx(exportRows, scopeLabel), 'Word')}
               className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:text-blue-600 dark:hover:text-blue-400 transition-colors border-t border-slate-100 dark:border-slate-800 cursor-pointer"
             >
-              <FileDoc className="w-4 h-4 text-blue-600" /> Word (.docx)
+              <FileDoc className="w-4 h-4 text-blue-600" /> {wordLabel.text}
             </button>
           </div>
         </>

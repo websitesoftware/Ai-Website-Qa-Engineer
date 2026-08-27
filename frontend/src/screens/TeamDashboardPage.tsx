@@ -10,7 +10,7 @@ import { useToast } from '../context/ToastContext';
 import { api } from '../lib/api';
 import { BackendTeamMember } from '../lib/types';
 import { timeAgo, formatDate } from '../lib/format';
-import { useContent } from '../context/ContentContext';
+import { useContent, getContent } from '../context/ContentContext';
 
 export const TeamDashboardPage: React.FC = () => {
   const { user } = useAuth();

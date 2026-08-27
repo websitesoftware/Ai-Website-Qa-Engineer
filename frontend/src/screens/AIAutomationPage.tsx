@@ -1,551 +1,472 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BugPrioritization } from '../components/ai-automation/BugPrioritization';
-import { RootCauseAnalysis } from '../components/ai-automation/RootCauseAnalysis';
-import { SuggestedFixes } from '../components/ai-automation/SuggestedFixes';
-import { PullRequestGeneration } from '../components/ai-automation/PullRequestGeneration';
-import { CicdIntegration } from '../components/ai-automation/CicdIntegration';
-import { PasteIssueAnalyzer } from '../components/ai-automation/PasteIssueAnalyzer';
-import { CodeReviewPanel } from '../components/ai-automation/CodeReviewPanel';
-import { API_BASE_URL, api } from '../lib/api';
-import { usePolling } from '../hooks/usePolling';
+import {
+  Robot,
+  Globe,
+  CircleNotch,
+  Copy,
+  Code,
+  ListBullets,
+  TextT,
+  Link as LinkIcon,
+  CursorClick,
+  TextAa,
+  ImageSquare,
+  SpeakerHigh,
+  WarningCircle,
+  MonitorPlay,
+  Play,
+  ArrowRight,
+  ArrowLeft,
+  ArrowCounterClockwise,
+  X,
+} from '@phosphor-icons/react';
+import { api, API_ORIGIN } from '../lib/api';
+import { NvdaElement, NvdaScanResult } from '../lib/types';
+import { useToast } from '../context/ToastContext';
+import { useContent, getContent } from '../context/ContentContext';
 
-// ---------------------------------------------------------------------------
-// Types (match the /api/ai-automation payload)
-// ---------------------------------------------------------------------------
-interface Prioritization {
-  bugId: string;
-  issueId: string;
-  category: string;
-  title: string;
-  severity: 'Critical' | 'High' | 'Medium' | 'Low';
-  score: number;
-  impactSummary: string;
-}
-interface Rca {
-  culpritFile: string;
-  errorLine: number;
-  explanation: string;
-  confidence: number;
-}
-interface Fixes {
-  original: string;
-  patched: string;
-  source?: string;
-  filePath?: string | null;
-  grounded?: boolean;
-  autoFixable?: boolean;
-}
-interface Cicd {
-  status: 'Passed' | 'Failed' | 'Running' | 'Idle';
-  passed?: boolean;
-  logs: string[];
-  workflowRun?: { url: string };
-}
-interface RepoMatch {
-  name?: string;
-  path?: string;
-  matchedBy?: string; // "hostname" | "live-port" | "url-path" | "port" | "unmatched" | "ambiguous_*"
-}
-interface PullRequest {
-  configured?: boolean;
-  branchName?: string;
-  prTitle?: string;
-  prUrl?: string;
-  prNumber?: number;
-  repo?: string; // "owner/repo" the PR was actually opened in
-  repoMatch?: RepoMatch;
-  status?: string;
-  error?: string;
-  reason?: string;
-  noCodeChange?: boolean;
-  filesChanged?: string[];
-  fixesApplied?: number;
-}
-interface MergeResult {
-  configured?: boolean;
-  merged?: boolean;
-  reason?: string;
-  approvalCount?: number;
-  changesRequestedCount?: number;
-  error?: string;
-}
-interface AutomationResponse {
-  ready: boolean;
-  reason?: string;
-  status?: string;
-  testId?: string;
-  url?: string;
-  llm?: { enabled: boolean; provider: string };
-  github?: { configured: boolean; repo?: string | null; repoName?: string; matchedBy?: string };
-  prioritization?: Prioritization | null;
-  rca?: Rca | null;
-  fixes?: Fixes | null;
-  cicd?: Cicd | null;
+interface LiveAnnouncement {
+  element_type: NvdaElement['element_type'] | string;
+  nvda_speech: string;
+  component_theory: string;
 }
 
-type Stage = 'idle' | 'prioritizing' | 'rca' | 'fixing' | 'cicd' | 'done';
-const STAGE_ORDER: Stage[] = ['prioritizing', 'rca', 'fixing', 'cicd', 'done'];
+const TYPE_META: Record<
+  NvdaElement['element_type'],
+  { icon: React.ElementType; label: string; badge: string }
+> = {
+  heading: { icon: TextT, label: 'Heading', badge: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-400 dark:border-purple-900' },
+  link: { icon: LinkIcon, label: 'Link', badge: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900' },
+  button: { icon: CursorClick, label: 'Button', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900' },
+  input: { icon: TextAa, label: 'Form Control', badge: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900' },
+  image: { icon: ImageSquare, label: 'Image', badge: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700' },
+};
 
 export const AIAutomationPage: React.FC = () => {
-  const [resp, setResp] = useState<AutomationResponse | null>(null);
-  const [stage, setStage] = useState<Stage>('idle');
-  const [loading, setLoading] = useState(true);
+  const { showToast } = useToast();
+  const heading = useContent('aiAutomation.heading', { text: 'NVDA Accessibility Agent' });
+  const subtitle = useContent('aiAutomation.subtitle', {
+    text: 'Shows the page, then lets you press Tab to move through every heading, link, button, form control and image — each one announced out loud, NVDA-style.',
+  });
+  const urlLabel = useContent('aiAutomation.urlLabel', { text: 'Page to inspect' });
+  const urlPlaceholder = useContent('aiAutomation.urlPlaceholder', { text: 'https://example.com' });
+  const scanButtonLoading = useContent('aiAutomation.scanButton.loading', { text: 'Loading page…' });
+  const scanButtonIdle = useContent('aiAutomation.scanButton.idle', { text: 'Scan Page' });
+  const scanErrorFallback = useContent('aiAutomation.scanErrorFallback', { text: 'Could not scan that page' });
+  const thinkingTitle = useContent('aiAutomation.thinking.title', { text: 'Loading the page and mapping its structure…' });
+  const thinkingSubtitle = useContent('aiAutomation.thinking.subtitle', { text: 'Capturing headings, links, buttons, form controls and images, in order.' });
+  const scannedLabel = useContent('aiAutomation.scannedLabel', { text: 'Scanned' });
+  const viewWalkthrough = useContent('aiAutomation.view.walkthrough', { text: 'Walkthrough' });
+  const viewAnnouncements = useContent('aiAutomation.view.announcements', { text: 'Announcements' });
+  const viewJson = useContent('aiAutomation.view.json', { text: 'JSON' });
+  const copyJsonLabel = useContent('aiAutomation.copyJson', { text: 'Copy JSON' });
+  const toastCopiedJson = useContent('aiAutomation.toast.copiedJson', { text: 'NVDA announcement JSON copied' });
+  const toastClipboardUnavailable = useContent('aiAutomation.toast.clipboardUnavailable', { text: 'Clipboard unavailable — copy manually' });
+  const noElementsFound = useContent('aiAutomation.noElementsFound', {
+    text: 'No headings, links, buttons, form controls or images were found on that page.',
+  });
+  const walkthroughHint = useContent('aiAutomation.walkthroughHint', {
+    text: 'This is the real, live page — click anything, scroll, or press Tab inside it directly. Buttons below jump to a specific element.',
+  });
+  const startTabbingLabel = useContent('aiAutomation.startTabbing', { text: 'Start Tabbing' });
+  const restartLabel = useContent('aiAutomation.restart', { text: 'Restart' });
+  const prevLabel = useContent('aiAutomation.prev', { text: 'Prev' });
+  const nextLabel = useContent('aiAutomation.next', { text: 'Next' });
+  const replayTooltip = useContent('aiAutomation.replayTooltip', { text: 'Replay this announcement' });
+  const clearTooltip = useContent('aiAutomation.clearTooltip', { text: 'Clear the current announcement' });
+  const iframeTitle = useContent('aiAutomation.iframeTitle', { text: 'Live walkthrough of the scanned page' });
+  const emptyStateText = useContent('aiAutomation.emptyState', {
+    text: 'Enter a URL above — the agent will show the page and let you Tab through it like NVDA, out loud.',
+  });
+  const navigatedToast = useContent('aiAutomation.navigatedToast', {
+    text: 'Followed a link inside the walkthrough — Announcements/JSON still reflect the original scan',
+  });
+  const [url, setUrl] = useState('');
+  const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<NvdaScanResult | null>(null);
+  const [view, setView] = useState<'walkthrough' | 'list' | 'json'>('walkthrough');
 
-  // Staged reveal state (presentation only — data is already real & fetched).
-  const [showPrio, setShowPrio] = useState(false);
-  const [showRca, setShowRca] = useState(false);
-  const [showFix, setShowFix] = useState(false);
-  const [showCicd, setShowCicd] = useState(false);
+  // Walkthrough (live iframe, Tab-to-hear) state
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [liveAnnouncement, setLiveAnnouncement] = useState<LiveAnnouncement | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // PR action state
-  const [pr, setPr] = useState<PullRequest | null>(null);
-  const [prLoading, setPrLoading] = useState(false);
+  const elements = result?.elements ?? null;
 
-  // Merge (app-level approval gate) state
-  const [mergeResult, setMergeResult] = useState<MergeResult | null>(null);
-  const [mergeLoading, setMergeLoading] = useState(false);
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { heading: 0, link: 0, button: 0, input: 0, image: 0 };
+    (elements || []).forEach((el) => {
+      c[el.element_type] = (c[el.element_type] || 0) + 1;
+    });
+    return c;
+  }, [elements]);
 
-  // Real source file/line for the top-priority issue — same locate call
-  // (and same Gemini-assisted fallback) IssuesPage's "Go to File" uses, so
-  // this panel can offer the identical click-to-VS-Code shortcut.
-  const [located, setLocated] = useState<{
-    filePath: string | null;
-    fileFullPath: string | null;
-    line: number | null;
-  } | null>(null);
-
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const clearTimers = () => {
-    timers.current.forEach(clearTimeout);
-    timers.current = [];
+  const speak = (text: string) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
   };
 
-  const revealSequence = useCallback(() => {
-    clearTimers();
-    setShowPrio(false);
-    setShowRca(false);
-    setShowFix(false);
-    setShowCicd(false);
-    const schedule = (delay: number, fn: () => void) => timers.current.push(setTimeout(fn, delay));
-
-    setStage('prioritizing');
-    schedule(300, () => { setShowPrio(true); setStage('rca'); });
-    schedule(900, () => { setShowRca(true); setStage('fixing'); });
-    schedule(1500, () => { setShowFix(true); setStage('cicd'); });
-    schedule(2100, () => { setShowCicd(true); setStage('done'); });
+  useEffect(() => {
+    // Stop any in-progress speech when leaving the page.
+    return () => {
+      if (typeof window !== 'undefined') window.speechSynthesis?.cancel();
+    };
   }, []);
 
-  const fetchAutomation = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setPr(null);
-    try {
-      const res = await fetch(`${API_BASE_URL}/ai-automation/run`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
-      if (!res.ok) throw new Error(`Request failed (${res.status})`);
-      const json: AutomationResponse = await res.json();
-      setResp(json);
-      if (json.ready) revealSequence();
-      else setStage('idle');
-    } catch (e) {
-      setError(
-        e instanceof Error
-          ? e.message
-          : 'Could not reach the QA backend. Make sure it is running on port 5000.',
-      );
-      setStage('idle');
-    } finally {
-      setLoading(false);
-    }
-  }, [revealSequence]);
-
+  // The live page runs inside a cross-origin iframe (served through our own
+  // proxy so it can be framed at all — see backend nvdaAgent.controller.js).
+  // It can't be scripted directly from here, so it self-announces via
+  // postMessage on real focus/click/scroll, which is what actually drives
+  // speech now — the pre-scanned `elements` array is just used to label the
+  // Prev/Next/count UI and for the Announcements/JSON tabs.
   useEffect(() => {
-    // Initial data fetch on mount — intentional, not a derived-state loop.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchAutomation();
-    return clearTimers;
+    const handler = (e: MessageEvent) => {
+      const data = e.data;
+      if (!data || data.source !== 'nvda-agent-iframe') return;
+      if (data.type === 'navigate') {
+        // Indices from the original scan no longer line up with the new
+        // page's elements — clear the stale Prev/Next counter rather than
+        // show a wrong position. The new page announces itself on load
+        // (below), and Prev/Next re-establish position once used again.
+        setActiveIndex(null);
+        showToast(navigatedToast.text, 'info');
+        return;
+      }
+      // 'ready' (page just loaded/navigated) and 'ack' (Prev/Next jumped to
+      // an element) both carry an announcement to speak; only 'ack' also
+      // carries an index to sync the Prev/Next counter to.
+      if (typeof data.index === 'number') setActiveIndex(data.index);
+      if (typeof data.nvda_speech === 'string') {
+        setLiveAnnouncement({ element_type: data.element_type, nvda_speech: data.nvda_speech, component_theory: data.component_theory });
+        speak(data.nvda_speech);
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const running = loading || (stage !== 'idle' && stage !== 'done');
-
-  // Real-time scanning: watch for a newly completed test (from Test Management
-  // running in another tab, or a fresh crawl finishing) and auto re-run the
-  // automation pipeline against it — no manual "re-analyse" click needed.
-  const latestSeenTestId = useRef<string | undefined>(undefined);
-  useEffect(() => {
-    latestSeenTestId.current = resp?.testId;
-  }, [resp?.testId]);
-
-  const checkForNewScan = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/tests`);
-      if (!res.ok) return;
-      const tests: Array<{ id: string; status: string }> = await res.json();
-      const latestCompleted = tests.find(
-        (t) => t.status === 'passed' || t.status === 'failed',
-      );
-      if (latestCompleted && latestCompleted.id !== latestSeenTestId.current && !running) {
-        fetchAutomation();
-      }
-    } catch {
-      // backend unreachable — the manual button / next tick will recover
-    }
-  }, [fetchAutomation, running]);
-
-  usePolling(checkForNewScan, 5000, true);
-
-  const testId = resp?.testId;
-  const issueId = resp?.prioritization?.issueId;
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets the previous issue's location before fetching the new one's; mirrors QADataContext's fetch-on-change pattern
-    setLocated(null);
-    if (!testId || !issueId) return;
-    let cancelled = false;
-    api
-      .locateIssue(testId, issueId)
-      .then((result) => {
-        if (cancelled) return;
-        setLocated({ filePath: result.filePath, fileFullPath: result.fileFullPath, line: result.line });
-      })
-      .catch(() => {
-        if (!cancelled) setLocated({ filePath: null, fileFullPath: null, line: null });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [testId, issueId]);
-
-  /** vscode://file/<absolute-path>:<line> opens VS Code desktop at the exact location, when registered as a URL handler. */
-  const vscodeFileUrl = (fileFullPath: string | null | undefined, line: number | null | undefined) => {
-    if (!fileFullPath) return null;
-    const normalized = fileFullPath.replace(/\\/g, '/');
-    const prefixed = normalized.startsWith('/') ? normalized : `/${normalized}`;
-    return `vscode://file${prefixed}${line ? `:${line}` : ''}`;
+  const goToIndex = (i: number) => {
+    if (!elements || elements.length === 0) return;
+    const clamped = Math.max(0, Math.min(elements.length - 1, i));
+    iframeRef.current?.contentWindow?.postMessage({ type: 'nvda-goto', index: clamped }, '*');
   };
 
-  // Deliberately narrow deps (only the fields actually used) so this isn't
-  // recreated on every unrelated `resp` change — the compiler's inferred
-  // whole-object dep would defeat that intentionally.
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization
-  const createPr = useCallback(async () => {
-    if (!resp?.testId) return;
-    setPrLoading(true);
-    setMergeResult(null);
+  const exitWalkthrough = () => {
+    setActiveIndex(null);
+    setLiveAnnouncement(null);
+    window.speechSynthesis?.cancel();
+  };
+
+  const handleScan = async () => {
+    const trimmed = url.trim();
+    if (!trimmed) return;
+    setScanning(true);
+    setError(null);
+    setResult(null);
+    exitWalkthrough();
     try {
-      const res = await fetch(`${API_BASE_URL}/ai-automation/pr`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ testId: resp.testId }),
-      });
-      const json: PullRequest = await res.json();
-      setPr(json);
-    } catch (e) {
-      setPr({ error: e instanceof Error ? e.message : 'PR request failed' });
+      const scanResult = await api.nvdaAgent.scan(trimmed);
+      setResult(scanResult);
+      setView('walkthrough');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : scanErrorFallback.text);
     } finally {
-      setPrLoading(false);
+      setScanning(false);
     }
-  }, [resp?.testId]);
+  };
 
-  // Same rationale as createPr above: narrow deps are intentional.
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization
-  const mergePr = useCallback(async () => {
-    if (!pr?.prNumber) return;
-    setMergeLoading(true);
+  const handleCopyJson = async () => {
+    if (!elements) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/ai-automation/merge`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prNumber: pr.prNumber, repo: pr.repo }),
-      });
-      const json: MergeResult = await res.json();
-      setMergeResult(json);
-    } catch (e) {
-      setMergeResult({ error: e instanceof Error ? e.message : 'Merge request failed' });
-    } finally {
-      setMergeLoading(false);
+      await navigator.clipboard.writeText(JSON.stringify(elements, null, 2));
+      showToast(toastCopiedJson.text, 'success');
+    } catch {
+      showToast(toastClipboardUnavailable.text, 'error');
     }
-  }, [pr?.prNumber, pr?.repo]);
-
-  // Manual correction / removal of the AI-detected top issue. Both re-run
-  // the whole pipeline afterwards so prioritization, RCA and the suggested
-  // fix reflect the change (or move on to the next-ranked issue on delete).
-  // Same narrow-deps rationale as createPr/mergePr above.
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization
-  const editTopIssue = useCallback(async (fields: { title: string; severity: string; category: string }) => {
-    if (!resp?.testId || !resp?.prioritization?.issueId) return;
-    await api.editIssue(resp.testId, resp.prioritization.issueId, {
-      title: fields.title,
-      severity: fields.severity.toLowerCase(),
-      category: fields.category,
-    });
-    await fetchAutomation();
-  }, [resp?.testId, resp?.prioritization?.issueId, fetchAutomation]);
-
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization
-  const deleteTopIssue = useCallback(async () => {
-    if (!resp?.testId || !resp?.prioritization?.issueId) return;
-    await api.deleteIssue(resp.testId, resp.prioritization.issueId);
-    await fetchAutomation();
-  }, [resp?.testId, resp?.prioritization?.issueId, fetchAutomation]);
-
-  const stageIndex = STAGE_ORDER.indexOf(stage);
-  const progressPct = stage === 'idle' ? 0 : Math.round(((stageIndex + 1) / STAGE_ORDER.length) * 100);
-
-  // ---- Initial spinner ----
-  if (loading && !resp) {
-    return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center gap-3">
-        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 tracking-wide animate-pulse">
-          Analysing latest scan…
-        </p>
-      </div>
-    );
-  }
-
-  const llmEnabled = resp?.llm?.enabled;
-  const githubConfigured = resp?.github?.configured;
+  };
 
   return (
-    <div className="bg-slate-50 dark:bg-slate-900 min-h-screen p-6 sm:p-8 text-slate-800 dark:text-slate-200 transition-colors duration-200">
-      <header className="max-w-7xl mx-auto mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
+    <div className="space-y-6 w-full max-w-5xl mx-auto px-4 py-2">
+      {/* Robot header */}
+      <div className="flex items-center gap-4 border-b border-slate-100 dark:border-slate-800 pb-5">
+        <div className="relative shrink-0">
+          <div className={`w-14 h-14 rounded-2xl bg-linear-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg ${scanning ? 'animate-pulse' : ''}`}>
+            <Robot className="w-8 h-8 text-white" weight="fill" />
+          </div>
+          <span
+            className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-slate-950 ${
+              scanning ? 'bg-amber-400 animate-ping' : elements ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'
+            }`}
+          />
+        </div>
         <div>
-          <div className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1 flex items-center gap-2 flex-wrap">
-            Core Operations Suite
-            <span
-              className={`normal-case font-semibold text-[10px] px-2 py-0.5 rounded-full border ${llmEnabled
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900'
-                  : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
-                }`}
-            >
-              {llmEnabled ? `LLM: ${resp?.llm?.provider}` : 'LLM: rules only'}
-            </span>
-            <span
-              className={`normal-case font-semibold text-[10px] px-2 py-0.5 rounded-full border ${githubConfigured && resp?.github?.repo
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900'
-                  : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900'
-                }`}
-            >
-              {!githubConfigured
-                ? 'GitHub: not connected'
-                : resp?.github?.repo
-                  ? `GitHub: ${resp.github.repo}`
-                  : 'GitHub: repo not identified'}
-            </span>
-            {githubConfigured && resp?.github?.matchedBy && (
-              <span
-                className="normal-case font-medium text-[10px] px-2 py-0.5 rounded-full border bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
-                title="How the scanned URL was matched to a local repo"
-              >
-                matched by: {resp.github.matchedBy}
-              </span>
-            )}
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-            Phase 3 – AI Automation Engine
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            {resp?.url
-              ? <>Analysing the latest completed scan: <span className="font-mono text-slate-700 dark:text-slate-300">{resp.url}</span></>
-              : 'Prioritises real detected issues, analyses root cause, and proposes fixes.'}
-          </p>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">{heading.text}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{subtitle.text}</p>
         </div>
+      </div>
 
-        <button
-          onClick={fetchAutomation}
-          disabled={running}
-          className="inline-flex items-center gap-2 justify-center px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:bg-emerald-400 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-lg shadow-sm hover:shadow transition-all duration-150 active:scale-[0.98] cursor-pointer"
-        >
-          <motion.span
-            animate={running ? { rotate: 360 } : { rotate: 0 }}
-            transition={running ? { repeat: Infinity, duration: 1, ease: 'linear' } : {}}
-            className="inline-block"
+      {/* URL input */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-5">
+        <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">
+          {urlLabel.text}
+        </label>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 flex items-center bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg px-3 focus-within:ring-4 focus-within:ring-blue-500/10 focus-within:border-blue-500 transition-all">
+            <Globe className="w-4 h-4 text-slate-400 shrink-0 mr-2" />
+            <input
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !scanning && handleScan()}
+              placeholder={urlPlaceholder.text}
+              className="flex-1 bg-transparent py-2.5 text-sm text-slate-800 dark:text-white focus:outline-none"
+            />
+          </div>
+          <button
+            onClick={handleScan}
+            disabled={scanning || !url.trim()}
+            className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold text-sm text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 dark:disabled:bg-blue-900 cursor-pointer transition-colors"
           >
-            🔄
-          </motion.span>
-          {running ? 'Analysing…' : 'Re-analyse Latest Scan'}
-        </button>
-      </header>
-
-      {/* Error state */}
-      {error && (
-        <div className="max-w-7xl mx-auto mb-6 rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 p-4 text-sm text-red-700 dark:text-red-400">
-          <strong className="font-semibold">Backend unreachable.</strong> {error}
+            {scanning ? <CircleNotch className="w-4 h-4 animate-spin" /> : <Robot className="w-4 h-4" />}
+            {scanning ? scanButtonLoading.text : scanButtonIdle.text}
+          </button>
         </div>
-      )}
-
-      {/* No completed scan yet — honest empty state, no fake data */}
-      {!error && resp && !resp.ready && (
-        <div className="max-w-7xl mx-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 p-8 text-center">
-          <div className="text-3xl mb-3">🧪</div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
-            {resp.reason === 'test_not_complete' ? 'A scan is still running' : 'No completed scan yet'}
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-            The AI Automation engine works on the output of a real QA scan. Go to
-            Test Management, run a test against a website, and come back here once
-            it finishes — the pipeline will prioritise and analyse the actual issues found.
+        {error && (
+          <p className="mt-3 text-sm text-red-600 dark:text-red-400 flex items-center gap-1.5">
+            <WarningCircle className="w-4 h-4 shrink-0" /> {error}
           </p>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Real pipeline */}
-      {!error && resp?.ready && (
-        <>
-          <div className="max-w-7xl mx-auto mb-8">
-            <div className="flex justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-              <span>Pipeline Progress</span>
-              <span>{progressPct}%</span>
+      {/* Robot "thinking" state */}
+      <AnimatePresence>
+        {scanning && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-8 flex flex-col items-center justify-center gap-3 text-center"
+          >
+            <motion.div
+              animate={{ rotate: [0, -8, 8, -8, 0] }}
+              transition={{ repeat: Infinity, duration: 1.4 }}
+              className="w-16 h-16 rounded-2xl bg-linear-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg"
+            >
+              <Robot className="w-9 h-9 text-white" weight="fill" />
+            </motion.div>
+            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">{thinkingTitle.text}</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">{thinkingSubtitle.text}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Results */}
+      {result && elements && !scanning && (
+        <div className="space-y-4">
+          {/* Summary */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-5">
+            <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">{scannedLabel.text}</p>
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{result.url}</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                  <button
+                    onClick={() => setView('walkthrough')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md transition-colors cursor-pointer ${
+                      view === 'walkthrough' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400'
+                    }`}
+                  >
+                    <MonitorPlay className="w-3.5 h-3.5" /> {viewWalkthrough.text}
+                  </button>
+                  <button
+                    onClick={() => setView('list')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md transition-colors cursor-pointer ${
+                      view === 'list' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400'
+                    }`}
+                  >
+                    <ListBullets className="w-3.5 h-3.5" /> {viewAnnouncements.text}
+                  </button>
+                  <button
+                    onClick={() => setView('json')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md transition-colors cursor-pointer ${
+                      view === 'json' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400'
+                    }`}
+                  >
+                    <Code className="w-3.5 h-3.5" /> {viewJson.text}
+                  </button>
+                </div>
+                <button
+                  onClick={handleCopyJson}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
+                >
+                  <Copy className="w-3.5 h-3.5" /> {copyJsonLabel.text}
+                </button>
+              </div>
             </div>
-            <div className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-              <motion.div
-                className="h-full bg-gradient-to-r from-blue-500 to-emerald-500"
-                initial={{ width: 0 }}
-                animate={{ width: `${progressPct}%` }}
-                transition={{ duration: 0.6, ease: 'easeOut' }}
-              />
+            <div className="flex items-center gap-2 flex-wrap">
+              {(Object.keys(TYPE_META) as (keyof typeof TYPE_META)[]).map((key) => {
+                const meta = TYPE_META[key];
+                const Icon = meta.icon;
+                return (
+                  <span key={key} className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded border ${meta.badge}`}>
+                    <Icon className="w-3.5 h-3.5" />{' '}
+                    {getContent('aiAutomation.elementCount', { text: '{count} {label}{plural}' }, { count: counts[key] || 0, label: meta.label, plural: counts[key] === 1 ? '' : 's' }).text}
+                  </span>
+                );
+              })}
+              <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 ml-auto">
+                {getContent('aiAutomation.tabOrderSummary', { text: '{count} elements, tab order 1–{count}' }, { count: elements.length }).text}
+              </span>
             </div>
           </div>
 
-          <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-            <div className="space-y-1">
-              <AnimatePresence mode="wait">
-                {showPrio && resp.prioritization && (
-                  <motion.div key="prio" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-                    <BugPrioritization data={resp.prioritization} onEdit={editTopIssue} onDelete={deleteTopIssue} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              {(!showPrio || !resp.prioritization) && <BugPrioritization data={null} />}
+          {elements.length === 0 && (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-10 text-center text-sm text-slate-400 dark:text-slate-500">
+              {noElementsFound.text}
+            </div>
+          )}
 
-              <AnimatePresence mode="wait">
-                {showRca && resp.rca && (
-                  <motion.div key="rca" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-                    <RootCauseAnalysis
-                      data={resp.rca}
-                      editorUrl={vscodeFileUrl(located?.fileFullPath, located?.line)}
-                      editorLabel={located?.filePath ? `${located.filePath}${located.line ? `:${located.line}` : ''}` : null}
-                      locating={located === null}
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              {(!showRca || !resp.rca) && <RootCauseAnalysis data={null} />}
+          {view === 'walkthrough' && elements.length > 0 && (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between gap-3 flex-wrap px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                  {walkthroughHint.text}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => goToIndex(0)}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg cursor-pointer transition-colors"
+                  >
+                    <Play className="w-3.5 h-3.5" weight="fill" /> {activeIndex === null ? startTabbingLabel.text : restartLabel.text}
+                  </button>
+                  {activeIndex !== null && (
+                    <>
+                      <button
+                        onClick={() => goToIndex(activeIndex - 1)}
+                        disabled={activeIndex === 0}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 rounded-lg cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <ArrowLeft className="w-3.5 h-3.5" /> {prevLabel.text}
+                      </button>
+                      <span className="text-xs font-bold text-slate-400 dark:text-slate-500 tabular-nums">
+                        {activeIndex + 1}/{elements.length}
+                      </span>
+                      <button
+                        onClick={() => goToIndex(activeIndex + 1)}
+                        disabled={activeIndex === elements.length - 1}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 rounded-lg cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {nextLabel.text} <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => liveAnnouncement && speak(liveAnnouncement.nvda_speech)}
+                        title={replayTooltip.text}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 px-2.5 py-1.5 rounded-lg cursor-pointer"
+                      >
+                        <ArrowCounterClockwise className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={exitWalkthrough}
+                        title={clearTooltip.text}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-2.5 py-1.5 rounded-lg cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
 
-              {/* Pull request — real when GitHub connected, honest notice otherwise */}
-              {githubConfigured ? (
-                pr && pr.prUrl ? (
-                  <PullRequestGeneration
-                    data={{
-                      branchName: pr.branchName || '',
-                      prTitle: pr.prTitle || '',
-                      prUrl: pr.prUrl,
-                      status: pr.status || 'Open',
-                      repo: pr.repo,
-                      repoMatch: pr.repoMatch,
-                      filePath: resp.fixes?.filePath,
-                      filesChanged: pr.filesChanged,
-                      fixesApplied: pr.fixesApplied,
-                    }}
-                    onMerge={mergePr}
-                    merge={{
-                      loading: mergeLoading,
-                      merged: Boolean(mergeResult?.merged),
-                      reason: mergeResult?.reason,
-                      approvalCount: mergeResult?.approvalCount,
-                      changesRequestedCount: mergeResult?.changesRequestedCount,
-                      error: mergeResult?.error,
-                    }}
-                  />
-                ) : (
-                  <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-6">
-                    <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-3">
-                      <span>🌿</span> Pull Request Generation
-                    </h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                      Opens a real PR that patches the actual offending source file in your
-                      connected repo — never a generic report.
-                    </p>
-                    {pr?.noCodeChange ? (
-                      <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
-                        {pr.error ||
-                          'No auto-fixable code change was found in your repo, so no PR was opened — ' +
-                            'opening one with nothing but commentary would be dishonest.'}{' '}
-                        Fix it manually, or re-analyse once you have (see Root Cause Analysis for
-                        the observed location).
-                      </p>
-                    ) : pr?.error ? (
-                      <p className="text-xs text-red-600 dark:text-red-400 mb-3">Error: {pr.error}</p>
-                    ) : null}
-                    <button
-                      onClick={createPr}
-                      disabled={prLoading}
-                      className="inline-flex items-center justify-center w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
-                    >
-                      {prLoading ? 'Opening PR…' : '🚀 Generate Pull Request'}
-                    </button>
+              <iframe
+                ref={iframeRef}
+                src={`${API_ORIGIN}/api/nvda-agent/proxy?url=${encodeURIComponent(result.url)}`}
+                title={iframeTitle.text}
+                className="w-full h-[65vh] bg-white border-0 block"
+              />
+
+              {liveAnnouncement && (
+                <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    {TYPE_META[liveAnnouncement.element_type as NvdaElement['element_type']] && (
+                      <span className={`shrink-0 w-6 h-6 rounded-lg flex items-center justify-center border ${TYPE_META[liveAnnouncement.element_type as NvdaElement['element_type']].badge}`}>
+                        {React.createElement(TYPE_META[liveAnnouncement.element_type as NvdaElement['element_type']].icon, { className: 'w-3.5 h-3.5' })}
+                      </span>
+                    )}
+                    <SpeakerHigh className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                    <span className="font-mono text-sm font-bold text-slate-800 dark:text-slate-200 wrap-break-word">{liveAnnouncement.nvda_speech}</span>
                   </div>
-                )
-              ) : (
-                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 shadow-sm mb-6">
-                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-2">
-                    <span>🌿</span> Pull Request Generation
-                  </h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Not connected. Set <code className="font-mono text-xs bg-slate-100 dark:bg-slate-700 px-1 rounded">GITHUB_TOKEN</code> and{' '}
-                    <code className="font-mono text-xs bg-slate-100 dark:bg-slate-700 px-1 rounded">GITHUB_REPO</code> in the
-                    backend <code className="font-mono text-xs bg-slate-100 dark:bg-slate-700 px-1 rounded">.env</code> to open real PRs
-                    against your own repository. (A public scanner can&apos;t PR a site it doesn&apos;t own.)
-                  </p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{liveAnnouncement.component_theory}</p>
                 </div>
               )}
             </div>
+          )}
 
-            <div className="space-y-1">
-              <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: showFix ? 1 : 0.5, y: 0 }} transition={{ duration: 0.4 }}>
-                <SuggestedFixes
-                  codeBefore={(showFix && resp.fixes?.original) || ''}
-                  codeAfter={(showFix && resp.fixes?.patched) || ''}
-                  filePath={resp.fixes?.filePath}
-                  grounded={resp.fixes?.grounded}
-                  autoFixable={resp.fixes?.autoFixable}
-                />
-                {showFix && resp.fixes?.source && (
-                  <p className="-mt-4 mb-6 text-[11px] text-slate-400 dark:text-slate-500 px-1">
-                    Fix generated by: <span className="font-semibold">{resp.fixes.source === 'rules' ? 'deterministic rules' : resp.fixes.source}</span>
-                  </p>
-                )}
-              </motion.div>
-
-              <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: showCicd ? 1 : 0.5, y: 0 }} transition={{ duration: 0.4 }}>
-                <CicdIntegration
-                  status={(showCicd && resp.cicd?.status) || 'Idle'}
-                  logs={(showCicd && resp.cicd?.logs) || []}
-                />
-                {showCicd && resp.cicd?.workflowRun?.url && (
-                  <a href={resp.cicd.workflowRun.url} target="_blank" rel="noreferrer" className="block mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline px-1">
-                    View GitHub Actions run →
-                  </a>
-                )}
-              </motion.div>
+          {view === 'json' && (
+            <div className="rounded-xl overflow-hidden bg-slate-950 shadow-md border border-slate-900">
+              <div className="flex items-center justify-between px-4 py-2 bg-slate-900 text-slate-400 text-xs font-mono border-b border-slate-900">
+                <span className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500/80 inline-block" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80 inline-block" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-green-500/80 inline-block" />
+                  <span className="ml-1 text-slate-500 font-sans font-semibold">nvda-announcements.json</span>
+                </span>
+              </div>
+              <pre className="p-4 overflow-x-auto font-mono text-xs text-blue-200/90 leading-relaxed whitespace-pre bg-slate-950/95">
+                {JSON.stringify(elements, null, 2)}
+              </pre>
             </div>
-          </main>
-        </>
+          )}
+
+          {view === 'list' && (
+            <div className="space-y-2.5">
+              {elements.map((el) => {
+                const meta = TYPE_META[el.element_type];
+                const Icon = meta.icon;
+                return (
+                  <motion.div
+                    key={el.tab_order}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: Math.min(el.tab_order * 0.015, 0.4) }}
+                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-4 flex items-start gap-3"
+                  >
+                    <div className="shrink-0 flex flex-col items-center gap-1.5">
+                      <span className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[11px] font-bold flex items-center justify-center">
+                        {el.tab_order}
+                      </span>
+                      <span className={`w-7 h-7 rounded-lg flex items-center justify-center border ${meta.badge}`}>
+                        <Icon className="w-4 h-4" />
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <SpeakerHigh className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                        <span className="font-mono text-sm font-bold text-slate-800 dark:text-slate-200 wrap-break-word">{el.nvda_speech}</span>
+                      </div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{el.component_theory}</p>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
 
-      {/* Paste-an-issue analyzer — independent of whatever the "latest scan"
-          happens to be right now, so it stays available even in the empty state. */}
-      {!error && (
-        <div className="max-w-7xl mx-auto mt-2">
-          <PasteIssueAnalyzer />
+      {!result && !scanning && !error && (
+        <div className="bg-white dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-10 text-center">
+          <Robot className="w-10 h-10 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
+          <p className="text-sm font-medium text-slate-400 dark:text-slate-500">
+            {emptyStateText.text}
+          </p>
         </div>
       )}
     </div>

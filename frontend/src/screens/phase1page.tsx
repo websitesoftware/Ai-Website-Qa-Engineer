@@ -7,6 +7,7 @@ import { useQAData } from '../context/QADataContext';
 import { BackendTest } from '../lib/types';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Skeleton } from '../components/ui/Skeleton';
+import { useContent, getContent } from '../context/ContentContext';
 
 // --- Types ---
 interface StatCardProps {
@@ -42,6 +43,48 @@ export default function ScanlinePhase1Report() {
   const { tests, loading } = useQAData();
   const [isExporting, setIsExporting] = useState(false);
 
+  const emptyTitle = useContent('phase1.empty.title', { text: 'No scans yet' });
+  const emptyDescription = useContent('phase1.empty.description', { text: 'Run a new test to see the Phase 1 foundation report here.' });
+  const brandName = useContent('phase1.brandName', { text: 'Scanline' });
+  const brandSubtitle = useContent('phase1.brandSubtitle', { text: 'AI QA Engineer — Phase 1' });
+  const statusScanning = useContent('phase1.status.scanning', { text: 'SCANNING SYSTEM...' });
+  const statusComplete = useContent('phase1.status.complete', { text: 'SCAN COMPLETE' });
+  const pagesCrawledLabel = useContent('phase1.pagesCrawled', { text: 'pages crawled' });
+  const durationLabel = useContent('phase1.duration', { text: 'duration' });
+  const statCardPagesCrawled = useContent('phase1.stat.pagesCrawled', { text: 'Pages Crawled' });
+  const statCardCrawlingTree = useContent('phase1.stat.crawlingTree', { text: 'Crawling map tree...' });
+  const statCardIssuesFound = useContent('phase1.stat.issuesFound', { text: 'Issues Found' });
+  const statCardBrokenLinks = useContent('phase1.stat.brokenLinks', { text: 'Broken Links' });
+  const statCardAvgLighthouse = useContent('phase1.stat.avgLighthouse', { text: 'Avg Lighthouse' });
+  const statPending = useContent('phase1.stat.pending', { text: 'Pending' });
+  const lighthouseScoresHeading = useContent('phase1.lighthouseScores', { text: 'Lighthouse Scores' });
+  const gaugePerformance = useContent('phase1.gauge.performance', { text: 'Performance' });
+  const gaugeAccessibility = useContent('phase1.gauge.accessibility', { text: 'Accessibility' });
+  const gaugeBestPractices = useContent('phase1.gauge.bestPractices', { text: 'Best Practices' });
+  const gaugeSeo = useContent('phase1.gauge.seo', { text: 'SEO' });
+  const viewportTestingHeading = useContent('phase1.viewportTesting', { text: 'Viewport Testing' });
+  const multiDeviceLabel = useContent('phase1.multiDevice', { text: 'multi-device' });
+  const noCapturesText = useContent('phase1.noCaptures', { text: 'No viewport captures yet.' });
+  const badgeIssue = useContent('phase1.badge.issue', { text: 'ISSUE' });
+  const badgePass = useContent('phase1.badge.pass', { text: 'PASS' });
+  const brokenLinksHeading = useContent('phase1.brokenLinksHeading', { text: 'Broken Links Detected' });
+  const tableTargetUrl = useContent('phase1.table.targetUrl', { text: 'Target URL' });
+  const tableStatusCode = useContent('phase1.table.statusCode', { text: 'Status Code' });
+  const tableExceptionType = useContent('phase1.table.exceptionType', { text: 'Exception Type' });
+  const noBrokenLinksText = useContent('phase1.noBrokenLinks', { text: 'No broken links detected.' });
+  const exceptionServerError = useContent('phase1.exception.serverError', { text: 'Server Error' });
+  const exceptionRedirect = useContent('phase1.exception.redirect', { text: 'Redirect' });
+  const exceptionNotFound = useContent('phase1.exception.notFound', { text: 'Not Found' });
+  const consoleHeading = useContent('phase1.consoleHeading', { text: 'Live Console Stream Exceptions' });
+  const capturedInPipelineLabel = useContent('phase1.capturedInPipeline', { text: 'Captured in pipeline' });
+  const noConsoleExceptionsText = useContent('phase1.noConsoleExceptions', { text: 'No console exceptions captured.' });
+  const qaActionsHeading = useContent('phase1.qaActionsHeading', { text: 'QA Actions & Prescriptions' });
+  const qaActionsSubtitle = useContent('phase1.qaActionsSubtitle', { text: 'Automated AI recommended code changes' });
+  const exportPDFLoading = useContent('phase1.exportPDF.loading', { text: 'Exporting…' });
+  const exportPDFIdle = useContent('phase1.exportPDF.idle', { text: 'Export PDF Report' });
+  const noOpenIssuesText = useContent('phase1.noOpenIssues', { text: 'No open issues on this scan.' });
+  const exportFailedAlert = useContent('phase1.exportFailedAlert', { text: 'PDF export failed. Check the console for details.' });
+
   const reportRef = useRef<HTMLDivElement>(null);
 
   const test: BackendTest | null = useMemo(
@@ -58,8 +101,8 @@ export default function ScanlinePhase1Report() {
     return (
       <EmptyState
         icon="ph-sparkle"
-        title="No scans yet"
-        description="Run a new test to see the Phase 1 foundation report here."
+        title={emptyTitle.text}
+        description={emptyDescription.text}
       />
     );
   }
@@ -207,7 +250,7 @@ export default function ScanlinePhase1Report() {
       pdf.save(`Scanline_Report_${domain}_${dateStamp}.pdf`);
     } catch (err) {
       console.error('[Scanline] PDF export failed:', err);
-      alert('PDF export failed. Check the console for details.');
+      alert(exportFailedAlert.text);
     } finally {
       setIsExporting(false);
     }
@@ -224,8 +267,8 @@ export default function ScanlinePhase1Report() {
               <i className="ph ph-sparkle text-white text-lg"></i>
             </div>
             <div>
-              <div className="font-display font-bold text-slate-900 dark:text-slate-100 text-base tracking-tight">Scanline</div>
-              <div className="text-[11.5px] text-slate-500 dark:text-slate-400">AI QA Engineer — Phase 1</div>
+              <div className="font-display font-bold text-slate-900 dark:text-slate-100 text-base tracking-tight">{brandName.text}</div>
+              <div className="text-[11.5px] text-slate-500 dark:text-slate-400">{brandSubtitle.text}</div>
             </div>
           </div>
 
@@ -234,7 +277,7 @@ export default function ScanlinePhase1Report() {
             : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
             }`}>
             <span className={`w-1.75 h-1.75 rounded-full ${isScanning ? 'bg-orange-500 animate-pulse' : 'bg-emerald-500'}`} />
-            {isScanning ? 'SCANNING SYSTEM...' : 'SCAN COMPLETE'}
+            {isScanning ? statusScanning.text : statusComplete.text}
           </div>
         </div>
       </header>
@@ -248,8 +291,8 @@ export default function ScanlinePhase1Report() {
           className="flex flex-wrap gap-x-6 gap-y-2 items-baseline mb-6 font-mono text-sm border-b border-slate-200/70 dark:border-slate-800 pb-4"
         >
           <div className="text-[#1C56C9] dark:text-blue-400 font-semibold">scan → {test.url}</div>
-          <div className="text-slate-500 dark:text-slate-400 text-xs"><b>{pagesCrawled}</b> pages crawled</div>
-          <div className="text-slate-500 dark:text-slate-400 text-xs"><b>{formatDuration(test.startedAt, test.completedAt)}</b> duration</div>
+          <div className="text-slate-500 dark:text-slate-400 text-xs"><b>{pagesCrawled}</b> {pagesCrawledLabel.text}</div>
+          <div className="text-slate-500 dark:text-slate-400 text-xs"><b>{formatDuration(test.startedAt, test.completedAt)}</b> {durationLabel.text}</div>
           <div className="text-slate-500 dark:text-slate-400 text-xs ml-auto">run <b>#{test.id.slice(-4)}</b> · {new Date(test.createdAt).toLocaleString('en-US', { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
         </div>
 
@@ -259,25 +302,39 @@ export default function ScanlinePhase1Report() {
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
         >
           <StatCard
-            label="Pages Crawled"
+            label={statCardPagesCrawled.text}
             value={pagesCrawled}
-            subtext={isScanning ? 'Crawling map tree...' : `${test.screenshots.filter((s) => s.error).length} unreachable`}
+            subtext={
+              isScanning
+                ? statCardCrawlingTree.text
+                : getContent('phase1.stat.unreachable', { text: '{count} unreachable' }, { count: test.screenshots.filter((s) => s.error).length }).text
+            }
           />
           <StatCard
-            label="Issues Found"
+            label={statCardIssuesFound.text}
             value={issuesFound}
-            subtext={`${test.issues.filter((i) => i.severity === 'critical' || i.severity === 'high').length} high/critical`}
+            subtext={
+              getContent(
+                'phase1.stat.highCritical',
+                { text: '{count} high/critical' },
+                { count: test.issues.filter((i) => i.severity === 'critical' || i.severity === 'high').length }
+              ).text
+            }
             subType={issuesFound > 0 ? 'down' : 'neutral'}
           />
           <StatCard
-            label="Broken Links"
+            label={statCardBrokenLinks.text}
             value={brokenLinks.length}
-            subtext={`${brokenLinks.filter((b) => b.statusCode >= 500).length} are 500s`}
+            subtext={getContent('phase1.stat.500s', { text: '{count} are 500s' }, { count: brokenLinks.filter((b) => b.statusCode >= 500).length }).text}
           />
           <StatCard
-            label="Avg Lighthouse"
+            label={statCardAvgLighthouse.text}
             value={isScanning ? '--' : Math.round(avgLighthouse)}
-            subtext={scores.performance != null ? `Performance: ${scores.performance}` : 'Pending'}
+            subtext={
+              scores.performance != null
+                ? getContent('phase1.stat.performanceValue', { text: 'Performance: {value}' }, { value: scores.performance }).text
+                : statPending.text
+            }
             subType="up"
           />
         </div>
@@ -290,15 +347,17 @@ export default function ScanlinePhase1Report() {
           <section className="lg:col-span-2 bg-white/85 dark:bg-slate-800 backdrop-blur-md rounded-xl border border-slate-200/70 dark:border-slate-700 p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-display text-[13px] font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <span className="bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 text-[9.5px] font-extrabold px-1.5 py-0.5 rounded">01</span> Lighthouse Scores
+                <span className="bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 text-[9.5px] font-extrabold px-1.5 py-0.5 rounded">01</span> {lighthouseScoresHeading.text}
               </h2>
-              <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">avg across {pagesCrawled} pages</span>
+              <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                {getContent('phase1.avgAcrossPages', { text: 'avg across {count} pages' }, { count: pagesCrawled }).text}
+              </span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
-              <Gauge label="Performance" value={scores.performance ?? 0} color={(scores.performance ?? 0) >= 80 ? 'text-emerald-500' : 'text-orange-500'} />
-              <Gauge label="Accessibility" value={scores.accessibility ?? 0} color={(scores.accessibility ?? 0) >= 80 ? 'text-emerald-500' : 'text-orange-500'} />
-              <Gauge label="Best Practices" value={scores.bestPractices ?? 0} color={(scores.bestPractices ?? 0) >= 80 ? 'text-emerald-500' : 'text-orange-500'} />
-              <Gauge label="SEO" value={scores.seo ?? 0} color={(scores.seo ?? 0) >= 80 ? 'text-emerald-500' : 'text-orange-500'} />
+              <Gauge label={gaugePerformance.text} value={scores.performance ?? 0} color={(scores.performance ?? 0) >= 80 ? 'text-emerald-500' : 'text-orange-500'} />
+              <Gauge label={gaugeAccessibility.text} value={scores.accessibility ?? 0} color={(scores.accessibility ?? 0) >= 80 ? 'text-emerald-500' : 'text-orange-500'} />
+              <Gauge label={gaugeBestPractices.text} value={scores.bestPractices ?? 0} color={(scores.bestPractices ?? 0) >= 80 ? 'text-emerald-500' : 'text-orange-500'} />
+              <Gauge label={gaugeSeo.text} value={scores.seo ?? 0} color={(scores.seo ?? 0) >= 80 ? 'text-emerald-500' : 'text-orange-500'} />
             </div>
           </section>
 
@@ -306,13 +365,13 @@ export default function ScanlinePhase1Report() {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-display text-[13px] font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                  <span className="bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 text-[9.5px] font-extrabold px-1.5 py-0.5 rounded">02</span> Viewport Testing
+                  <span className="bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 text-[9.5px] font-extrabold px-1.5 py-0.5 rounded">02</span> {viewportTestingHeading.text}
                 </h2>
-                <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">{test.options?.device || 'multi-device'}</span>
+                <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">{test.options?.device || multiDeviceLabel.text}</span>
               </div>
               <div className="space-y-2.5">
                 {test.screenshots.length === 0 && (
-                  <p className="text-xs text-slate-400 dark:text-slate-500 py-2">No viewport captures yet.</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 py-2">{noCapturesText.text}</p>
                 )}
                 {test.screenshots.map((shot, i) => (
                   <div
@@ -332,7 +391,7 @@ export default function ScanlinePhase1Report() {
                           : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
                       }`}
                     >
-                      {shot.error ? 'ISSUE' : 'PASS'}
+                      {shot.error ? badgeIssue.text : badgePass.text}
                     </span>
                   </div>
                 ))}
@@ -348,29 +407,31 @@ export default function ScanlinePhase1Report() {
         >
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display text-[13px] font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <span className="bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 text-[9.5px] font-extrabold px-1.5 py-0.5 rounded">03</span> Broken Links Detected
+              <span className="bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 text-[9.5px] font-extrabold px-1.5 py-0.5 rounded">03</span> {brokenLinksHeading.text}
             </h2>
-            <span className="text-[11px] font-mono text-red-500 dark:text-red-400 font-semibold bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900 px-2 py-0.5 rounded">{brokenLinks.length} total exceptions</span>
+            <span className="text-[11px] font-mono text-red-500 dark:text-red-400 font-semibold bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900 px-2 py-0.5 rounded">
+              {getContent('phase1.totalExceptions', { text: '{count} total exceptions' }, { count: brokenLinks.length }).text}
+            </span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="text-slate-400 dark:text-slate-500 uppercase tracking-wider font-mono text-[10px] bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
-                  <th className="py-2.5 px-3">Target URL</th>
-                  <th className="py-2.5 px-3">Status Code</th>
-                  <th className="py-2.5 px-3 text-right">Exception Type</th>
+                  <th className="py-2.5 px-3">{tableTargetUrl.text}</th>
+                  <th className="py-2.5 px-3">{tableStatusCode.text}</th>
+                  <th className="py-2.5 px-3 text-right">{tableExceptionType.text}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
                 {brokenLinks.length === 0 && (
                   <tr>
-                    <td colSpan={3} className="py-4 px-3 text-center text-slate-400 dark:text-slate-500">No broken links detected.</td>
+                    <td colSpan={3} className="py-4 px-3 text-center text-slate-400 dark:text-slate-500">{noBrokenLinksText.text}</td>
                   </tr>
                 )}
                 {brokenLinks.map((link, i) => {
                   const isServerError = link.statusCode >= 500;
                   const isRedirect = link.statusCode >= 300 && link.statusCode < 400;
-                  const exceptionType = link.error || (isServerError ? 'Server Error' : isRedirect ? 'Redirect' : 'Not Found');
+                  const exceptionType = link.error || (isServerError ? exceptionServerError.text : isRedirect ? exceptionRedirect.text : exceptionNotFound.text);
                   const colorClasses = isServerError
                     ? 'text-red-600 dark:text-red-400'
                     : isRedirect
@@ -399,13 +460,13 @@ export default function ScanlinePhase1Report() {
         >
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display text-[13px] font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <span className="bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 text-[9.5px] font-extrabold px-1.5 py-0.5 rounded">04</span> Live Console Stream Exceptions
+              <span className="bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 text-[9.5px] font-extrabold px-1.5 py-0.5 rounded">04</span> {consoleHeading.text}
             </h2>
-            <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">Captured in pipeline</span>
+            <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">{capturedInPipelineLabel.text}</span>
           </div>
           <div className="divide-y divide-slate-100 dark:divide-slate-800 font-mono text-xs">
             {consoleErrors.length === 0 && (
-              <p className="py-3 text-slate-400 dark:text-slate-500">No console exceptions captured.</p>
+              <p className="py-3 text-slate-400 dark:text-slate-500">{noConsoleExceptionsText.text}</p>
             )}
             {consoleErrors.map((err, i) => {
               const isError = err.type === 'error';
@@ -442,9 +503,9 @@ export default function ScanlinePhase1Report() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-display text-[13px] font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <span className="bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 text-[9.5px] font-extrabold px-1.5 py-0.5 rounded">05</span> QA Actions &amp; Prescriptions
+                <span className="bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 text-[9.5px] font-extrabold px-1.5 py-0.5 rounded">05</span> {qaActionsHeading.text}
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Automated AI recommended code changes</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{qaActionsSubtitle.text}</p>
             </div>
 
             <button
@@ -453,7 +514,7 @@ export default function ScanlinePhase1Report() {
               data-html2canvas-ignore
               className="px-4.5 py-2.5 bg-[#1C56C9] hover:bg-[#164aac] dark:bg-blue-600 dark:hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-900/25 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 cursor-pointer"
             >
-              {isExporting ? 'Exporting…' : 'Export PDF Report'}
+              {isExporting ? exportPDFLoading.text : exportPDFIdle.text}
             </button>
           </div>
         </section>
@@ -467,7 +528,7 @@ export default function ScanlinePhase1Report() {
         <div className="space-y-3">
           {test.issues.length === 0 && (
             <div data-pdf-block className="bg-white/85 dark:bg-slate-800 backdrop-blur-md rounded-xl p-4 text-sm text-slate-400 dark:text-slate-500 text-center">
-              No open issues on this scan.
+              {noOpenIssuesText.text}
             </div>
           )}
           {test.issues.map((issue) => (
@@ -519,6 +580,7 @@ function Gauge({ label, value, color }: GaugeProps) {
 
 // --- Issue Rows ---
 function IssueRow({ title, fix, category, severity }: IssueRowProps) {
+  const fixLabel = useContent('phase1.fixLabel', { text: 'Fix:' });
   const sevColors = {
     high: 'bg-red-500',
     med: 'bg-orange-500',
@@ -530,7 +592,7 @@ function IssueRow({ title, fix, category, severity }: IssueRowProps) {
       <div className={`w-1.5 h-10 rounded-full self-center shrink-0 ${sevColors[severity]}`} />
       <div className="flex-1 min-w-0">
         <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">{title}</h4>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5"><b>Fix:</b> {fix}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5"><b>{fixLabel.text}</b> {fix}</p>
       </div>
       <span className="text-[10px] font-mono font-semibold px-2 py-1 bg-white/85 dark:bg-slate-800 backdrop-blur-md border border-slate-200/70 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-md shrink-0 uppercase tracking-wider">
         {category}

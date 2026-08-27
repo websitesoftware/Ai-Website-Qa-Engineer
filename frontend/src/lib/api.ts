@@ -12,6 +12,7 @@ import {
   PolicyScoreRanges,
   MonitorFrequency,
   TeamRole,
+  NvdaScanResult,
 } from './types';
 
 export const API_BASE_URL =
@@ -156,6 +157,11 @@ export const api = {
       repo: string | null;
       matchedBy: string | null;
     }>(`/ai-automation/locate?testId=${encodeURIComponent(testId)}&issueId=${encodeURIComponent(issueId)}`),
+
+  nvdaAgent: {
+    scan: (url: string) =>
+      request<NvdaScanResult>('/nvda-agent/scan', { method: 'POST', body: JSON.stringify({ url }) }),
+  },
 
   getStats: () => request<BackendStats>('/stats'),
 

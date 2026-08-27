@@ -1,11 +1,12 @@
 
 'use client';
-import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useRef } from 'react';
 import { NewTestModal } from '../components/test/NewTestModal';
 import { useQAData } from './QADataContext';
 import { useToast } from './ToastContext';
 import { useReportModal } from './ReportModalContext';
 import { useAuth } from './AuthContext';
+import { useActiveOverlay } from './ActiveOverlayContext';
 
 interface NewTestModalContextValue {
   open: () => void;
@@ -15,7 +16,8 @@ interface NewTestModalContextValue {
 const NewTestModalContext = createContext<NewTestModalContextValue | undefined>(undefined);
 
 export const NewTestModalProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const { activeOverlay, claim, release } = useActiveOverlay();
+  const isOpen = activeOverlay === 'new-test';
   const { createTest } = useQAData();
   const { showToast } = useToast();
   const { openReport } = useReportModal();
@@ -29,18 +31,18 @@ export const NewTestModalProvider: React.FC<{ children: React.ReactNode }> = ({ 
       showToast('Please sign in to run a scan — use the Account menu in the top right.', 'info');
       return;
     }
-    setIsOpen(true);
-  }, [user, showToast]);
-  const close = useCallback(() => setIsOpen(false), []);
+    claim('new-test');
+  }, [user, showToast, claim]);
+  const close = useCallback(() => release('new-test'), [release]);
 
   const handleStart = useCallback(
     async (url: string, modules: string[], policyId?: string) => {
       const test = await createTest(url, { modules, policyId });
       showToast(`AI QA scan started for ${test.url}`, 'success');
       pendingTestIdRef.current = test.id;
-      setIsOpen(false);
+      release('new-test');
     },
-    [createTest, showToast]
+    [createTest, showToast, release]
   );
 
   // NewTestModal's spring-physics exit transition has no fixed duration, so
