@@ -86,10 +86,9 @@ export default function TicketPage() {
   const [posting, setPosting] = useState(false);
   // Remembered locally (not tied to login) so a repeat commenter doesn't
   // have to retype their email every time on this device.
-  const [commentEmail, setCommentEmail] = useState('');
-  useEffect(() => {
-    setCommentEmail(localStorage.getItem('qa_comment_email') || '');
-  }, []);
+  const [commentEmail, setCommentEmail] = useState(() =>
+    typeof window === 'undefined' ? '' : localStorage.getItem('qa_comment_email') || ''
+  );
 
   const row = useMemo(() => {
     const rows = buildIssueRows(tests);
